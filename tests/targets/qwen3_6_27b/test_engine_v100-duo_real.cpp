@@ -178,8 +178,9 @@ void compare_rounds(const ninfer::GenerationResult& captured,
 void check_identity(ninfer::Engine& engine) {
     const auto summary = engine.load_summary();
     require(summary.tp == 2 && summary.model_id == "qwen3.8-27b" &&
-                summary.weights_id == "gguf-q4-k-m",
-            "this gate requires the TP2 Qwen3.8-27B GGUF Q4_K_M artifact");
+                (summary.weights_id == "gguf-q4-k-m" || summary.weights_id == "gguf-blocks" ||
+                 summary.weights_id == "gguf-blocks-full"),
+            "this gate requires a TP2 Qwen3.8-27B GGUF artifact");
 }
 
 int exercise(const char* artifact, ninfer::ProposalHead head) {

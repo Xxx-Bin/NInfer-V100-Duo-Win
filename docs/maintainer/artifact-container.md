@@ -400,7 +400,7 @@ is **not** compared: third-party conversions of the registered architecture (for
 Swift-1.5 OracleRouter NVFP4 artifact) declare their own name. The reader validates the layout
 signature the projection assumes instead — Text `qwen3_5_text` with 64 layers, hidden size 5120,
 vocabulary 248320, 24/4/256 attention heads, intermediate size 17408 and the linear-attention head
-geometry, an indexed 131,072-row proposal, Vision `qwen3_5_vision` with depth 27, `Qwen3_5MTP`, and,
+geometry, an indexed 131,072-row proposal when supplied, Vision `qwen3_5_vision` with depth 27, `Qwen3_5MTP`, and,
 when present, the five-layer `qwen3` DFlash2 companion — and rejects any other file with an error
 naming the offending field. It does not execute the version-3 directory. Instead
 `src/artifact/reader.cpp` projects it into the version-2 directory above: version-3 logical
@@ -418,6 +418,12 @@ layout names map to the registered identities, and the chat template from
   fused parameter group whose parts span several physical objects becomes ordered row segments
   `<name>#0..#3`; Vision and, when present, DFlash2 companion objects are projected. The DFlash2
   projection does not enable DFlash2 execution; this target still runs Text/Vision/MTP only.
+
+GGUF files without `components.text.proposal` and without `proposal/head` or
+`proposal/token_ids` bindings project to `qwen3.8-27b/gguf-blocks-full`. This inventory uses
+the full output head for MTP and omits the indexed head and token-id map. Q8_0 endpoint and
+MTP input-projection objects retain their original 32-value block bytes. `--lm-head-draft`
+is rejected for this profile; ordinary generation and full-vocabulary MTP are supported.
 
 Projection rejects any binding that is not whole rows of its objects, segments that disagree on
 columns, unregistered formats or layouts, and any Text/MTP/proposal/Vision/DFlash2 object left

@@ -42,6 +42,10 @@ GPU residency is frozen when the Engine starts:
   request-transient allocation;
 - `--vision` loads those allocations and enables image/video input.
 
+A `qwen3.8-27b/gguf-blocks-full` artifact omits the indexed proposal tensors and uses the full
+output head for MTP. It accepts `--spec mtp --draft-tokens N` and rejects `--lm-head-draft`.
+The V100 launcher selects this mode with the leading `proposal-head=full` argument.
+
 The complete `.ninfer` inventory is still validated. These choices are not lazy loading: a
 text-only Engine rejects media and cannot enable Vision later. DFlash and Vision are mutually
 exclusive. The default speculative and Vision settings produce the smallest resident profile.

@@ -13,7 +13,8 @@ namespace ninfer::ops {
  *
  * `ids` is contiguous I32 [T], `out` is contiguous BF16 [D,T], and every id is in
  * [0,vocab). `table` has logical shape [vocab,D] and is contiguous BF16_CTRL, GGML_K
- * `ggml-k256-v1`, Q6G64_F16S RowSplit, W8G32_F16S RowSplit, or FP8_E4M3FN_ROW_BF16S RowScale.
+ * `ggml-k256-v1`, GGUF `gguf-blocks-v1` (including Q8_0), Q6G64_F16S RowSplit,
+ * W8G32_F16S RowSplit, or FP8_E4M3FN_ROW_BF16S RowScale.
  * Dense BF16 values are copied
  * bit-exactly. For quantized tables, the oracle independently decodes each code and multiplies it
  * by the exact stored scale in FP64; the BF16 output is promoted and compared directly with that

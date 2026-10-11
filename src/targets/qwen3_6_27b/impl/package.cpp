@@ -102,6 +102,9 @@ Package::WeightsProfile Package::resolve_weights(const artifact::ArtifactIdentit
     if (identity.model_id == qwen3_8_model_id && identity.weights_id == "gguf-blocks") {
         return WeightsProfile::Qwen38Gguf;
     }
+    if (identity.model_id == qwen3_8_model_id && identity.weights_id == "gguf-blocks-full") {
+        return WeightsProfile::Qwen38GgufFull;
+    }
     throw std::runtime_error("artifact identity '" + identity.model_id + "/" + identity.weights_id +
                              "' is not supported by target '" + std::string(target_key) + "'");
 }
@@ -110,6 +113,12 @@ Package::LoadPlan Package::plan_load(artifact::Binder& binder, const EngineOptio
                                      WeightsProfile weights_profile) {
     if (binder.device_count() != options.tp) {
         throw std::invalid_argument("artifact binder device count does not match EngineOptions.tp");
+    }
+    if (weights_profile == WeightsProfile::Qwen38GgufFull &&
+        options.speculative.proposal_head == ProposalHead::Optimized) {
+        throw std::invalid_argument(
+            "this artifact uses full-vocabulary MTP; omit --lm-head-draft or use "
+            "proposal-head=full in tools/v100/ninfer-v100-duo.sh");
     }
     return LoadPlan(std::make_unique<LoadPlan::Impl>(
         weights_profile,

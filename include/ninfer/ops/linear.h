@@ -57,11 +57,14 @@ enum class LinearPolicy : std::uint8_t {
  * no bias, activation, residual addition, or transpose mode.
  *
  * @par Supported execution domain
- * Registered execution uses GGML_K `ggml-k256-v1`, RowSplit Q4G64_F16S, Q5G64_F16S, Q6G64_F16S, or W8G32_F16S weights
+ * Registered execution uses GGUF `gguf-blocks-v1` (including Q8_0), GGML_K `ggml-k256-v1`,
+ * RowSplit Q4G64_F16S, Q5G64_F16S, Q6G64_F16S, or W8G32_F16S weights
  * with FP16 scales, block-scaled NVFP4 weights, row-scaled FP8_E4M3FN_ROW_BF16S weights, plus
  * registered contiguous BF16_CTRL problems. Each format owns a finite registry of exact physical
  * weight problems and selects its kernel internally; a valid encoding and alignment do not imply
- * arbitrary N/K support. FP8 currently registers `[N,K]` in `{[14336,5120], [16384,5120],
+ * arbitrary N/K support. GGUF registers the Qwen3.8 Text/MTP endpoint and projection
+ * problems, including their TP2 shards, with K divisible by 512 for vector projections.
+ * FP8 currently registers `[N,K]` in `{[14336,5120], [16384,5120],
  * [34816,5120], [248320,5120], [5120,6144], [5120,17408]}` at every positive T. The current NVFP4
  * problems register the five non-vocabulary FP8 geometries and accept every positive T. Text and
  * MTP packed-weight problems accept every positive column extent T. Registered Vision problems
@@ -84,7 +87,8 @@ enum class LinearPolicy : std::uint8_t {
  * corresponding low-precision route: the resolved plan may remain A16 when that is the qualified
  * choice. BF16_CTRL and GGML_K admit only LinearPolicy::A16Only. Registered Q4/Q5/Q6/W8 formats admit
  * LinearPolicy::A16Only and LinearPolicy::AllowA8. The five non-vocabulary FP8 problems admit the
- * same two policies at every positive T. AllowA8 resolves `[14336,5120]` to A16 through T=11 and
+ * same two policies at every positive T. GGUF also admits A16Only and AllowA8.
+ * AllowA8 resolves `[14336,5120]` to A16 through T=11 and
  * A8 from T=12; `[16384,5120]` to A16 through T=10 and A8 from T=11; `[34816,5120]` to A8 at T=1,
  * A16 at T=2..4, and A8 from T=5; both `[5120,6144]` and `[5120,17408]` resolve T<25 to A16 and
  * T>=25 to A8. FP8 `[248320,5120]` admits A16Only, AllowA8, and AllowA4; every policy retains A16

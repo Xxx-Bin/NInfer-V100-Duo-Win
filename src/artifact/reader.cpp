@@ -115,6 +115,7 @@ NumericFormat parse_format(std::string_view name) {
     if (name == "GGUF_Q2_K") { return NumericFormat::GGUF_Q2_K; }
     if (name == "GGUF_Q4_K") { return NumericFormat::GGUF_Q4_K; }
     if (name == "GGUF_Q6_K") { return NumericFormat::GGUF_Q6_K; }
+    if (name == "GGUF_Q8_0") { return NumericFormat::GGUF_Q8_0; }
     throw ArtifactError("unknown tensor format: " + std::string(name));
 }
 
@@ -343,12 +344,10 @@ void require_qwen38_layout(const Json& components) {
     require_layout_field(text_config, "text.config", "linear_value_head_dim", Json(128));
     require_layout_field(text_config, "text.config", "linear_conv_kernel_dim", Json(4));
 
-    if (!text.contains("proposal") || !text.at("proposal").is_object()) {
-        throw ArtifactError(
-            "v3 artifact does not match the qwen3.8-27b layout: components.text.proposal");
+    if (text.contains("proposal")) {
+        require_layout_field(text.at("proposal"), "text.proposal", "domain", Json("indexed"));
+        require_layout_field(text.at("proposal"), "text.proposal", "rows", Json(131072));
     }
-    require_layout_field(text.at("proposal"), "text.proposal", "domain", Json("indexed"));
-    require_layout_field(text.at("proposal"), "text.proposal", "rows", Json(131072));
 
     const auto& vision        = require_layout_component(components, "vision");
     const auto& vision_config = require_layout_config(vision, "vision");
@@ -410,6 +409,11 @@ public:
                 throw ArtifactError("duplicate v3 object id: " + id);
             }
             if (object.value("layout", "") == "gguf_blocks_v1") { gguf_ = true; }
+        }
+        indexed_proposal_ = directory_.at("components").at("text").contains("proposal");
+        if (!indexed_proposal_ && (!gguf_ || directory_.at("bindings").contains("proposal/head") ||
+                                   directory_.at("bindings").contains("proposal/token_ids"))) {
+            throw ArtifactError("v3 artifact has an inconsistent full-vocabulary proposal inventory");
         }
     }
 
@@ -551,17 +555,13 @@ private:
              }) {
             add_resource("frontend/" + std::string(role), component, role);
         }
-        const auto& proposal = directory_.at("components").at("text").at("proposal");
-        if (proposal.value("domain", "") != "indexed" ||
-            proposal.value("rows", std::uint64_t{0}) != 131072) {
-            throw ArtifactError("qwen3.8-27b GGUF v3 requires the 131072-row indexed proposal");
-        }
-
         add_segments("text/token_embedding", {"text/token_embedding"});
         add_segments("text/output_head", {"text/output_head"});
         add("text/final_norm", {"text/final_norm"});
-        add_segments("text/draft_head", {"proposal/head"});
-        add("text/draft_head_token_ids", {"proposal/token_ids"});
+        if (indexed_proposal_) {
+            add_segments("text/draft_head", {"proposal/head"});
+            add("text/draft_head_token_ids", {"proposal/token_ids"});
+        }
 
         const auto input_columns = gdn_output_input_columns();
         for (int layer = 0; layer < 64; ++layer) {
@@ -612,7 +612,7 @@ private:
 
         add_vision();
         add_dflash2();
-        return project("gguf-blocks");
+        return project(indexed_proposal_ ? "gguf-blocks" : "gguf-blocks-full");
     }
 
     void add_dflash2() {
@@ -686,6 +686,7 @@ private:
                     {"gguf_iq2_xxs", "GGUF_IQ2_XXS"}, {"gguf_iq2_s", "GGUF_IQ2_S"},
                     {"gguf_iq1_m", "GGUF_IQ1_M"}, {"gguf_q2_k", "GGUF_Q2_K"},
                     {"gguf_q4_k", "GGUF_Q4_K"}, {"gguf_q6_k", "GGUF_Q6_K"},
+                    {"gguf_q8_0", "GGUF_Q8_0"},
                 };
                 static const std::map<std::string, std::string, std::less<>> layouts = {
                     {"contiguous_le_v1", "contiguous-le-v1"},
@@ -985,6 +986,7 @@ private:
     std::map<std::string, const Json*, std::less<>> selected_;
     std::map<std::string, std::string, std::less<>> physical_names_;
     bool gguf_ = false;
+    bool indexed_proposal_ = false;
 };
 
 } // namespace

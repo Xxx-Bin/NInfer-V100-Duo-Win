@@ -293,6 +293,7 @@ struct TP2DFlashExtension<qwen3_6_27b::detail::Variant> {
         QType head_type;
         switch (profile) {
         case qwen3_6_27b::detail::WeightsProfile::Qwen38Gguf:
+        case qwen3_6_27b::detail::WeightsProfile::Qwen38GgufFull:
             head_type = QType::GGUF;
             break;
         case qwen3_6_27b::detail::WeightsProfile::Qwen38Nvfp4:

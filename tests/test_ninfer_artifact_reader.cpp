@@ -204,6 +204,20 @@ Json foreign_name_v3_directory(std::string_view name) {
 // while the registered layout it depends on is checked independently of that name.
 void test_v3_layout_gate() {
     {
+        auto directory = foreign_name_v3_directory("qwen3.8-27b-coder390-q6k-mtp");
+        directory["components"]["text"].erase("proposal");
+        directory["objects"].push_back({{"id", "obj/gguf"}, {"kind", "tensor"},
+                                         {"layout", "gguf_blocks_v1"}});
+        auto fixture = write_v3_fixture(directory, "v3_full_proposal");
+        expect_artifact_error_containing([&] { Reader reader(fixture.path); },
+                                         "missing v3 binding", "full-vocabulary GGUF v3 artifact");
+        directory["bindings"]["proposal/head"] = {{"object", "obj/gguf"}};
+        auto invalid = write_v3_fixture(directory, "v3_inconsistent_proposal");
+        expect_artifact_error_containing([&] { Reader reader(invalid.path); },
+                                         "inconsistent full-vocabulary proposal inventory",
+                                         "proposal binding without metadata");
+    }
+    {
         auto fixture = write_v3_fixture(foreign_name_v3_directory("swift-1.5-qwen3.8-27b-orcarouter"),
                                         "v3_foreign_name");
         expect_artifact_error_containing([&] { Reader reader(fixture.path); },
@@ -231,6 +245,11 @@ void test_v3_layout_gate() {
 
 void test_registered_sizes() {
     using ninfer::artifact::tensor_encoded_size;
+    const std::array<std::uint64_t, 2> q8_shape = {5120, 5120};
+    if (tensor_encoded_size(StorageLayout::GgufBlocksV1, NumericFormat::GGUF_Q8_0, q8_shape) !=
+        std::uint64_t{5120} * 160 * 34) {
+        throw std::runtime_error("Q8_0 byte size does not match its stored 32-value blocks");
+    }
     constexpr StorageLayout direct   = StorageLayout::ContiguousLeV1;
     constexpr StorageLayout rows     = StorageLayout::RowSplitK128V1;
     constexpr StorageLayout fp8_rows = StorageLayout::RowScaleV1;
@@ -330,6 +349,26 @@ void test_common_validation() {
             return;
         }
         throw std::runtime_error("v1 artifact was accepted");
+    }
+}
+
+void test_full_qwen38_v3_if_configured() {
+    const char* path = std::getenv("NINFER_QWEN3_8_27B_FULL_WEIGHTS");
+    if (path == nullptr || *path == '\0') { return; }
+    Reader reader(path);
+    if (reader.identity().weights_id != "gguf-blocks-full" ||
+        reader.identity().model_id != "qwen3.8-27b" ||
+        reader.find("text/draft_head#0") != nullptr ||
+        reader.find("text/draft_head_token_ids") != nullptr) {
+        throw std::runtime_error("full-vocabulary V3 projection identity or proposal mismatch");
+    }
+    for (const char* name : {"text/token_embedding#0", "text/output_head#0",
+                             "mtp/input_projection#0"}) {
+        const auto* descriptor = reader.find(name);
+        const auto* tensor = descriptor == nullptr ? nullptr : std::get_if<TensorDescriptor>(descriptor);
+        if (tensor == nullptr || tensor->format != NumericFormat::GGUF_Q8_0) {
+            throw std::runtime_error(std::string(name) + ": Q8_0 projection is missing");
+        }
     }
 }
 
@@ -487,6 +526,7 @@ int main() {
         test_normative_fixture();
         test_common_validation();
         test_v3_layout_gate();
+        test_full_qwen38_v3_if_configured();
         test_official_qwen38_v3_if_configured();
         test_gsq_qwen38_v3_vision_if_configured();
         test_swift_qwen38_v3_if_configured();

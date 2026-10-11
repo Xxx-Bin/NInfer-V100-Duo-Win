@@ -183,6 +183,31 @@ std::array<SliceRange, 1> one(SliceRange range) { return {range}; }
 } // namespace
 
 int main() {
+    {
+        const std::array<std::uint64_t, 2> shape = {4, 1024};
+        constexpr std::uint64_t row_bytes = 32 * 34;
+        Bytes parent(4 * row_bytes);
+        for (std::uint64_t offset = 0; offset < parent.size(); ++offset) {
+            parent[offset] = pattern(offset / row_bytes, offset % row_bytes, 0);
+        }
+        const auto rows = ninfer::artifact::tensor_row_slice(
+            StorageLayout::GgufBlocksV1, NumericFormat::GGUF_Q8_0, shape,
+            one(SliceRange{1, 2}));
+        expect_equal(apply_slice(parent, rows),
+                     Bytes(parent.begin() + row_bytes, parent.begin() + 3 * row_bytes),
+                     "Q8_0 exact rows");
+        const std::array<SliceRange, 2> columns = {SliceRange{0, 256}, SliceRange{768, 256}};
+        const auto slice = ninfer::artifact::tensor_column_slice(
+            StorageLayout::GgufBlocksV1, NumericFormat::GGUF_Q8_0, shape, columns);
+        Bytes expected;
+        for (std::uint64_t row = 0; row < 4; ++row) {
+            for (std::uint64_t block : {0, 24}) {
+                const auto begin = parent.begin() + row * row_bytes + block * 34;
+                expected.insert(expected.end(), begin, begin + 8 * 34);
+            }
+        }
+        expect_equal(apply_slice(parent, slice), expected, "Q8_0 exact TP columns");
+    }
     // --- contiguous-le-v1 -----------------------------------------------------------------------
     {
         constexpr std::uint64_t kRows = 8;

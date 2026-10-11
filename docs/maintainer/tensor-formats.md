@@ -36,8 +36,8 @@ recomputed scale is implied. `ggml-k256-v1` row descriptors select the codec; th
 of all rows remain part of the fused matrix's represented public input.
 
 The `GGUF_*` block formats preserve the blocks of a per-tensor mixed-precision GGUF (for example
-the GSQ-RCO Qwen3.8-27B releases) without re-quantization. Every block covers 256 consecutive
-values of one row; its represented values are exactly those of the matching `dequantize_row_*`
+the GSQ-RCO Qwen3.8-27B releases) without re-quantization. Q8_0 blocks cover 32 consecutive
+values of one row; the other blocks cover 256. Represented values are exactly those of the matching `dequantize_row_*`
 function of llama.cpp's `ggml-quants.c`, with the codebooks of `ggml-common.h`:
 
 | Canonical name | ggml type | Block bytes | Bits/weight |
@@ -52,11 +52,14 @@ function of llama.cpp's `ggml-quants.c`, with the codebooks of `ggml-common.h`:
 | `GGUF_Q2_K` | `Q2_K` | 84 | 2.63 |
 | `GGUF_Q4_K` | `Q4_K` | 144 | 4.50 |
 | `GGUF_Q6_K` | `Q6_K` | 210 | 6.56 |
+| `GGUF_Q8_0` | `Q8_0` | 34 | 8.50 |
 
-These ten are the types the registered GGUF-blocks artifact uses; other ggml types are not
+These eleven are the types the registered GGUF-blocks artifacts use; other ggml types are not
 registered. Each represented value is the FP32 product of the block's FP16 super-scale(s), an
 integer sub-scale and an integer or codebook code (minus a minimum term for `Q2_K`, `Q4_K` and the
 `IQ1_M` delta), so an exact FP32 decode exists for every value.
+Q8_0 stores one little-endian FP16 scale followed by 32 signed int8 codes;
+each value is `float(scale) * float(code)`. Code bytes and stored scales are preserved.
 
 The block-scaled floating-point weight format is:
 

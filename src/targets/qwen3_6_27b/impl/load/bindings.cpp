@@ -51,6 +51,7 @@ NumericFormat endpoint_format(WeightsProfile weights_profile) {
     case WeightsProfile::Qwen38GgmlK:
         return NumericFormat::GGML_K;
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         break; // per-object GGUF block formats; see bind_gguf_weight
     }
     throw std::invalid_argument("qwen3_6_27b: invalid weights profile");
@@ -143,7 +144,9 @@ WeightPlan bind_gguf_weight(artifact::Binder& binder, std::string_view name,
 
 WeightPlan bind_matrix(artifact::Binder& binder, WeightsProfile profile, std::string_view name,
                        NumericFormat format, std::uint64_t rows, std::uint64_t columns) {
-    if (profile == WeightsProfile::Qwen38Gguf) { return bind_gguf_weight(binder, name, rows, columns); }
+    if (profile == WeightsProfile::Qwen38Gguf || profile == WeightsProfile::Qwen38GgufFull) {
+        return bind_gguf_weight(binder, name, rows, columns);
+    }
     return bind_weight(binder, name, format, {rows, columns});
 }
 
@@ -440,7 +443,8 @@ bool binds_nvfp4(const artifact::Binder& binder, std::string_view name) {
 void bind_qwen38_fused_text_layers(artifact::Binder& binder, BindingPlan& out,
                                    WeightsProfile profile) {
     const bool ggml_k = profile == WeightsProfile::Qwen38GgmlK;
-    const bool gguf   = profile == WeightsProfile::Qwen38Gguf;
+    const bool gguf   = profile == WeightsProfile::Qwen38Gguf ||
+                        profile == WeightsProfile::Qwen38GgufFull;
     const NumericFormat matrix_format = ggml_k ? NumericFormat::GGML_K : NumericFormat::FP8_E4M3FN_ROW_BF16S;
     const auto matrix = [&](const std::string& name, std::uint64_t rows, std::uint64_t columns) {
         return bind_matrix(binder, profile, name, matrix_format, rows, columns);
@@ -841,7 +845,8 @@ ShardMapping shard_mapping(std::string_view object, int tp, const TextConfig& co
     // {5120, 6144} -- 6144 = value_dim, matching TextConfig::value_dim exactly. It is NOT
     // 5120x4096; 4096 does not appear anywhere in this object.
     if (ends("gdn/output")) {
-        if (profile == WeightsProfile::Qwen38GgmlK || profile == WeightsProfile::Qwen38Gguf) {
+        if (profile == WeightsProfile::Qwen38GgmlK || profile == WeightsProfile::Qwen38Gguf ||
+            profile == WeightsProfile::Qwen38GgufFull) {
             // GGUF stores V heads as [repeat,key,128], while the recurrent state and
             // activations are [key,repeat,128]. Retain complete K256 weight blocks:
             // each rank takes its key heads from all three repeat sections. The
@@ -1063,7 +1068,8 @@ ArtifactLoadPlan bind_artifact(artifact::Binder& binder, WeightsProfile weights_
     out.frontend     = qwen3_6::bind_frontend_resources(binder);
     out.features     = features;
     const bool ggml_k = weights_profile == WeightsProfile::Qwen38GgmlK;
-    const bool gguf   = weights_profile == WeightsProfile::Qwen38Gguf;
+    const bool gguf   = weights_profile == WeightsProfile::Qwen38Gguf ||
+                        weights_profile == WeightsProfile::Qwen38GgufFull;
     if (ggml_k && features.vision) {
         throw std::invalid_argument(
             "qwen3.8-27b gguf-q4-k-m artifacts deliver Text and MTP; start them without --vision");
@@ -1090,6 +1096,7 @@ ArtifactLoadPlan bind_artifact(artifact::Binder& binder, WeightsProfile weights_
     case WeightsProfile::Qwen38Nvfp4:
     case WeightsProfile::Qwen38GgmlK:
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         bind_qwen38_fused_text_layers(binder, out, weights_profile);
         break;
     default:
@@ -1101,7 +1108,11 @@ ArtifactLoadPlan bind_artifact(artifact::Binder& binder, WeightsProfile weights_
     const artifact::TensorPlacement proposal_placement =
         features.optimized_proposal() ? artifact::TensorPlacement::Device
                                       : artifact::TensorPlacement::ValidateOnly;
-    if (gguf) {
+    if (weights_profile == WeightsProfile::Qwen38GgufFull) {
+        if (features.optimized_proposal()) {
+            throw artifact::ArtifactError("gguf-blocks-full does not contain an optimized proposal head");
+        }
+    } else if (gguf) {
         out.draft_head = bind_gguf_weight(binder, "text/draft_head", 131072, 5120,
                                           proposal_placement);
     } else {
@@ -1110,9 +1121,11 @@ ArtifactLoadPlan bind_artifact(artifact::Binder& binder, WeightsProfile weights_
                                             {131072, 5120}, proposal_placement),
             .format = out.draft_format};
     }
-    out.draft_head_token_ids = artifact::bind_tensor(
-        binder, "text/draft_head_token_ids", NumericFormat::I32, {131072}, proposal_placement);
-    validate_draft_ids(binder, out.draft_head_token_ids);
+    if (weights_profile != WeightsProfile::Qwen38GgufFull) {
+        out.draft_head_token_ids = artifact::bind_tensor(
+            binder, "text/draft_head_token_ids", NumericFormat::I32, {131072}, proposal_placement);
+        validate_draft_ids(binder, out.draft_head_token_ids);
+    }
 
     const artifact::TensorPlacement mtp_placement = features.mtp()
                                                         ? artifact::TensorPlacement::Device

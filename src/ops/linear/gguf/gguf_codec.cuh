@@ -246,6 +246,18 @@ __device__ __forceinline__ void decode8<GgufType::Q6_K>(const unsigned char* b, 
     }
 }
 
+template <>
+__device__ __forceinline__ void decode8<GgufType::Q8_0>(const unsigned char* block, int group,
+                                                        float (&values)[8]) {
+    const unsigned char* subblock = block + (group / 4) * 34;
+    const float scale = f16(subblock, 0);
+#pragma unroll
+    for (int index = 0; index < 8; ++index) {
+        values[index] = scale * static_cast<float>(
+            static_cast<signed char>(u8(subblock, 2 + (group % 4) * 8 + index)));
+    }
+}
+
 // --- int8 decoders for the A8 vector route -----------------------------------------------------
 // decode_i8 yields the same eight values as decode8 as `scale * code - minimum`, with the eight
 // integer codes packed as signed bytes into two words (values 0..3 in w[0], 4..7 in w[1]), so a dot
@@ -467,6 +479,17 @@ __device__ __forceinline__ void decode_i8<GgufType::Q6_K>(const unsigned char* b
     }
 }
 
+template <>
+__device__ __forceinline__ void decode_i8<GgufType::Q8_0>(const unsigned char* block, int group,
+                                                          int (&codes)[2], float& scale,
+                                                          float&, const void*) {
+    const unsigned char* subblock = block + (group / 4) * 34;
+    scale = f16(subblock, 0);
+    const int offset = 2 + (group % 4) * 8;
+    codes[0] = static_cast<int>(u32(subblock, offset));
+    codes[1] = static_cast<int>(u32(subblock, offset + 4));
+}
+
 // Runtime-type dispatch for paths where the type is not a template parameter.
 __device__ __forceinline__ void decode8(GgufType type, const unsigned char* block, int j8,
                                         float (&w)[8]) {
@@ -481,6 +504,7 @@ __device__ __forceinline__ void decode8(GgufType type, const unsigned char* bloc
     case GgufType::Q2_K: decode8<GgufType::Q2_K>(block, j8, w); return;
     case GgufType::Q4_K: decode8<GgufType::Q4_K>(block, j8, w); return;
     case GgufType::Q6_K: decode8<GgufType::Q6_K>(block, j8, w); return;
+    case GgufType::Q8_0: decode8<GgufType::Q8_0>(block, j8, w); return;
     }
 }
 

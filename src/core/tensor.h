@@ -41,7 +41,7 @@ enum class QType : std::uint16_t {
     GGUF                 = 10,
 };
 
-// One ggml block type of a GGUF-blocks weight. Every block covers 256 values.
+// One ggml block type of a GGUF-blocks weight. Q8_0 covers 32 values; the others cover 256.
 enum class GgufType : std::uint8_t {
     IQ4_XS  = 0,
     IQ3_S   = 1,
@@ -53,9 +53,14 @@ enum class GgufType : std::uint8_t {
     Q2_K    = 7,
     Q4_K    = 8,
     Q6_K    = 9,
+    Q8_0    = 10,
 };
 
-inline constexpr int kGgufTypeCount = 10;
+inline constexpr int kGgufTypeCount = 11;
+
+constexpr int gguf_block_values(GgufType type) {
+    return type == GgufType::Q8_0 ? 32 : 256;
+}
 
 constexpr int gguf_block_bytes(GgufType type) {
     switch (type) {
@@ -69,13 +74,18 @@ constexpr int gguf_block_bytes(GgufType type) {
     case GgufType::Q2_K: return 84;
     case GgufType::Q4_K: return 144;
     case GgufType::Q6_K: return 210;
+    case GgufType::Q8_0: return 34;
     }
     return 0;
 }
 
+constexpr int gguf_tile_bytes(GgufType type) {
+    return 256 / gguf_block_values(type) * gguf_block_bytes(type);
+}
+
 // A GGUF-blocks weight is up to four consecutive row runs, each stored as whole rows of one ggml
 // block type in its own allocation. Row r of the logical matrix is row (r - first_row) of the
-// run containing it; a run's rows are `row_bytes = (k / 256) * gguf_block_bytes(type)` apart.
+// run containing it; a run's rows are `row_bytes = (k / block_values) * block_bytes` apart.
 struct GgufSegment {
     const void* data   = nullptr;
     std::int32_t rows  = 0;

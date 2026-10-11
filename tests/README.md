@@ -5,6 +5,40 @@ benchmark-report, and external protocol behavior. Repository verification princi
 [`../AGENTS.md`](../AGENTS.md); Op contract and CUDA implementation guidance is in
 [`../docs/maintainer/op-development.md`](../docs/maintainer/op-development.md).
 
+## Coder390 Verification
+
+For the Coder390 Q6_K MTP V3 artifact, set
+`NINFER_QWEN3_8_27B_FULL_WEIGHTS` to its explicit path when running
+`ninfer_artifact_reader_test`. Set `NINFER_V100_DUO_ARTIFACT` to the same path and
+`NINFER_V100_DUO_PROPOSAL_HEAD=full` for `ninfer_qwen3_8_27b_v100-duo_real_test`
+and `ninfer_qwen3_8_27b_v100-duo_prefix_real_test`.
+`ninfer_gguf_test` qualifies Q8_0 through public Linear and Embedding calls: exact
+stored-scale decoding, FP64 dots at the 5120-wide MTP and 124160-row TP2 vocabulary shapes,
+A16/A8/prefill route boundaries and CUDA Graph replay, checking every Q8_0 output row.
+Q8_0 A8 dots compare directly
+against the original BF16 activation with relative L2 below 0.015 and a pointwise cap
+of `0.025 * sqrt(sum(product^2))` plus output-rounding and FP32 accumulation allowances;
+A16/prefill retain the suite's 0.004 relative L2 criterion.
+
+On 2026-10-11, the CUDA 12.8/GCC 13 build on two V100-SXM2 16 GB GPUs passed the
+reader gate on Coder390, official NVFP4, Swift-1.5 NVFP4 and GSQ-RCO IQ3_S artifacts,
+exact Q8_0 slicing, artifact materialization and the GGUF numerical suite. The Coder390
+TP2 integration probe used INT8 KV, context 4096, prefill chunk 256 and MTP3 with a full
+proposal head. Graph/eager token sequences and acceptance counters matched; MTP and
+ordinary continuous decode produced the same 64 tokens. Its strict fresh-prefill
+teacher-forced argmax gate failed at one position with an emitted-logit deficit of
+0.125. The same position therefore also differs from ordinary continuous decode.
+The test remains strict; this result does not qualify exact greedy parity across
+prefill/decode partitions or losslessness against fresh-prefill logits.
+
+The prefix gate matched graph/eager outputs, logit bits, acceptance and retained frontiers
+for response replay, suffix append, normalized history, exact hits and a custom stop after
+accepted drafts. Its overall result still fails the strict cold-choice teacher-force
+check: at resident-exact output position 24, cached token 264 and cold token 539 both
+have zero deficit in fresh-prefill BF16 logits, whose argmax selects 264. Graph and
+eager each report one mismatch. The check is deferred until after replay comparisons
+so it records both results, and still makes the gate fail.
+
 ## Organization
 
 - `artifact/` — Python container, registered layout, quantization, and resource behavior;

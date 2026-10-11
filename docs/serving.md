@@ -41,8 +41,13 @@ its embedded companion and `--tp 2`; it also supports Vision. The NVFP4 profile
 requires `--lm-head-draft` for DFlash2 (its FP8 full-head top-16 route is not
 supported). A later request cannot enable a capability omitted at startup.
 
+The Coder390 Q6_K MTP V3 artifact projects to `qwen3.8-27b/gguf-blocks-full` and has no
+indexed proposal head. Use `--spec mtp --draft-tokens 3` without `--lm-head-draft`, or
+select `proposal-head=full` in the V100 launcher. The [README](../README.md) records its
+tested two-card context and KV settings.
+
 `--tp 2` splits one model across two GPUs and requires an explicit `--devices A,B` naming one
-distinct device per rank. It supports `--spec mtp` (with `--draft-tokens` and `--lm-head-draft`)
+distinct device per rank. It supports `--spec mtp` (with `--draft-tokens` and an optional `--lm-head-draft`)
 and `--vision` for the 27B package's execution-qualified Vision artifacts. Vision weights and
 encoding reside only on the primary rank; composed embeddings are copied to the peer before
 split text prefill, and both ranks use the same three-axis positions and per-request RoPE delta.

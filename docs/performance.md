@@ -1437,6 +1437,139 @@ inspection, so these rows remain same-prompt throughput rather than a
 quality or fixed-output comparison. Reproduce with the same command and the
 artifact path swapped.
 
+## V100 Duo Coder390 Q6_K MTP
+
+October 11, 2026: the public Engine and production server ran
+`Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer` from
+[nerkyor's model repository](https://huggingface.co/nerkyor/Qwen3.8-27B-Coder390-EfficientThink-Opus5.5-GPT6Astra-Grok4.7-DSV4Pro-K3-SFT-RLOO-GGUF-NInfer).
+The artifact projects to `qwen3.8-27b/gguf-blocks-full`: native Q6_K text
+weights, Q8_0 embedding/output/MTP input, and a full-vocabulary proposal head.
+The server launcher needs `proposal-head=full`; direct executables omit
+`--lm-head-draft`. This campaign uses 2 × Tesla V100-SXM2 16 GB with NVLink,
+driver 580.178.04, CUDA 12.8, GCC 13.3, TP2, INT8 group-64 KV and CUDA Graph.
+The benchmark and corpus targets were rebuilt in `build-v100-duo`.
+
+These are fresh measurements of a separate fine-tune on the October 11 build.
+The older NVFP4, GSQ and Swift tables retain their original dates, prompts
+and configurations; they are historical throughput references rather than a
+matched current-build A/B or an output-quality comparison. Strict
+fresh-prefill greedy parity remains unqualified; see
+[the numerical and integration results](../tests/README.md#coder390-verification).
+
+### Single-request capacity
+
+With full-vocabulary MTP3, C1, native RoPE and the minimum supported
+128-token prefill chunk, explicit context/KV **183,360** starts with
+**69 MiB free per GPU** and completes a 128-output-token HTTP request.
+The next 64-token page, 183,424, is rejected before weights upload:
+4,388,601,600 bytes required versus 4,388,342,784 available for runtime.
+The successful profile reserves 4,387,452,672 bytes with about 0.80 MiB
+of planned slack. The observed free memory also reflects the difference
+between the planned graph allowance and graph allocations actually observed.
+This is a near-OOM capacity profile for this hardware and MTP window;
+input plus output must fit the ceiling. The 131,072-context/4,096-chunk
+C1 speed profile leaves 499 MiB free with MTP3.
+
+### Natural-completion MTP sweep
+
+The natural-completion sweep repeats the exact 74-token
+[pelican prompt](#v100-duo-decode-pelican-html) three times per resident
+MTP3/4/5 server, with C1, context/KV 131,072, chunk 4,096,
+`--no-thinking --no-prefix-reuse`, greedy temperature 0, seed 42 and
+`max_tokens:12288`. Mean decode is the arithmetic mean of
+`(completion_tokens - 1) / timings_seconds.decode`. Peak is the highest
+logged five-second decode interval with one running request. Load and
+prefill are excluded.
+
+| MTP | Output tokens per run | Peak 5-second tok/s | Mean whole-request tok/s | Draft acceptance | Startup free per GPU |
+|---:|---:|---:|---:|---:|---:|
+| 3 | 8,314 | 111.591 | 101.744 | 87.41% | 499 MiB |
+| 4 | 5,924 | 104.994 | 91.907 | 80.67% | 499 MiB |
+| 5 | 7,367 | 110.595 | 94.806 | 75.94% | 497 MiB |
+
+All nine requests ended with a stop token, had zero prefix-cache hits and
+no reasoning content. Each window's three response texts matched, while
+different windows produced different completions. Per-request decode rates
+were 101.741–101.748, 91.896–91.917 and 94.798–94.813 tok/s respectively.
+MTP3 has the highest mean for this artifact and prompt; no independent
+output-quality judgment was made. The shared prompt does not make these
+different-length responses a fixed-output comparison.
+
+There are no completed fixed-code, SDK-first-token or occupied-context
+speed measurements in this campaign. The maximum-context result above
+qualifies startup and a short request; it does not qualify a full
+183K-occupied completion or establish long-context speed.
+
+### NVFP4 MTP3 regression check
+
+The October 11 newly compiled server also ran the official
+`$HOME/models/qwen3_8_27b_nvfp4.ninfer`, on the same two V100s and toolchain.
+It used the October 2 README recipe: optimized MTP3, TP2, INT8 KV, Graph,
+C1, context/KV 131,072, chunk 4,096, the identical 74-token pelican request,
+greedy sampling, seed 42, no thinking or prefix reuse, and three natural
+completions. No earlier binary was rebuilt for this check.
+
+| Metric | Historical reference | October 11 result |
+|---|---:|---:|
+| Mean whole-request decode | 138.058 tok/s | 138.053 tok/s |
+| Peak five-second decode | 148.2 tok/s | 148.987 tok/s |
+| Output tokens per run | 9,668 | 9,668 / 9,668 / 9,668 |
+| Accepted/drafted per run | 7,003 / 7,998 | 7,003 / 7,998 in all three runs |
+
+The mean differs by -0.0036% from the historical full-precision value;
+per-run rates were 138.051, 138.058 and 138.050 tok/s, with decode phases
+of 70.024602, 70.021507 and 70.025271 seconds. The speed reference is the
+[October 2 comparison](#v100-duo-october-2026-rebuild-two-artifact-comparison);
+the accepted/drafted reference is the earlier
+[MTP3 pelican measurement](#v100-duo-decode-pelican-html). These observations
+show no speed regression on this workload.
+
+All three requests stopped naturally with zero prefix-cache hits and no
+reasoning content; all three full response texts matched. Their output
+lengths and MTP counters agree with the recorded references. The extracted
+HTML parsed with the existing parse5 5.1.1 library without parse errors,
+contained one inline SVG with 92 shape elements and 13 SVG animations,
+including wheel rotations and two leg-path morph animations, and had no
+external `src`/`href` resources. Browser rendering was not tested. Historical
+response bodies were not retained, so these checks do not establish a
+byte-for-byte match against the October 2 output.
+
+Raw requests, responses, timings, parser diagnostics and the extracted
+`pelican.html` are under
+`profiles/bench/nvfp4_mtp3_regression_20261011/`. Reproduce with the
+pelican request protocol and this server command:
+
+```bash
+tools/v100/ninfer-v100-duo.sh model="$HOME/models/qwen3_8_27b_nvfp4.ninfer" \
+  draft-tokens=3 proposal-head=optimized \
+  --max-context 131072 --kv-capacity 131072 --prefill-chunk 4096 \
+  --max-concurrency 1 --no-thinking --no-prefix-reuse \
+  --request-log-jsonl /tmp/nvfp4-mtp3-regression.requests.jsonl
+```
+
+### Reproduction
+
+Use the artifact's explicit path and repeat the server command for
+`draft-tokens=3`, `4` and `5`, stopping the previous server before changing
+the window. After each server is ready, submit the identical
+[pelican JSON request](#v100-duo-decode-pelican-html) three times. Preserve
+the responses and `request_done`/five-second `throughput` records.
+
+```bash
+tools/v100/ninfer-v100-duo.sh \
+  model="$HOME/models/Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer" \
+  draft-tokens=3 proposal-head=full \
+  --max-context 131072 --kv-capacity 131072 --prefill-chunk 4096 \
+  --max-concurrency 1 --no-thinking --no-prefix-reuse \
+  --request-log-jsonl /tmp/coder390-mtp3.requests.jsonl
+```
+
+For the capacity boundary, keep MTP3, change context/KV to 183,360 and
+chunk to 128, and use one slot. Raising context/KV to 183,424 reproduces
+the reservation rejection on the idle measured host. The local raw
+server logs and responses are under
+`profiles/bench/coder390_20261011/`.
+
 ## V100 Duo maximum-context capacity sweep
 
 The capacity comparison in the README varies only the requested maximum context from 1,024

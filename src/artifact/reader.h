@@ -39,6 +39,7 @@ enum class NumericFormat {
     GGUF_Q2_K,
     GGUF_Q4_K,
     GGUF_Q6_K,
+    GGUF_Q8_0,
 };
 
 enum class StorageLayout {
@@ -64,8 +65,9 @@ std::uint64_t tensor_encoded_size(StorageLayout layout, NumericFormat format,
                                   std::span<const std::uint64_t> shape,
                                   std::uint64_t stored_bytes = 0);
 std::uint64_t ggml_k_code_offset(std::uint64_t rows);
-// Bytes of one 256-value block of a GGUF_* format; zero for every other format.
+// Bytes of one stored block of a GGUF_* format; zero for every other format.
 std::uint64_t gguf_block_bytes(NumericFormat format) noexcept;
+std::uint64_t gguf_block_values(NumericFormat format) noexcept;
 inline bool is_gguf_format(NumericFormat format) noexcept { return gguf_block_bytes(format) != 0; }
 void validate_ggml_k_payload(std::span<const std::uint64_t> shape,
                              std::span<const std::byte> payload);

@@ -1,9 +1,9 @@
 # NInfer V100 Duo
 
 Qwen3.8-27B inference on **2 × Tesla V100-SXM2 16 GB (NVLink)**, TP2 and
-CUDA 12.8. One build supports all three artifacts below; choose one at server
-startup. All contain Text, Vision, MTP and a DFlash2 companion; the comparison
-and recommended profiles below use **MTP3**.
+CUDA 12.8. One build supports all four artifacts below; choose one at server
+startup. The first three include Text, Vision, MTP and a DFlash2 companion;
+Coder390 uses Text and full-vocabulary MTP. The launcher defaults to **MTP3**.
 Based on [Neroued/ninfer](https://github.com/Neroued/ninfer) and
 [geoffwatts/ninfer-v100](https://github.com/geoffwatts/ninfer-v100).
 
@@ -16,10 +16,40 @@ Download the `.ninfer` artifact, not the source checkpoint or raw GGUF:
 | Official Qwen3.8-27B NVFP4 | [Hugging Face](https://huggingface.co/neroued/Qwen3.8-27B-nvfp4-NInfer) | `qwen3_8_27b_nvfp4.ninfer` | Faster MTP decode |
 | GSQ-RCO IQ3_S NInfer v3 | [Hugging Face](https://huggingface.co/WaveCut/Qwen3.8-27B-GSQ-RCO-IQ3_S-NInfer-v3) | `Qwen3.8-27B-GSQ-RCO-IQ3_S-ninfer-v3.ninfer` | Faster prefill; full native 262,144-token context |
 | Swift-1.5 Qwen3.8-27B OracleRouter DFlash2 NVFP4 | [Hugging Face](https://huggingface.co/kvnxiao/swift-1.5-qwen3.8-27b-orcarouter-dflash2-nvfp4-ninfer) | `swift-1.5-qwen3.8-27b-orcarouter-dflash2-nvfp4.ninfer` | Fastest measured MTP decode of the three |
+| Qwen3.8-27B Coder390 EfficientThink Q6_K MTP | [Hugging Face](https://huggingface.co/nerkyor/Qwen3.8-27B-Coder390-EfficientThink-Opus5.5-GPT6Astra-Grok4.7-DSV4Pro-K3-SFT-RLOO-GGUF-NInfer) | `Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer` | Coder fine-tune with native Q6_K weights and full-vocabulary MTP |
 
-All three load as the same `qwen3.8-27b` target and take the same profile
-flags; only the artifact path changes. Swift-1.5 is a separately fine-tuned
-model, so its completions differ from the official artifact's.
+All four load as the `qwen3.8-27b` family. The first three use an indexed
+proposal head; Coder390 requires `proposal-head=full` and its own memory
+profiles. Swift-1.5 and Coder390 are separately fine-tuned models, so their
+completions differ from the official artifact's.
+
+`Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer` V3 is also supported.
+It preserves Q6_K text weights and Q8_0 embedding/output/MTP input weights and uses
+full-vocabulary MTP instead of an indexed proposal head. Select `proposal-head=full`:
+
+```bash
+tools/v100/ninfer-v100-duo.sh \
+  model="$HOME/models/Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer" \
+  draft-tokens=3 proposal-head=full \
+  --max-context 131072 --prefill-chunk 1024 \
+  --max-concurrency 2 --kv-capacity 131072
+```
+
+On two V100-SXM2 16 GB cards with CUDA 12.8, this configuration starts with about
+647 MiB free per GPU. Two concurrent non-thinking 128-token HTTP generations completed with
+full-vocabulary MTP and a two-row decode batch, including SSE and a 1606-token
+prompt spanning two prefill chunks. The 131072-token KV pool is shared between requests;
+two full 131072-token contexts cannot fit simultaneously.
+For more free memory, use `--max-context 65536 --prefill-chunk 1024 --max-concurrency 2
+--kv-capacity auto`: this also passed concurrent generation, with a 123776-token shared
+pool and about 1.14 GiB free per GPU.
+The original 131072-context/4096-chunk/two-slot configuration cannot reserve the
+1 GiB `auto` headroom: its minimum runtime needs 3.90 GiB after weights, with only
+4.09 GiB available. Direct CLI/server invocations use
+`--spec mtp --draft-tokens 3` and omit `--lm-head-draft`; ordinary generation is also supported.
+Strict fresh-prefill/continuous-decode greedy parity is not qualified for this artifact;
+see [verification results](tests/README.md#coder390-verification).
+Single-request speed and maximum-context commands are in [Startup Profiles](#startup-profiles).
 
 Build with `tools/v100/build.sh`. For the configurations below, run:
 
@@ -36,7 +66,7 @@ Stop the previous server before switching models.
 
 ### MTP3, MTP4, MTP5
 
-Same rebuilt servers, 131,072-token capacity and a 74-token pelican/SVG/HTML
+The October 2/5 measurements use the same rebuilt servers, 131,072-token capacity and a 74-token pelican/SVG/HTML
 prompt. Each row has three naturally completed, single-request, greedy runs
 with no thinking or prefix reuse. **Peak** is the fastest logged five-second
 decode interval; **average** is the mean of the three whole-request decode
@@ -65,13 +95,46 @@ therefore the launcher stays on MTP3 by default. Select MTP4/5 by adding
 `draft-tokens=4` or `draft-tokens=5` **immediately after** `model=...`, and
 review the resulting output.
 
+**Coder390 — October 11, 2026:** same 74-token prompt, 131,072-token
+capacity, 4,096-token chunks and three greedy, naturally completed requests
+per window, using its full-vocabulary proposal head. These are separate
+measurements on the October 11 build; the other models' rows retain their
+October 2/5 builds and dates.
+
+| Window | Output tokens per run | Peak 5 s | Average decode |
+|---|---:|---:|---:|
+| MTP3 | 8,314 | **111.6 tok/s** | **101.74 tok/s** |
+| MTP4 | 5,924 | 105.0 tok/s | 91.91 tok/s |
+| MTP5 | 7,367 | 110.6 tok/s | 94.81 tok/s |
+
+All nine responses stopped naturally, with no thinking or prefix-cache hits.
+**MTP3 has the highest mean decode rate for Coder390 on this task**, so keep
+`draft-tokens=3 proposal-head=full`. Different windows produce different
+completions; these rates do not establish output-quality parity. Agent
+first-token and occupied long-context speeds are not measured in this
+campaign. Details and reproduction:
+[Coder390 measurements](docs/performance.md#v100-duo-coder390-q6_k-mtp).
+
+**NVFP4 MTP3 regression check — October 11:** the newly compiled server
+repeated the same recipe three times. Mean decode is **138.05 tok/s**
+versus the historical **138.06 tok/s** (less than 0.01% difference), with
+a **149.0 tok/s** five-second peak. All three responses naturally ended at
+**9,668 tokens**, and their full texts match each other. MTP accepted
+7,003/7,998 drafts per run, matching the earlier recorded counters.
+HTML/SVG parsing passed, with wheel and leg animations and no external
+assets. No regression was observed on this workload; historical response
+text was not retained for a byte-for-byte comparison. See
+[regression evidence](docs/performance.md#nvfp4-mtp3-regression-check).
+
 ### Three Agent First Requests
 
-The Pi, Codex and Claude Agent SDKs sent their first requests to a **local
-capture server**, not a model provider. Each captured payload was rendered
-and tokenized by both artifacts; corresponding input token IDs matched.
+For the October 2 comparison, the Pi, Codex and Claude Agent SDKs sent their first requests to a **local
+capture server**, not a model provider. The harness serialized the captured
+system/tools/message fields into text snapshots, then tokenized them with
+both artifacts; corresponding input token IDs matched.
 The table is one uncached Engine request per capture with MTP3, 131,072-token
-capacity, 4,096-token chunks and eight output tokens. Decode Graph is primed
+capacity, 4,096-token chunks and eight measured decode tokens after the prefill
+token. Decode Graph is primed
 separately; the Agent prompt has no measured-request warmup.
 
 | Captured SDK | Input tokens | NVFP4 first token | GSQ first token | NVFP4 prefill | GSQ prefill |
@@ -82,7 +145,9 @@ separately; the Agent prompt has no measured-request warmup.
 
 First-token time starts at the Engine request, **not** model load, SDK startup,
 network transport, Agent tool execution or the first visible UI character.
-These are captured prompt measurements, not interactive Agent benchmarks.
+These snapshots go directly to the Engine rather than through serving
+protocol translation. They measure captured-prompt prefill, not interactive
+Agent execution.
 Methods and reproduction: [two-artifact measurements](docs/performance.md#v100-duo-october-2026-rebuild-two-artifact-comparison).
 
 ### Long-Context Decay (Earlier Campaign)
@@ -187,6 +252,39 @@ features or aggregate throughput over single-request speed:
 | NVFP4 | Text concurrency | `--max-context 155648 --prefill-chunk 4096 --max-concurrency 2 --kv-capacity 155648` | Two-row decode for overlapping requests; 703 MiB free in the earlier startup test; smaller per-request ceiling. |
 | NVFP4 | Vision | `--vision --vision-max-tokens 2048 --max-context 155648 --prefill-chunk 1024 --max-concurrency 2 --kv-capacity 155648` | Two Vision slots, tested image requests; 713 MiB free after the rebuilt-server startup. |
 | GSQ-RCO | Vision and native context | `--vision --vision-max-tokens 2048 --max-context 262144 --prefill-chunk 1024 --max-concurrency 3 --kv-capacity auto` | Tested three-row real-image decode; `auto` resolved to 344,832 shared tokens and 1.20 GiB free after rebuilt-server startup. |
+
+**Coder390 — single-request speed:**
+
+```bash
+tools/v100/ninfer-v100-duo.sh \
+  model="$HOME/models/Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer" \
+  draft-tokens=3 proposal-head=full \
+  --max-context 131072 --prefill-chunk 4096 \
+  --max-concurrency 1 --kv-capacity 131072
+```
+
+This is the Coder390 short-prompt benchmark configuration. MTP3 startup leaves
+499 MiB free per GPU. For two active requests, use the 1,024-token chunk
+in the Coder390 command under [Models](#models).
+
+**Coder390 — maximum text context with one request and MTP3:**
+
+```bash
+tools/v100/ninfer-v100-duo.sh \
+  model="$HOME/models/Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer" \
+  draft-tokens=3 proposal-head=full \
+  --max-context 183360 --prefill-chunk 128 \
+  --max-concurrency 1 --kv-capacity 183360
+```
+
+On the October 11 CUDA 12.8 build, **183,360 tokens** starts and completes
+a short HTTP generation; the next 64-token KV page at 183,424 is rejected
+by the memory reservation. This uses the minimum supported 128-token prefill
+chunk and leaves only **69 MiB free per GPU** at startup. It is a near-OOM
+capacity profile with slower prefill; keep the GPUs free of other applications.
+Full occupied-context generation has not been measured for this profile.
+The ceiling includes input **plus output**, and is specific to MTP3, one slot,
+Graph and INT8 KV on these two 16 GB cards. It does not fit a 250K request.
 
 **NVFP4 text-only maximum context (separate, single-request option):**
 

@@ -26,6 +26,7 @@ The executable `--help` output is the exact source for command-line option spell
 | Qwen3.8-27B | `nvfp4` (third-party Swift-1.5 OracleRouter conversion, projected from NInfer v3) | [Hugging Face](https://huggingface.co/kvnxiao/swift-1.5-qwen3.8-27b-orcarouter-dflash2-nvfp4-ninfer) | Separately fine-tuned model; no model card in this repository |
 | Qwen3.8-27B | `gguf-q4-k-m` (local V100 profile) | generated locally as `qwen3_8_27b_q4_k_m.ninfer` | Text/MTP only; embedded Vision objects are validation-only |
 | Qwen3.8-27B | `gguf-blocks` (projected from NInfer v3) | GSQ-RCO IQ3_S v3 artifact, e.g. `Qwen3.8-27B-GSQ-RCO-IQ3_S-ninfer-v3.ninfer` | Text/MTP only; [artifact reference §15](maintainer/qwen3.8-27b-artifact.md#15-gguf-blocks-artifact) |
+| Qwen3.8-27B | `gguf-blocks-full` (third-party Coder390, projected from NInfer v3) | [Hugging Face](https://huggingface.co/nerkyor/Qwen3.8-27B-Coder390-EfficientThink-Opus5.5-GPT6Astra-Grok4.7-DSV4Pro-K3-SFT-RLOO-GGUF-NInfer) | `Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer`; full-vocabulary MTP; Q8_0 endpoints; [artifact reference §15](maintainer/qwen3.8-27b-artifact.md#15-gguf-blocks-artifact) |
 | Qwen3.6-35B-A3B | `groupwise-int` | [Hugging Face](https://huggingface.co/neroued/Qwen3.6-35B-A3B-NInfer) | [model card](../model-cards/Qwen3.6-35B-A3B-NInfer/README.md) |
 
 ## Repository-local guides

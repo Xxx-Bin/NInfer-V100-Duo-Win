@@ -87,14 +87,20 @@ std::uint64_t gguf_block_bytes(NumericFormat format) noexcept {
     case NumericFormat::GGUF_Q2_K: return 84;
     case NumericFormat::GGUF_Q4_K: return 144;
     case NumericFormat::GGUF_Q6_K: return 210;
+    case NumericFormat::GGUF_Q8_0: return 34;
     default: return 0;
     }
 }
 
+std::uint64_t gguf_block_values(NumericFormat format) noexcept {
+    return format == NumericFormat::GGUF_Q8_0 ? 32 : 256;
+}
+
 namespace {
-// gguf-blocks-v1 rows are whole, unpadded rows of 256-value blocks (storage-layouts.md).
+// gguf-blocks-v1 rows are whole, unpadded rows of stored blocks (storage-layouts.md).
 std::uint64_t gguf_row_bytes(NumericFormat format, std::uint64_t columns) {
-    return checked_mul(columns / 256, gguf_block_bytes(format), "GGUF row bytes");
+    return checked_mul(columns / gguf_block_values(format), gguf_block_bytes(format),
+                       "GGUF row bytes");
 }
 } // namespace
 
@@ -176,6 +182,8 @@ std::string_view format_name(NumericFormat format) noexcept {
         return "GGUF_Q4_K";
     case NumericFormat::GGUF_Q6_K:
         return "GGUF_Q6_K";
+    case NumericFormat::GGUF_Q8_0:
+        return "GGUF_Q8_0";
     }
     return {};
 }
@@ -596,6 +604,7 @@ TensorSlice tensor_column_slice(StorageLayout layout, NumericFormat format,
         // is a whole number of blocks per row and concatenates into the shard's own rows.
         (void)tensor_encoded_size(layout, format, shape);
         const std::uint64_t block_bytes = gguf_block_bytes(format);
+        const std::uint64_t block_values = gguf_block_values(format);
         for (const auto& columns : column_ranges) {
             require_slice(columns.begin % 256 == 0 && columns.count % 256 == 0,
                           "gguf-blocks-v1 column boundaries must be multiples of 256");
@@ -603,9 +612,10 @@ TensorSlice tensor_column_slice(StorageLayout layout, NumericFormat format,
         const std::array<SlicePlane, 1> planes = {SlicePlane{0, 0, block_bytes}};
         std::uint64_t destination              = 0;
         for (const SliceRange& range : column_ranges) {
-            append_column_plane_copies(out, planes, rows, range.begin / 256, shape[1] / 256,
-                                       total_count / 256, range.count / 256, destination);
-            destination += range.count / 256;
+            append_column_plane_copies(out, planes, rows, range.begin / block_values,
+                                       shape[1] / block_values, total_count / block_values,
+                                       range.count / block_values, destination);
+            destination += range.count / block_values;
         }
         out.encoded_bytes = checked_mul(rows, gguf_row_bytes(format, total_count),
                                         "GGUF column slice size");

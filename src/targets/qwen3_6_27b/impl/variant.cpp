@@ -361,6 +361,7 @@ std::size_t Variant::attention_projection_workspace_capacity_bytes(WeightsProfil
     case WeightsProfile::Qwen38GgmlK:
         return 0;
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return ops::attn_input_proj_workspace_capacity_bytes(
             QType::GGUF, 14336, TextConfig::hidden, ops::LinearPolicy::AllowA8, first, last);
     case WeightsProfile::Qwen36Nvfp4:
@@ -382,6 +383,7 @@ std::size_t Variant::attention_output_projection_workspace_capacity_bytes(
             QType::GGML_K, TextConfig::hidden, TextConfig::value_dim,
             ops::LinearPolicy::A16Only, first, last);
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return ops::linear_add_workspace_capacity_bytes(
             QType::GGUF, TextConfig::hidden, TextConfig::query_size,
             ops::LinearPolicy::AllowA8, first, last);
@@ -411,6 +413,7 @@ std::size_t Variant::gdn_input_projection_workspace_capacity_bytes(WeightsProfil
     case WeightsProfile::Qwen38GgmlK:
         return 0;
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return ops::gdn_input_proj_workspace_capacity_bytes(
             QType::GGUF, 16384, TextConfig::hidden, ops::LinearPolicy::AllowA8, first, last);
     case WeightsProfile::Qwen36GroupwiseInt:
@@ -437,6 +440,7 @@ std::size_t Variant::gdn_input_projection_snapshot_workspace_capacity_bytes(
                             QType::GGML_K, 16384, TextConfig::hidden,
                             ops::LinearPolicy::A16Only, batch_size, first, last));
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return std::max(kMinimumLeafWorkspaceBytes,
                         ops::gdn_input_proj_conv_snapshot_workspace_capacity_bytes(
                             QType::GGUF, 16384, TextConfig::hidden,
@@ -472,6 +476,7 @@ std::size_t Variant::gdn_input_projection_record_workspace_capacity_bytes(
                             QType::GGML_K, 16384, TextConfig::hidden,
                             ops::LinearPolicy::A16Only, batch_size, first, last));
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return std::max(kMinimumLeafWorkspaceBytes,
                         ops::gdn_input_proj_conv_record_workspace_capacity_bytes(
                             QType::GGUF, 16384, TextConfig::hidden,
@@ -505,6 +510,7 @@ std::size_t Variant::gdn_output_projection_workspace_capacity_bytes(WeightsProfi
     case WeightsProfile::Qwen38GgmlK:
         return 0;
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return ops::linear_add_workspace_capacity_bytes(QType::GGUF, TextConfig::hidden,
                                                         TextConfig::value_dim,
                                                         ops::LinearPolicy::AllowA8, first, last);
@@ -539,6 +545,7 @@ std::size_t Variant::post_mixer_workspace_capacity_bytes(WeightsProfile weights_
         return post_mixer_workspace_bytes(QType::GGML_K, QType::GGML_K,
                                           ops::LinearPolicy::A16Only, first, last);
     case WeightsProfile::Qwen38Gguf:
+    case WeightsProfile::Qwen38GgufFull:
         return post_mixer_workspace_bytes(QType::GGUF, QType::GGUF, ops::LinearPolicy::A16Only,
                                           first, last);
     case WeightsProfile::Qwen36GroupwiseInt:

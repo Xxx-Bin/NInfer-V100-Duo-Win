@@ -38,6 +38,7 @@ StorageLayout storage_layout_for(NumericFormat format) {
     case NumericFormat::GGUF_Q2_K:
     case NumericFormat::GGUF_Q4_K:
     case NumericFormat::GGUF_Q6_K:
+    case NumericFormat::GGUF_Q8_0:
         return StorageLayout::GgufBlocksV1;
     }
     throw std::logic_error("unhandled numeric format");
@@ -55,6 +56,7 @@ GgufType gguf_type_for(NumericFormat format) {
     case NumericFormat::GGUF_Q2_K: return GgufType::Q2_K;
     case NumericFormat::GGUF_Q4_K: return GgufType::Q4_K;
     case NumericFormat::GGUF_Q6_K: return GgufType::Q6_K;
+    case NumericFormat::GGUF_Q8_0: return GgufType::Q8_0;
     default: throw std::logic_error("not a GGUF block format");
     }
 }
@@ -301,7 +303,8 @@ Weight materialized_gguf_weight(const MaterializedArtifact& materialized,
     std::int64_t covered = 0;
     for (std::size_t i = 0; i < segments.size(); ++i) {
         const std::uint64_t row_bytes =
-            static_cast<std::uint64_t>(columns / 256) * gguf_block_bytes(formats[i]);
+            static_cast<std::uint64_t>(columns) / gguf_block_values(formats[i]) *
+            gguf_block_bytes(formats[i]);
         const std::uint64_t bytes = materialized.device_bytes(segments[i], device);
         if (row_bytes == 0 || bytes % row_bytes != 0) {
             throw ArtifactError("GGUF segment placement is not a whole number of rows");

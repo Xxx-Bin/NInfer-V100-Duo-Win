@@ -7,6 +7,8 @@
 #include "core/arena.h"
 #include "core/device.h"
 #include "ops/linear/gguf/gguf.h"
+#include "ninfer/ops/embedding.h"
+#include "ninfer/ops/linear.h"
 
 #include <cuda_bf16.h>
 #include <cuda_fp16.h>
@@ -52,6 +54,15 @@ std::array<double, 256> oracle(GgufType type, const std::uint8_t* b) {
     std::array<double, 256> y;
     double* out = y.data();
     switch (type) {
+    case GgufType::Q8_0: {
+        for (int block = 0; block < 8; ++block) {
+            const double scale = h(b + block * 34);
+            for (int index = 0; index < 32; ++index) {
+                out[block * 32 + index] = scale *
+                    static_cast<std::int8_t>(b[block * 34 + 2 + index]);
+            }
+        }
+    } break;
     case GgufType::IQ4_XS: {
         const double d = h(b);
         const std::uint16_t scales_h = u16(b + 2);
@@ -264,10 +275,19 @@ std::array<double, 256> oracle(GgufType type, const std::uint8_t* b) {
 
 // Random codes with finite, realistic super-scales at each format's scale fields.
 void random_block(GgufType type, std::uint8_t* b, std::mt19937& rng) {
-    const int bytes = gguf_block_bytes(type);
+    const int bytes = gguf_tile_bytes(type);
     for (int i = 0; i < bytes; ++i) { b[i] = std::uint8_t(rng()); }
     const float d = 0.0005F * float(1 + rng() % 17);
     switch (type) {
+    case GgufType::Q8_0:
+        for (int block = 0; block < 8; ++block) {
+            put_half(b + block * 34, block == 7 ? 0.0F :
+                                      (block % 3 == 0 ? -d : d * float(block + 1)));
+            b[block * 34 + 2] = 128;
+            b[block * 34 + 3] = 127;
+            b[block * 34 + 4] = 0;
+        }
+        break;
     case GgufType::IQ1_M: {
         const __half half = __float2half_rn(d * 4);
         std::uint16_t bits;
@@ -321,7 +341,7 @@ struct HostWeight {
     std::vector<double> row(int r) const {
         std::size_t s = 0;
         while (r >= rows[s]) { r -= rows[s++]; }
-        const int block_bytes = gguf_block_bytes(types[s]);
+        const int block_bytes = gguf_tile_bytes(types[s]);
         std::vector<double> out(k);
         for (int block = 0; block < k / 256; ++block) {
             const auto values = oracle(types[s], bytes[s].data() +
@@ -340,8 +360,8 @@ HostWeight make_weight(const std::vector<std::pair<GgufType, int>>& segments, in
         w.types.push_back(type);
         w.rows.push_back(rows);
         w.n += rows;
-        std::vector<std::uint8_t> bytes(std::size_t(rows) * (k / 256) * gguf_block_bytes(type));
-        for (std::size_t offset = 0; offset < bytes.size(); offset += gguf_block_bytes(type)) {
+        std::vector<std::uint8_t> bytes(std::size_t(rows) * (k / 256) * gguf_tile_bytes(type));
+        for (std::size_t offset = 0; offset < bytes.size(); offset += gguf_tile_bytes(type)) {
             random_block(type, bytes.data() + offset, rng);
         }
         w.device.push_back(std::make_unique<DeviceBuffer>(bytes.size()));
@@ -353,7 +373,7 @@ HostWeight make_weight(const std::vector<std::pair<GgufType, int>>& segments, in
 
 const char* name(GgufType type) {
     static const char* names[] = {"IQ4_XS", "IQ3_S", "IQ3_XXS", "IQ2_XS", "IQ2_XXS",
-                                  "IQ2_S",  "IQ1_M", "Q2_K",    "Q4_K",   "Q6_K"};
+                                  "IQ2_S",  "IQ1_M", "Q2_K",    "Q4_K",   "Q6_K", "Q8_0"};
     return names[static_cast<int>(type)];
 }
 
@@ -390,8 +410,9 @@ std::vector<double> represented_a8(const std::vector<__nv_bfloat16>& input, int 
 
 void check_projection(const HostWeight& host, int tokens, int sections, bool add, bool tiled,
                       bool with_workspace, std::mt19937& rng, const std::string& label,
-                      bool allow_a8 = false) {
+                      bool allow_a8 = false, bool capture = false) {
     const int n = host.n, k = host.k;
+    const bool q8 = host.types.front() == GgufType::Q8_0;
     std::vector<__nv_bfloat16> input(std::size_t(k) * tokens);
     for (auto& value : input) { value = __float2bfloat16_rn(float(int(rng() % 2001) - 1000) / 500.0F); }
     std::vector<__nv_bfloat16> initial(std::size_t(n) * tokens);
@@ -406,7 +427,7 @@ void check_projection(const HostWeight& host, int tokens, int sections, bool add
     std::vector<Tensor> outputs;
     std::vector<int> strides;
     for (int s = 0; s < sections; ++s) {
-        const int stride = section_rows[s] + 8;
+        const int stride = section_rows[s] + (q8 ? 0 : 8);
         strides.push_back(stride);
         buffers.push_back(std::make_unique<DeviceBuffer>(std::size_t(stride) * tokens * 2));
         std::vector<__nv_bfloat16> fill(std::size_t(stride) * tokens);
@@ -426,33 +447,67 @@ void check_projection(const HostWeight& host, int tokens, int sections, bool add
         workspace = std::make_unique<WorkspaceArena>(std::max<std::size_t>(bytes, 256));
     }
     Tensor xt(x.p, DType::BF16, {k, tokens});
-    ops::detail::gguf_project(xt, weight, outputs.data(), sections, add, tiled, allow_a8,
-                              workspace.get(), nullptr);
+    cudaStream_t stream = nullptr;
+    cudaGraph_t graph = nullptr;
+    cudaGraphExec_t executable = nullptr;
+    if (capture) {
+        CUDA_CHECK(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+        CUDA_CHECK(cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal));
+    }
+    if (q8 && sections == 1 && !add && !tiled) {
+        if (workspace) {
+            ops::linear(xt, weight, outputs.front(),
+                        allow_a8 ? ops::LinearPolicy::AllowA8 : ops::LinearPolicy::A16Only,
+                        *workspace, stream);
+        } else {
+            ops::linear(xt, weight, outputs.front(), stream);
+        }
+    } else {
+        ops::detail::gguf_project(xt, weight, outputs.data(), sections, add, tiled, allow_a8,
+                                  workspace.get(), stream);
+    }
+    if (capture) {
+        CUDA_CHECK(cudaStreamEndCapture(stream, &graph));
+        CUDA_CHECK(cudaGraphInstantiate(&executable, graph, nullptr, nullptr, 0));
+        CUDA_CHECK(cudaGraphLaunch(executable, stream));
+        CUDA_CHECK(cudaGraphLaunch(executable, stream));
+    }
     CUDA_CHECK(cudaDeviceSynchronize());
+    if (capture) {
+        CUDA_CHECK(cudaGraphExecDestroy(executable));
+        CUDA_CHECK(cudaGraphDestroy(graph));
+        CUDA_CHECK(cudaStreamDestroy(stream));
+    }
 
     const bool gemm_route = tokens > 16 && with_workspace;
     const bool a8_route   = allow_a8 && !gemm_route;
     const std::vector<double> quantized =
-        a8_route ? represented_a8(input, k, tokens, tiled) : std::vector<double>{};
+        a8_route && !q8 ? represented_a8(input, k, tokens, tiled) : std::vector<double>{};
+    std::vector<std::vector<__nv_bfloat16>> actual_outputs(sections);
+    for (int section = 0; section < sections; ++section) {
+        actual_outputs[section].resize(std::size_t(strides[section]) * tokens);
+        buffers[section]->copy_to_host(actual_outputs[section].data(), buffers[section]->bytes);
+    }
     double error2 = 0, reference2 = 0, worst = 0;
-    const int samples = std::min(n, 64);
+    const int samples = q8 ? n : std::min(n, 64);
     for (int sample = 0; sample < samples; ++sample) {
         const int row = sample == samples - 1 ? n - 1 : sample * (n / samples);
         int s = 0, local = row;
         while (local >= section_rows[s]) { local -= section_rows[s++]; }
-        std::vector<__nv_bfloat16> column(std::size_t(strides[s]) * tokens);
-        buffers[s]->copy_to_host(column.data(), buffers[s]->bytes);
+        const auto& column = actual_outputs[s];
         const auto decoded = host.row(row);
         for (int t = 0; t < tokens; ++t) {
             double reference = add ? double(__bfloat162float(initial[t * n + row])) : 0.0;
             double magnitude = 0.0;
+            double product_square_sum = 0.0;
             for (int j = 0; j < k; ++j) {
                 const int index = tiled ? tiled_input(j, k) : j;
-                const double activation = a8_route ? quantized[t * k + j]
+                const double activation = a8_route && !q8 ? quantized[t * k + j]
                                                    : double(__bfloat162float(input[t * k + index]));
                 const double product = decoded[j] * activation;
                 reference += product;
                 magnitude += std::abs(product);
+                product_square_sum += product * product;
             }
             const double actual = __bfloat162float(column[t * strides[s] + local]);
             if (!std::isfinite(actual)) { throw std::runtime_error(label + ": non-finite result"); }
@@ -462,7 +517,8 @@ void check_projection(const HostWeight& host, int tokens, int sections, bool add
             // One BF16 rounding of the result, FP32 accumulation over K products (and, on the A8
             // route, the FP32 product of the two scales per 8-value term), and on the tensor-core
             // route one FP16 rounding of each weight and activation operand.
-            const double tolerance = std::ldexp(std::abs(reference), -8) +
+            const double tolerance = (q8 && a8_route ? 0.025 * std::sqrt(product_square_sum) : 0.0) +
+                                     std::ldexp(std::abs(reference), -8) +
                                      (gemm_route ? std::ldexp(magnitude, -10) : 2e-5 * magnitude) +
                                      (add ? std::ldexp(std::abs(reference), -8) : 0.0);
             if (std::abs(actual - reference) > tolerance) {
@@ -478,7 +534,8 @@ void check_projection(const HostWeight& host, int tokens, int sections, bool add
               << " add=" << add << " tiled=" << tiled << " ws=" << with_workspace
               << " a8=" << a8_route
               << " relative_l2=" << relative << '\n';
-    if (!(relative < 4e-3)) { throw std::runtime_error(label + ": FP64 oracle mismatch"); }
+    const double relative_limit = q8 && a8_route ? 0.015 : 4e-3;
+    if (!(relative < relative_limit)) { throw std::runtime_error(label + ": FP64 oracle mismatch"); }
 }
 
 void check_embedding(const HostWeight& host, const std::string& label) {
@@ -487,7 +544,7 @@ void check_embedding(const HostWeight& host, const std::string& label) {
     id_buffer.copy_from_host(ids.data(), id_buffer.bytes);
     Tensor id_tensor(id_buffer.p, DType::I32, {static_cast<int>(ids.size())});
     Tensor output(out.p, DType::BF16, {host.k, static_cast<int>(ids.size())});
-    ops::detail::gguf_embedding(id_tensor, host.weight(), output, nullptr);
+    ops::embedding(id_tensor, host.weight(), output, nullptr);
     CUDA_CHECK(cudaDeviceSynchronize());
     std::vector<__nv_bfloat16> values(ids.size() * host.k);
     out.copy_to_host(values.data(), out.bytes);
@@ -507,10 +564,17 @@ void check_embedding(const HostWeight& host, const std::string& label) {
     ops::detail::gguf_dequantize_fp32(host.weight(), static_cast<float*>(full_device.p), nullptr);
     CUDA_CHECK(cudaDeviceSynchronize());
     full_device.copy_to_host(full.data(), full_device.bytes);
-    for (int row : {0, host.n - 1, host.n / 3}) {
+    const bool q8 = host.types.front() == GgufType::Q8_0;
+    const std::array<int, 3> sampled_rows{0, host.n - 1, host.n / 3};
+    const int row_checks = q8 ? host.n : static_cast<int>(sampled_rows.size());
+    for (int sample = 0; sample < row_checks; ++sample) {
+        const int row = q8 ? sample : sampled_rows[sample];
         const auto decoded = host.row(row);
         for (int j = 0; j < host.k; ++j) {
-            if (std::abs(double(full[std::size_t(row) * host.k + j]) - decoded[j]) >
+            const float expected = static_cast<float>(decoded[j]);
+            if ((q8 &&
+                 std::memcmp(&full[std::size_t(row) * host.k + j], &expected, sizeof(float)) != 0) ||
+                std::abs(double(full[std::size_t(row) * host.k + j]) - decoded[j]) >
                 1e-6 * std::abs(decoded[j]) + 1e-12) {
                 throw std::runtime_error(label + ": FP32 dequantization differs from ggml");
             }
@@ -529,7 +593,7 @@ int main() {
         const GgufType all[] = {GgufType::IQ4_XS, GgufType::IQ3_S, GgufType::IQ3_XXS,
                                 GgufType::IQ2_XS, GgufType::IQ2_XXS, GgufType::IQ2_S,
                                 GgufType::IQ1_M,  GgufType::Q2_K,  GgufType::Q4_K,
-                                GgufType::Q6_K};
+                                GgufType::Q6_K, GgufType::Q8_0};
         // Every format: exact decode, vector passes at 1..9 columns (two passes at 9), and the
         // tensor-core route above 16 columns.
         for (const GgufType type : all) {
@@ -540,6 +604,24 @@ int main() {
                 check_projection(host, tokens, 1, false, false, false, rng, name(type), true);
             }
             check_projection(host, 40, 1, false, false, true, rng, name(type));
+        }
+        {
+            const HostWeight projection = make_weight({{GgufType::Q8_0, 5120}}, 5120, rng);
+            check_embedding(projection, "Q8_0 model width");
+            for (const int tokens : {1, 4, 7, 8, 9, 15, 16, 17}) {
+                check_projection(projection, tokens, 1, false, false, true, rng,
+                                 "Q8_0 MTP TP2", true);
+                check_projection(projection, tokens, 1, false, false, false, rng,
+                                 "Q8_0 full-head A16");
+            }
+            const HostWeight full_head = make_weight({{GgufType::Q8_0, 124160}}, 5120, rng);
+            check_projection(full_head, 3, 1, false, false, false, rng, "Q8_0 vocabulary TP2");
+            check_projection(projection, 3, 1, false, false, false, rng,
+                             "Q8_0 A16 graph", false, true);
+            check_projection(projection, 4, 1, false, false, true, rng,
+                             "Q8_0 A8 graph", true, true);
+            check_projection(projection, 17, 1, false, false, true, rng,
+                             "Q8_0 GEMM graph", true, true);
         }
         // Real mixed parents: a GDN q|k|v (IQ3_S) + z (IQ3_XXS) at K=5120 into qkv/z sections,
         // an attention q|k|gate|v with four types and sections, residual accumulation, and the

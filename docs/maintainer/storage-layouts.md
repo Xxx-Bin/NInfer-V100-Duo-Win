@@ -16,7 +16,7 @@ The storage registry contains exactly these identities:
 | `blockscale-k16-m128x4-v1` | tensor layout | `NVFP4` | rank 2 `[N,K]`, `N % 128 == 0`, `K % 64 == 0` | 256 bytes |
 | `row-scale-v1` | tensor layout | `FP8_E4M3FN_ROW_BF16S` | rank 2 `[N,K]` | 256 bytes |
 | `ggml-k256-v1` | tensor layout | `GGML_K` | rank 2 `[N,K]`, `K % 256 == 0` | 256 bytes |
-| `gguf-blocks-v1` | tensor layout | the ten `GGUF_*` formats | rank 2 `[N,K]`, `K % 256 == 0` | 256 bytes |
+| `gguf-blocks-v1` | tensor layout | the eleven `GGUF_*` formats | rank 2 `[N,K]`, `K % 256 == 0` | 256 bytes |
 | `raw-bytes-v1` | resource encoding | not applicable | nonempty byte string | 1 byte |
 
 These are closed identities, not templates. A format/layout combination not present in the table is
@@ -384,13 +384,16 @@ and `Weight.qdata` to the code plane; scales remain inside the raw blocks.
 ## 9. `gguf-blocks-v1`
 
 This layout accepts one `GGUF_*` format per rank-two `[N,K]` matrix with positive dimensions and
-`K % 256 == 0`. The payload is the rows in logical order, each row its `K/256` blocks in order, each
+`K % 256 == 0`. The payload is the rows in logical order, each row its `K/block_values` blocks in order, each
 block exactly the bytes GGUF stores for it:
 
 ```text
-row_bytes     = (K / 256) * block_bytes(format)
+row_bytes     = (K / block_values(format)) * block_bytes(format)
 payload_bytes = N * row_bytes
 ```
+
+`block_values` is 32 for Q8_0 (34 bytes) and 256 for the other registered types.
+CUDA consumers process eight adjacent Q8_0 blocks as one 256-value tile without repacking.
 
 There is no header, padding, plane split or reordering; scales live inside the blocks. A row range
 is therefore one contiguous byte range, and TP row slicing copies whole rows. Column slicing

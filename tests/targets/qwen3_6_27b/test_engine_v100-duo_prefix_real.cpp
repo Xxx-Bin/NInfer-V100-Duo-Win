@@ -51,7 +51,12 @@ ninfer::EngineOptions engine_options(const char* artifact, bool graphs) {
     options.use_cuda_graph = graphs;
     options.speculative.backend = ninfer::SpeculativeBackend::Mtp;
     options.speculative.draft_tokens = 3;
-    options.speculative.proposal_head = ninfer::ProposalHead::Optimized;
+    const char* proposal = std::getenv("NINFER_V100_DUO_PROPOSAL_HEAD");
+    if (proposal == nullptr || std::strcmp(proposal, "optimized") == 0) {
+        options.speculative.proposal_head = ninfer::ProposalHead::Optimized;
+    } else if (std::strcmp(proposal, "full") != 0) {
+        throw std::runtime_error("NINFER_V100_DUO_PROPOSAL_HEAD must be full or optimized");
+    }
     return options;
 }
 
@@ -153,13 +158,13 @@ float logit_value(std::uint16_t bits) {
     return result;
 }
 
-void compare_cold_rounding(ninfer::Engine& engine, const Tokens& prompt,
+bool compare_cold_rounding(ninfer::Engine& engine, const Tokens& prompt,
                           const Observation& cached, const Observation& cold) {
     const auto& a = cached.result.generated_token_ids;
     const auto& b = cold.result.generated_token_ids;
     require(a.size() == b.size(), cached.name + ": cold output lengths differ");
     const auto [first_a, first_b] = std::mismatch(a.begin(), a.end(), b.begin());
-    if (first_a == a.end()) { return; }
+    if (first_a == a.end()) { return true; }
     const auto position = static_cast<std::size_t>(first_a - a.begin());
     std::cout << cached.name << "_cold first_divergence=" << position
               << " cached_token=" << *first_a << " cold_token=" << *first_b << std::endl;
@@ -177,6 +182,8 @@ void compare_cold_rounding(ninfer::Engine& engine, const Tokens& prompt,
     require(oracle.logits.size() >= kTokenDomain, "teacher-force logits omit vocabulary rows");
     require(*first_a >= 0 && static_cast<std::size_t>(*first_a) < kTokenDomain,
             "cached output is outside the vocabulary");
+    require(*first_b >= 0 && static_cast<std::size_t>(*first_b) < kTokenDomain,
+            "cold output is outside the vocabulary");
     ninfer::TokenId best = -1;
     float best_logit = -std::numeric_limits<float>::infinity();
     for (std::size_t i = 0; i < kTokenDomain; ++i) {
@@ -188,14 +195,18 @@ void compare_cold_rounding(ninfer::Engine& engine, const Tokens& prompt,
         }
     }
     const float deficit = best_logit - logit_value(oracle.logits[*first_a]);
+    const float cold_deficit = best_logit - logit_value(oracle.logits[*first_b]);
     std::cout << cached.name << "_cold teacher_force_argmax=" << best
-              << " cached_emitted_logit_deficit=" << deficit << std::endl;
-    require(oracle.result.generated_token_ids.front() == best && best == *first_b,
-            "the fresh shared-history oracle does not reproduce the cold choice");
+              << " cached_emitted_logit_deficit=" << deficit
+              << " cold_emitted_logit_deficit=" << cold_deficit
+              << " cold_teacher_force_match=" << (best == *first_b) << std::endl;
+    require(oracle.result.generated_token_ids.front() == best,
+            "the fresh shared-history oracle did not sample its argmax");
     // Bound already used by test_engine_mtp_tp2_real.cpp, not fitted to this fixture.
     constexpr float kNearTieBound = 0.5F;
     require(deficit <= kNearTieBound,
             cached.name + ": cold divergence exceeds the TP2 near-tie logit bound");
+    return best == *first_b;
 }
 
 Tokens continuation(const Tokens& prompt, const ninfer::GenerationResult& response,
@@ -211,11 +222,18 @@ Tokens continuation(const Tokens& prompt, const ninfer::GenerationResult& respon
     return result;
 }
 
-std::vector<Observation> exercise(const char* artifact, bool graphs) {
+struct ExerciseResult {
+    std::vector<Observation> observations;
+    std::size_t cold_teacher_force_mismatches = 0;
+};
+
+ExerciseResult exercise(const char* artifact, bool graphs) {
     ninfer::Engine engine(engine_options(artifact, graphs));
     require(engine.load_summary().tp == 2 && engine.load_summary().model_id == "qwen3.8-27b" &&
-                engine.load_summary().weights_id == "gguf-q4-k-m",
-            "this test requires the TP2 Qwen3.8 GGUF Q4_K_M artifact");
+                (engine.load_summary().weights_id == "gguf-q4-k-m" ||
+                 engine.load_summary().weights_id == "gguf-blocks" ||
+                 engine.load_summary().weights_id == "gguf-blocks-full"),
+            "this test requires a TP2 Qwen3.8 GGUF artifact");
     engine.debug_enable_logit_capture(true);
     engine.debug_enable_peer_egress_check(true);
     const auto input = coding_prompt();
@@ -224,6 +242,7 @@ std::vector<Observation> exercise(const char* artifact, bool graphs) {
             "coding fixture must have at least 2k tokens and leave room for continuations");
     using Path = ninfer::PrefixReusePath;
     std::vector<Observation> observations;
+    std::size_t cold_teacher_force_mismatches = 0;
     auto remember = [&](Observation observation) -> const Observation& {
         observations.push_back(std::move(observation));
         return observations.back();
@@ -284,19 +303,29 @@ std::vector<Observation> exercise(const char* artifact, bool graphs) {
     same_output(append_twice, append_twice_cold);
     const auto& exact_cold = remember(run(engine, "resident_exact_cold", engine.prepare_tokens(frontier),
                                           false, Path::FullReset));
-    compare_cold_rounding(engine, frontier, exact, exact_cold);
+    if (!compare_cold_rounding(engine, frontier, exact, exact_cold)) {
+        ++cold_teacher_force_mismatches;
+    }
 
-    require(first.result.generated_token_ids[0] != first.result.generated_token_ids[1],
-            "partial-terminal fixture repeats its first token");
+    const auto& first_tokens = first.result.generated_token_ids;
+    std::size_t stop_position = kOutput / 2;
+    while (stop_position < first_tokens.size() - 1 &&
+           std::find(first_tokens.begin(), first_tokens.begin() + stop_position,
+                     first_tokens[stop_position]) != first_tokens.begin() + stop_position) {
+        ++stop_position;
+    }
+    require(stop_position < first_tokens.size() - 1,
+            "partial-terminal fixture has no unique later stop token");
+    const auto stopped_outputs = static_cast<std::uint32_t>(stop_position + 1);
     const auto& stopped = remember(run(engine, "partial_terminal", engine.prepare(input), false,
-        Path::FullReset, kOutput, first.result.generated_token_ids[1], 2));
+        Path::FullReset, kOutput, first_tokens[stop_position], stopped_outputs));
     require(stopped.result.finish_reason == ninfer::FinishReason::StopToken &&
                 stopped.result.speculative.accepted_tokens > 0,
             "custom stop did not terminate inside an accepted speculative round");
     const auto stopped_append_tokens = continuation(tokens, stopped.result, next_turn);
     const auto& stopped_append = remember(run(engine, "partial_terminal_append",
         engine.prepare_tokens(stopped_append_tokens), true, Path::AppendAtFrontier));
-    require(stopped_append.result.reused_prompt_tokens == tokens.size() + 1,
+    require(stopped_append.result.reused_prompt_tokens == tokens.size() + stopped_outputs - 1,
             "partial-terminal append resumed uncommitted speculative state");
     const auto& stopped_cold = remember(run(engine, "partial_terminal_append_cold",
         engine.prepare_tokens(stopped_append_tokens), false, Path::FullReset));
@@ -317,8 +346,10 @@ std::vector<Observation> exercise(const char* artifact, bool graphs) {
             "normalized response did not restore the saved response boundary");
     const auto& normalized_cold = remember(run(engine, "normalized_response_cold",
         engine.prepare(normalized), false, Path::FullReset));
-    compare_cold_rounding(engine, engine.prepare(normalized).debug_token_ids(),
-                          normalized_reuse, normalized_cold);
+    if (!compare_cold_rounding(engine, engine.prepare(normalized).debug_token_ids(),
+                               normalized_reuse, normalized_cold)) {
+        ++cold_teacher_force_mismatches;
+    }
 
     // Stop immediately after the original prompt, leaving its complete state resident without
     // restoring a checkpoint. Appending the normalized response now has the same token partition
@@ -373,7 +404,7 @@ std::vector<Observation> exercise(const char* artifact, bool graphs) {
         require(cached[1] > 0.0 && cached[1] < cold[1],
                 "warmed exact prefix reuse did not reduce median TTFT");
     }
-    return observations;
+    return {std::move(observations), cold_teacher_force_mismatches};
 }
 
 } // namespace
@@ -392,13 +423,21 @@ int main() {
     try {
         const auto captured = exercise(artifact, true);
         const auto eager = exercise(artifact, false);
-        require(captured.size() == eager.size(), "graph/eager case counts differ");
-        for (std::size_t i = 0; i < captured.size(); ++i) {
-            same_replay(captured[i], eager[i]);
-            require(captured[i].result.reused_prompt_tokens == eager[i].result.reused_prompt_tokens,
+        require(captured.observations.size() == eager.observations.size(),
+                "graph/eager case counts differ");
+        for (std::size_t i = 0; i < captured.observations.size(); ++i) {
+            same_replay(captured.observations[i], eager.observations[i]);
+            require(captured.observations[i].result.reused_prompt_tokens ==
+                        eager.observations[i].result.reused_prompt_tokens,
                     "graph/eager restored different prefix frontiers");
         }
         std::cout << "V100 Duo prefix reuse: graph/eager outputs, logits, acceptance and frontiers PASS\n";
+        std::cout << "cold_teacher_force_mismatches graph="
+                  << captured.cold_teacher_force_mismatches
+                  << " eager=" << eager.cold_teacher_force_mismatches << std::endl;
+        require(captured.cold_teacher_force_mismatches == 0 &&
+                    eager.cold_teacher_force_mismatches == 0,
+                "the fresh shared-history oracle does not reproduce the cold choice");
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "V100 Duo prefix reuse: " << error.what() << '\n';

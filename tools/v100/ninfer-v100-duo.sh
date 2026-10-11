@@ -11,17 +11,24 @@ readonly cuda_lib_dir=/usr/local/cuda-12.8/lib64
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     cat <<EOF
-usage: ${BASH_SOURCE[0]} model=PATH [draft-tokens=N] [ninfer-serve options]
+usage: ${BASH_SOURCE[0]} model=PATH [draft-tokens=N] [proposal-head=optimized|full] [ninfer-serve options]
 
 Starts the HTTP server with the dual-V100 production defaults:
   --tp 2 --devices 0,1 --max-context 180224 --prefill-chunk 4096 --kv-dtype int8
   --spec mtp --draft-tokens 3 --lm-head-draft
   --max-concurrency 1 --host 127.0.0.1 --port 8080
 
-model=PATH and draft-tokens=N are read from the leading key=value arguments; draft-tokens defaults
-to 3 and takes any MTP window in 1..5 (N=4 is the faster measured window: acceptance rate down,
-decode speed and tokens per round up; the 180224-token default remains within its capacity).
+model=PATH, draft-tokens=N and proposal-head=... are read from the leading key=value arguments.
+draft-tokens defaults to 3 and takes any MTP window in 1..5. Throughput and completions depend
+on the artifact and window; see README.md for the measured MTP3/4/5 results.
 Any remaining arguments are passed to ninfer-serve after these defaults and therefore override them.
+
+proposal-head defaults to optimized. Use proposal-head=full for V3 Text/MTP artifacts without
+an indexed proposal head, including Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer.
+For Coder390 single-request speed, also pass --max-context 131072 --prefill-chunk 4096
+--max-concurrency 1 --kv-capacity 131072. Its measured MTP3 single-request capacity ceiling is
+--max-context 183360 --prefill-chunk 128 --max-concurrency 1 --kv-capacity 183360;
+this leaves only 69 MiB free per GPU and trades prefill speed for capacity.
 
 For the previous long-context configuration, pass --max-context 200000 --prefill-chunk 1024
 together: 200000 plus the 4096-token default chunk exceeds the 16 GB reservation.
@@ -47,6 +54,7 @@ fi
 
 artifact=
 draft_tokens=3
+proposal_head=optimized
 while [[ $# -gt 0 && "${1}" == ?*=?* ]]; do
     key=${1%%=*}
     value=${1#*=}
@@ -59,12 +67,18 @@ while [[ $# -gt 0 && "${1}" == ?*=?* ]]; do
                 exit 2
             fi
             draft_tokens=${value} ;;
+        proposal-head)
+            if [[ "${value}" != full && "${value}" != optimized ]]; then
+                echo "proposal-head must be full or optimized (see --help)" >&2
+                exit 2
+            fi
+            proposal_head=${value} ;;
         *)
             break ;;
     esac
     shift
 done
-readonly artifact draft_tokens
+readonly artifact draft_tokens proposal_head
 if [[ -z "${artifact}" ]]; then
     echo "first argument must be model=PATH (see --help)" >&2
     exit 2
@@ -101,11 +115,14 @@ fi
 # OMP_NUM_THREADS or an artificial CPU affinity here: that needlessly leaves host capacity idle.
 # If a deployment has an external CPU quota, it can apply that quota to this process without
 # changing the inference defaults.
+proposal_args=()
+if [[ "${proposal_head}" == optimized ]]; then proposal_args+=(--lm-head-draft); fi
+
 exec "${executable}" "${artifact}" \
     --tp 2 --devices 0,1 \
     --max-context 180224 --prefill-chunk 4096 \
     --kv-dtype int8 \
-    --spec mtp --draft-tokens "${draft_tokens}" --lm-head-draft \
+    --spec mtp --draft-tokens "${draft_tokens}" "${proposal_args[@]}" \
     --max-concurrency 1 \
     --host 127.0.0.1 --port 8080 \
     "$@"

@@ -31,7 +31,7 @@ constexpr std::int32_t kVectorMaxTokens = 16;
 constexpr std::int32_t kGemmRowTile = 2048;
 
 std::int64_t row_bytes(GgufType type, std::int32_t k) {
-    return static_cast<std::int64_t>(k / 256) * gguf_block_bytes(type);
+    return static_cast<std::int64_t>(k / 256) * gguf_tile_bytes(type);
 }
 
 struct Outputs {
@@ -202,7 +202,7 @@ __global__ void __launch_bounds__(Warps * 32, (kVectorMinBlocks<MaxTokens, Rows>
 vector_kernel(const __nv_bfloat16* __restrict__ x, const signed char* __restrict__ codes,
               const float* __restrict__ steps, const unsigned char* __restrict__ rows,
               int row_count, int first_row, int k, int tokens, int token_base, Outputs out) {
-    constexpr int kBlockBytes = gguf_block_bytes(Type);
+    constexpr int kBlockBytes = gguf_tile_bytes(Type);
     constexpr int kRowWords   = kStageBlocks * kBlockBytes / 4; // 32-bit words per row per stage
     constexpr int kStageWords = Rows * kRowWords;
     constexpr int kLaneWords  = (kStageWords + 31) / 32;
@@ -384,6 +384,7 @@ void launch_vector(const VectorInput& x, const GgufSegment& segment, int first_r
         NINFER_GGUF_TYPE_CASE(Q2_K)
         NINFER_GGUF_TYPE_CASE(Q4_K)
         NINFER_GGUF_TYPE_CASE(Q6_K)
+        NINFER_GGUF_TYPE_CASE(Q8_0)
 #undef NINFER_GGUF_TYPE_CASE
     }
     CUDA_CHECK(cudaGetLastError());
@@ -398,7 +399,7 @@ __global__ void dequantize_kernel(const unsigned char* __restrict__ rows, int ro
     if (g >= groups) { return; }
     const int row             = static_cast<int>(g / (k / 8));
     const int group           = static_cast<int>(g % (k / 8));
-    constexpr int kBlockBytes = gguf_block_bytes(Type);
+    constexpr int kBlockBytes = gguf_tile_bytes(Type);
     const unsigned char* block = rows +
         static_cast<std::int64_t>(row_begin + row) * (k / 256) * kBlockBytes +
         (group / 32) * kBlockBytes;
@@ -438,6 +439,7 @@ void launch_dequantize(const GgufSegment& segment, int row_begin, int row_count,
         NINFER_GGUF_TYPE_CASE(Q2_K)
         NINFER_GGUF_TYPE_CASE(Q4_K)
         NINFER_GGUF_TYPE_CASE(Q6_K)
+        NINFER_GGUF_TYPE_CASE(Q8_0)
 #undef NINFER_GGUF_TYPE_CASE
     }
     CUDA_CHECK(cudaGetLastError());
@@ -615,7 +617,7 @@ __global__ void embedding_kernel(const std::int32_t* __restrict__ ids, Weight we
         row -= weight.gguf_segments[segment++].rows;
     }
     const GgufSegment& s      = weight.gguf_segments[segment];
-    const int block_bytes     = gguf_block_bytes(s.type);
+    const int block_bytes     = gguf_tile_bytes(s.type);
     const unsigned char* base = static_cast<const unsigned char*>(s.data) +
                                 static_cast<std::int64_t>(row) * (weight.k / 256) * block_bytes;
     for (int group = threadIdx.x; group < weight.k / 8; group += blockDim.x) {

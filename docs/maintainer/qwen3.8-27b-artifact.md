@@ -1,7 +1,8 @@
 # Qwen3.8-27B artifact reference
 
 This reference defines the registered Qwen3.8-27B `.ninfer` storage contracts: the
-`qwen3.8-27b/nvfp4`, preserved `qwen3.8-27b/gguf-q4-k-m`, and `qwen3.8-27b/gguf-blocks` identities, their object inventories,
+`qwen3.8-27b/nvfp4`, preserved `qwen3.8-27b/gguf-q4-k-m`, `qwen3.8-27b/gguf-blocks`,
+and `qwen3.8-27b/gguf-blocks-full` identities, their object inventories,
 shapes, numeric formats, storage layouts, fused row order, aliases, fixed sources, and
 source-to-object transforms. The existing registered `qwen3.8-27b/groupwise-int` contract remains
 defined in Section 13.
@@ -884,6 +885,12 @@ differences:
   are implemented.
 
 ### 15.2 Execution
+
+The `gguf-blocks-full` inventory uses the same Text/MTP/Vision bindings but omits
+`text/draft_head` and `text/draft_head_token_ids`. The Coder390 EfficientThink Q6_K MTP
+V3 artifact uses this inventory, with Q8_0 token embedding, output head and MTP input projection.
+Its MTP proposals use the full output vocabulary; selecting `--lm-head-draft` is an error.
+Q8_0 is decoded from its stored FP16 scale and signed int8 codes with no weight conversion.
 
 The `Qwen38Gguf` weights profile binds the segments, splits each by the TP2 shard map restricted
 to its own rows (Rows axis) or by whole 256-column block ranges (Columns axis), and runs every
