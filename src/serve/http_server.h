@@ -79,8 +79,9 @@ private:
     std::thread stats_thread_;
     bool stats_stopping_ = false;
 
-    // Web panel: engine snapshot captured at attach() plus the /metrics sampling state.
+    // Web panel: engine snapshots captured at attach() plus the /metrics sampling state.
     ninfer::LoadSummary load_summary_{};
+    ninfer::MemorySummary memory_summary_{};
     bool has_load_summary_ = false;
     SystemMonitor system_monitor_;
     std::mutex monitor_mutex_;

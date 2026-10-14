@@ -269,6 +269,10 @@ function renderAbout(eng, hw, st) {
     ["Engine", eng.version ? `NInfer v${eng.version}` : "NInfer"],
     ["Tensor parallel", eng.tp > 1 ? `${eng.tp} GPUs` : null],
     ["Context", eng.max_context ? `${fmt(eng.max_context)} tokens` : null],
+    // The ceiling the configured context was admitted against; only worth a row when it differs,
+    // otherwise it would just repeat the line above.
+    ["Native capacity", eng.max_context_ceiling && eng.max_context_ceiling !== eng.max_context
+                          ? `${fmt(eng.max_context_ceiling)} tokens` : null],
     ["Weights", eng.weights_id],
   ]);
   facts($("facts-hw"), [

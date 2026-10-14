@@ -498,10 +498,17 @@ void HttpServer::handle_metrics(const httplib::Request&, httplib::Response& res)
         });
     }
 
+    // The engine admits a request against `max_context`; `effective_max_context` is only the
+    // ceiling that value was validated against (the variant's native capacity, or the YaRN
+    // window). Both are reported, because they answer different questions.
+    const std::uint32_t admitted_max_context = memory_summary_.max_context != 0
+                                                   ? memory_summary_.max_context
+                                                   : options_.max_context;
     nlohmann::json engine = nlohmann::json{
         {"model", public_model_id_},
         {"tp", load_summary_.tp},
-        {"max_context", load_summary_.effective_max_context},
+        {"max_context", admitted_max_context},
+        {"max_context_ceiling", load_summary_.effective_max_context},
     };
     if (!load_summary_.weights_id.empty()) { engine["weights_id"] = load_summary_.weights_id; }
 
@@ -984,6 +991,7 @@ void HttpServer::attach(GenerationService& service) {
     const ninfer::LoadSummary load = service.load_summary();
     public_model_id_               = resolve_public_model_id(options_, load.model_id);
     load_summary_                  = load;
+    memory_summary_                = service.memory_summary();
     has_load_summary_              = true;
     service_                       = &service;
     request_jsonl_.write_server_start(options_, service.sampling_defaults(), public_model_id_, load,
