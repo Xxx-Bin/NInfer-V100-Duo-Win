@@ -84,6 +84,18 @@ struct ThroughputReport {
     ninfer::RuntimeStats scheduler;
 };
 
+// One completed request's measured rates. Prefill counts only tokens actually evaluated
+// (resident prefix hits excluded); decode counts the tokens produced after prefill's first
+// token. A rate is negative when its phase took no measurable time.
+struct RequestRates {
+    double prefill_tok_s = -1.0;
+    double decode_tok_s  = -1.0;
+};
+
+// RequestRates of one outcome, for consumers that need the numbers rather than the console
+// record's formatted line. It applies the same token/phase definition format_request_done prints.
+RequestRates request_rates(const GenerationOutcome& outcome);
+
 RequestLogContext make_request_log_context(std::uint64_t id, std::string protocol,
                                            const GenerationRequest& request,
                                            const PreparedRequest& prepared);

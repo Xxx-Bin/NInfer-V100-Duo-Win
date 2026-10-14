@@ -1,7 +1,8 @@
 # HTTP serving
 
 `build/apps/ninfer-serve` loads one registered artifact and exposes OpenAI- and
-Anthropic-compatible HTTP endpoints over one resident NInfer Engine.
+Anthropic-compatible HTTP endpoints over one resident NInfer Engine. The same
+process serves an embedded web panel at `http://<host>:<port>/`.
 
 ## Start the server
 
@@ -107,7 +108,9 @@ INT8 KV). `--kv-dtype int8` is mandatory at that window.
 
 | Method and path | Behavior |
 |---|---|
-| `GET /health` | process health |
+| `GET /health` | process health and the public model id |
+| `GET /` and `GET /web/...` | embedded web panel (Chat, Monitor, About) |
+| `GET /metrics` | live engine throughput and GPU/host readings for the panel |
 | `GET /v1/models` | configured OpenAI model alias |
 | `GET /v1/models/{id}` | lookup of the configured alias |
 | `POST /v1/chat/completions` | OpenAI-style chat generation |
@@ -118,6 +121,23 @@ INT8 KV). `--kv-dtype int8` is mandatory at that window.
 | `GET /v1/responses/{id}/input_items` | list that Response's normalized input Items |
 | `POST /v1/messages` | Anthropic-style message generation |
 | `POST /v1/messages/count_tokens` | checkpoint-native expanded input-token count |
+
+## Web panel
+
+`GET /` serves an embedded single-page panel with three views. It is compiled into
+`ninfer-serve` (no filesystem access at runtime) and only talks to this server.
+
+- **Chat** — streaming conversation over `POST /v1/chat/completions` with reasoning display,
+  per-browser sampling settings, text-file attachments, and Markdown export. The Thinking
+  selector offers exactly the supported `reasoning_effort` values — shown as Off, Low, Medium
+  and Extra High (`none`, `low`, `medium`, `xhigh`; default `medium`) — so the panel cannot
+  request an unsupported level. History stays in the browser's local storage.
+- **Monitor** — prefill and decode throughput from the engine's monotonic token counters, one
+  card per device showing that GPU's own utilization, VRAM, temperature and power draw (read
+  through NVML, which is loaded dynamically; a card degrades to "not readable" when it is
+  missing), and the running CPU load, CPU package temperature and system memory.
+- **About** — model/engine identity and context, host CPU/RAM/GPU description, and the
+  OpenAI/Anthropic base URLs for other clients.
 
 ## OpenAI Chat Completions
 
@@ -507,7 +527,9 @@ curl http://127.0.0.1:8080/v1/messages/count_tokens \
 ## Authentication and CORS
 
 Pass `--api-key VALUE` to require the same value as an OpenAI bearer token or Anthropic
-`x-api-key` header. `GET /health` and CORS preflight requests remain unauthenticated.
+`x-api-key` header. `GET /health`, the web panel shell, and CORS preflight requests remain
+unauthenticated; the panel's data routes (`/metrics` and the protocol endpoints) still need the
+key, which the panel asks for under About > Settings.
 
 ```bash
 curl http://127.0.0.1:8080/v1/models \

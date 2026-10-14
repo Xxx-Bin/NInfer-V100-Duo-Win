@@ -4,6 +4,7 @@
 #include "serve/response_store.h"
 #include "serve/request_log.h"
 #include "serve/serve_options.h"
+#include "serve/system_monitor.h"
 
 #include <httplib.h>
 
@@ -11,9 +12,11 @@
 #include <condition_variable>
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace ninfer::serve {
 
@@ -51,6 +54,8 @@ private:
     void handle_response_compact(const httplib::Request& req, httplib::Response& res);
     void handle_models(const httplib::Request& req, httplib::Response& res) const;
     void handle_model(const httplib::Request& req, httplib::Response& res) const;
+    void handle_metrics(const httplib::Request& req, httplib::Response& res);
+    void handle_web_asset(const httplib::Request& req, httplib::Response& res) const;
 
     // The process-wide console logger serializes lines from request and reporter threads.
     void log_line(const std::string& line);
@@ -73,6 +78,36 @@ private:
     std::condition_variable stats_cv_;
     std::thread stats_thread_;
     bool stats_stopping_ = false;
+
+    // Web panel: engine snapshot captured at attach() plus the /metrics sampling state.
+    ninfer::LoadSummary load_summary_{};
+    bool has_load_summary_ = false;
+    SystemMonitor system_monitor_;
+    std::mutex monitor_mutex_;
+    bool monitor_has_baseline_ = false;
+    std::chrono::steady_clock::time_point monitor_baseline_time_{};
+    ninfer::RuntimeStats monitor_baseline_{};
+    double monitor_tok_s_         = 0.0;
+    double monitor_prefill_tok_s_ = 0.0;
+    // Last completed request's measured rates, so the panel still shows a prefill speed for a
+    // prompt the sub-second sampling interval never caught.
+    RequestRates last_rates_{};
+    bool has_last_rates_ = false;
+    // Fixed-size rings of the last kMonitorHistorySamples /metrics observations, served back as
+    // the panel's sparkline series.
+    static constexpr std::size_t kMonitorHistorySamples = 120;
+    struct MonitorRing {
+        std::deque<double> values;
+        void push(double value) {
+            values.push_back(value);
+            if (values.size() > kMonitorHistorySamples) { values.pop_front(); }
+        }
+    };
+    MonitorRing ring_tok_s_;
+    MonitorRing ring_prefill_tok_s_;
+    MonitorRing ring_cpu_util_;
+    MonitorRing ring_cpu_temp_;
+    MonitorRing ring_ram_used_;
 };
 
 } // namespace ninfer::serve

@@ -3,6 +3,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -357,6 +358,22 @@ int main() {
               "human request log omits response checkpoint reuse path");
     failures += check(format_request_start(context).find("submitted") != std::string::npos,
                       "human request log mislabels a submitted request");
+
+    // The rates the web panel shows: prefill counts only tokens actually evaluated (resident
+    // prefix hits excluded), decode counts the tokens produced after prefill's first token.
+    const RequestRates rates = request_rates(outcome);
+    failures +=
+        check(std::abs(rates.prefill_tok_s - 300.0 / outcome.metrics.prefill_seconds) < 1e-9,
+              "request prefill rate does not exclude reused prefix tokens");
+    failures += check(std::abs(rates.decode_tok_s - 1023.0 / outcome.metrics.decode_seconds) < 1e-9,
+                      "request decode rate does not exclude the prefill-emitted token");
+    // A request with no measurable phase reports "not measured" rather than a divide-by-zero.
+    GenerationOutcome instant;
+    instant.prompt_tokens     = 4;
+    instant.completion_tokens = 1;
+    const RequestRates no_time = request_rates(instant);
+    failures += check(no_time.prefill_tok_s < 0.0 && no_time.decode_tok_s < 0.0,
+                      "zero-duration phases did not report an unmeasured rate");
 
     ThroughputReport throughput;
     throughput.interval_seconds                = 2.0;

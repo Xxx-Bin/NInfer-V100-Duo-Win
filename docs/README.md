@@ -9,7 +9,7 @@ published-artifact CLI and HTTP examples for other profiles.
 | Document | Purpose |
 |---|---|
 | [CLI](cli.md) | text, chat-history, image/video input, output streams, sampling, MTP, dual-GPU (`--tp 2`) execution, and common runtime options |
-| [HTTP serving](serving.md) | OpenAI Responses/Chat Completions, Anthropic Messages, state, streaming, token counting, authentication, tool calls, dual-GPU serving, and YaRN extended context |
+| [HTTP serving](serving.md) | OpenAI Responses/Chat Completions, Anthropic Messages, state, streaming, token counting, authentication, tool calls, dual-GPU serving, YaRN extended context, and the embedded web panel (Chat, Monitor, About) |
 | [Performance](performance.md) | V100 Duo performance measurements; inherited RTX 5090 single-request, concurrent-decode, MTP/DFlash and 1M-context results |
 | [CLI examples](../examples/cli/) | committed text, multimodal, thinking, long-decode, and long-context inputs |
 

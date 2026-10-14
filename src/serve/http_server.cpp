@@ -5,9 +5,11 @@
 #include "serve/openai_schema.h"
 #include "serve/request_log.h"
 #include "serve/translate.h"
+#include "serve/web_assets.h"
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <exception>
@@ -17,6 +19,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace ninfer::serve {
 namespace {
@@ -101,6 +104,31 @@ std::string_view unstreamed_content(const GenerationOutcome& outcome) {
     return std::string_view(outcome.text).substr(outcome.streamed_content_bytes);
 }
 
+bool ends_with(std::string_view text, std::string_view suffix) {
+    return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
+}
+
+std::string_view web_content_type(std::string_view path) {
+    if (ends_with(path, ".html")) { return "text/html; charset=utf-8"; }
+    if (ends_with(path, ".css")) { return "text/css; charset=utf-8"; }
+    if (ends_with(path, ".js")) { return "text/javascript; charset=utf-8"; }
+    if (ends_with(path, ".svg")) { return "image/svg+xml"; }
+    if (ends_with(path, ".woff2")) { return "font/woff2"; }
+    if (ends_with(path, ".txt")) { return "text/plain; charset=utf-8"; }
+    return "application/octet-stream";
+}
+
+// Seconds -> optional JSON number, dropping non-finite values instead of emitting invalid JSON.
+nlohmann::json rate_json(double value) {
+    return value >= 0.0 ? nlohmann::json(value) : nlohmann::json(nullptr);
+}
+
+nlohmann::json ring_json(const std::deque<double>& values) {
+    nlohmann::json out = nlohmann::json::array();
+    for (const double value : values) { out.push_back(rate_json(value)); }
+    return out;
+}
+
 } // namespace
 
 httplib::Server::HandlerResponse handle_unrendered_http_error(const ServeOptions& options,
@@ -156,6 +184,11 @@ void HttpServer::log_request_done(const RequestLogContext& context,
                                   const GenerationOutcome& outcome) {
     log_line(format_request_done(context, outcome));
     request_jsonl_.write_request_done(context, outcome);
+    {
+        std::lock_guard lock(monitor_mutex_);
+        last_rates_     = request_rates(outcome);
+        has_last_rates_ = true;
+    }
 }
 
 void HttpServer::log_request_error(const RequestLogContext& context, const std::string& message) {
@@ -225,7 +258,12 @@ void HttpServer::register_routes() {
     }
 
     server_.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
-        if (options_.api_key.empty() || req.path == "/health" || req.method == "OPTIONS") {
+        // The panel shell itself is public; every data route (including /metrics) still needs
+        // the key, and the page asks for it under About > Settings.
+        const bool public_shell =
+            req.path == "/" || req.path.rfind("/web/", 0) == 0 || req.path == "/favicon.ico";
+        if (options_.api_key.empty() || req.method == "OPTIONS" || req.path == "/health" ||
+            public_shell) {
             return httplib::Server::HandlerResponse::Unhandled;
         }
         // Accept both the OpenAI-style bearer token and the Anthropic-style
@@ -266,8 +304,24 @@ void HttpServer::register_routes() {
             }
         });
 
-    server_.Get("/health", [](const httplib::Request&, httplib::Response& res) {
-        res.set_content(nlohmann::json{{"status", "ok"}}.dump(), "application/json");
+    server_.Get("/health", [this](const httplib::Request&, httplib::Response& res) {
+        nlohmann::json body{{"status", "ok"}};
+        if (!public_model_id_.empty()) { body["model"] = public_model_id_; }
+        res.set_content(body.dump(), "application/json");
+    });
+    server_.Get("/metrics", [this](const httplib::Request& req, httplib::Response& res) {
+        handle_metrics(req, res);
+    });
+    // The embedded web panel: "/" serves the shell, "/web/<path>" its assets.
+    server_.Get("/", [this](const httplib::Request& req, httplib::Response& res) {
+        handle_web_asset(req, res);
+    });
+    server_.Get(R"(/web/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handle_web_asset(req, res);
+    });
+    // A bare browser request for the site icon: the panel's own SVG stands in for it.
+    server_.Get("/favicon.ico", [this](const httplib::Request& req, httplib::Response& res) {
+        handle_web_asset(req, res);
     });
     server_.Get("/v1/models", [this](const httplib::Request& req, httplib::Response& res) {
         handle_models(req, res);
@@ -331,6 +385,170 @@ void HttpServer::handle_model(const httplib::Request& req, httplib::Response& re
         return;
     }
     res.set_content(make_model_object(public_model_id_, unix_time_now()), "application/json");
+}
+
+void HttpServer::handle_web_asset(const httplib::Request& req, httplib::Response& res) const {
+    std::string path;
+    if (req.path == "/") {
+        path = "index.html";
+    } else if (req.path == "/favicon.ico") {
+        path = "favicon.svg";
+    } else if (req.path.rfind("/web/", 0) == 0) {
+        path = req.path.substr(5);
+    } else {
+        res.status = 404;
+        return;
+    }
+    // The asset set is a fixed embedded list; reject anything outside it (no traversal possible,
+    // since nothing reads the filesystem here).
+    for (const web::WebAsset& asset : web::assets()) {
+        if (asset.path == path) {
+            res.set_content(std::string(asset.content), std::string(web_content_type(path)));
+            return;
+        }
+    }
+    res.status = 404;
+}
+
+void HttpServer::handle_metrics(const httplib::Request&, httplib::Response& res) {
+    using Clock                 = std::chrono::steady_clock;
+    const ninfer::RuntimeStats stats = service_->runtime_stats();
+    std::vector<int> devices = options_.devices;
+    if (devices.empty()) { devices.push_back(options_.device); }
+
+    std::deque<double> h_tok, h_prefill, h_cpu, h_cpu_temp, h_ram;
+    RequestRates last_rates;
+    bool has_last_rates = false;
+    SystemSample system;
+    {
+        std::lock_guard lock(monitor_mutex_);
+        last_rates     = last_rates_;
+        has_last_rates = has_last_rates_;
+        // Throughput over the interval since the previous /metrics poll. Derived from the same
+        // monotonic RuntimeStats counters the periodic console reporter uses, so it measures the
+        // whole engine (all requests) rather than one HTTP call.
+        const Clock::time_point now = Clock::now();
+        if (!monitor_has_baseline_) {
+            monitor_has_baseline_    = true;
+            monitor_baseline_time_   = now;
+            monitor_baseline_        = stats;
+        } else {
+            const double seconds = std::chrono::duration<double>(now - monitor_baseline_time_).count();
+            if (seconds >= 0.25) {
+                const std::uint64_t prefill =
+                    stats.computed_prefill_tokens - monitor_baseline_.computed_prefill_tokens;
+                const std::uint64_t decode =
+                    stats.committed_decode_tokens - monitor_baseline_.committed_decode_tokens;
+                // A phase's counter moves in bursts (one per prefill chunk / decode round), so an
+                // interval can straddle a gap and read zero while the phase is still running. Hold
+                // the previous rate while the phase is active; drop to zero once it has stopped.
+                if (prefill != 0) {
+                    monitor_prefill_tok_s_ = static_cast<double>(prefill) / seconds;
+                } else if (stats.prefilling_requests == 0) {
+                    monitor_prefill_tok_s_ = 0.0;
+                }
+                if (decode != 0) {
+                    monitor_tok_s_ = static_cast<double>(decode) / seconds;
+                } else if (stats.decode_ready_requests == 0) {
+                    monitor_tok_s_ = 0.0;
+                }
+                monitor_baseline_time_ = now;
+                monitor_baseline_      = stats;
+                ring_tok_s_.push(monitor_tok_s_);
+                ring_prefill_tok_s_.push(monitor_prefill_tok_s_);
+            }
+        }
+
+        system = system_monitor_.sample(devices);
+        ring_cpu_util_.push(system.host.cpu_util_available ? system.host.cpu_util : -1.0);
+        ring_cpu_temp_.push(system.host.cpu_temp_available ? system.host.cpu_temp : -1.0);
+        ring_ram_used_.push(system.host.ram_total != 0
+                                ? static_cast<double>(system.host.ram_used)
+                                : -1.0);
+        h_tok     = ring_tok_s_.values;
+        h_prefill = ring_prefill_tok_s_.values;
+        h_cpu     = ring_cpu_util_.values;
+        h_cpu_temp = ring_cpu_temp_.values;
+        h_ram     = ring_ram_used_.values;
+    }
+
+    // Live scheduler state: the prefill lane drives "Reading", decodable slots drive
+    // "Generating"; queued requests are reported separately. Prefill and decode run
+    // concurrently, so both rates are always reported - they read 0 when nothing moved
+    // in the interval.
+    const bool generating = stats.decode_ready_requests != 0;
+    const bool reading    = stats.prefilling_requests != 0;
+    const char* state     = reading ? "reading" : generating ? "generating" : "idle";
+
+    // One row per device: the Monitor shows each card's own utilization, memory and temperature.
+    nlohmann::json gpu_rows = nlohmann::json::array();
+    for (const GpuReading& gpu : system.gpus) {
+        gpu_rows.push_back(nlohmann::json{
+            {"index", gpu.index},
+            {"name", gpu.name},
+            {"available", gpu.available},
+            {"mem_used", gpu.mem_total != 0 ? nlohmann::json(gpu.mem_used) : nlohmann::json(nullptr)},
+            {"mem_total", gpu.mem_total},
+            {"util", gpu.available ? nlohmann::json(gpu.util) : nlohmann::json(nullptr)},
+            {"temp", gpu.available ? nlohmann::json(gpu.temp) : nlohmann::json(nullptr)},
+            {"power", gpu.power_available ? nlohmann::json(gpu.power_mw / 1000.0)
+                                          : nlohmann::json(nullptr)},
+            {"power_limit", gpu.power_limit_mw != 0 ? nlohmann::json(gpu.power_limit_mw / 1000.0)
+                                                    : nlohmann::json(nullptr)},
+        });
+    }
+
+    nlohmann::json engine = nlohmann::json{
+        {"model", public_model_id_},
+        {"tp", load_summary_.tp},
+        {"max_context", load_summary_.effective_max_context},
+    };
+    if (!load_summary_.weights_id.empty()) { engine["weights_id"] = load_summary_.weights_id; }
+
+    nlohmann::json hardware{
+        {"gpus", std::move(gpu_rows)},
+        {"cpu_util", system.host.cpu_util_available ? nlohmann::json(system.host.cpu_util)
+                                                    : nlohmann::json(nullptr)},
+        {"cpu_temp", system.host.cpu_temp_available ? nlohmann::json(system.host.cpu_temp)
+                                                    : nlohmann::json(nullptr)},
+        {"ram_total", system.host.ram_total},
+        {"ram_used", system.host.ram_total != 0 ? nlohmann::json(system.host.ram_used)
+                                                : nlohmann::json(nullptr)},
+    };
+
+    nlohmann::json hardware_static{
+        {"nvml_available", system_monitor_.host().nvml_available},
+        {"gpu_name", system_monitor_.host().gpu_name},
+        {"cpu_name", system_monitor_.host().cpu_name},
+        {"threads", system_monitor_.host().threads},
+        {"cpu_temp_source", system_monitor_.host().cpu_temp_source},
+    };
+
+    nlohmann::json history{
+        {"tok_s", ring_json(h_tok)},
+        {"prefill_tok_s", ring_json(h_prefill)},
+        {"cpu_util", ring_json(h_cpu)},
+        {"cpu_temp", ring_json(h_cpu_temp)},
+        {"ram_used", ring_json(h_ram)},
+    };
+
+    nlohmann::json body{
+        {"live",
+         {{"state", state},
+          {"queued", stats.waiting_requests},
+          {"running", stats.running_requests},
+          {"tok_s", monitor_tok_s_},
+          {"prefill_tok_s", monitor_prefill_tok_s_}}},
+        {"last",
+         {{"available", has_last_rates},
+          {"prefill_tok_s", rate_json(has_last_rates ? last_rates.prefill_tok_s : -1.0)},
+          {"tok_s", rate_json(has_last_rates ? last_rates.decode_tok_s : -1.0)}}},
+        {"hardware", std::move(hardware)},
+        {"hardware_static", std::move(hardware_static)},
+        {"engine", std::move(engine)},
+        {"history", std::move(history)},
+    };
+    res.set_content(body.dump(), "application/json");
 }
 
 void HttpServer::handle_chat_completions(const httplib::Request& req, httplib::Response& res) {
@@ -765,6 +983,8 @@ void HttpServer::attach(GenerationService& service) {
     }
     const ninfer::LoadSummary load = service.load_summary();
     public_model_id_               = resolve_public_model_id(options_, load.model_id);
+    load_summary_                  = load;
+    has_load_summary_              = true;
     service_                       = &service;
     request_jsonl_.write_server_start(options_, service.sampling_defaults(), public_model_id_, load,
                                       service.memory_summary());

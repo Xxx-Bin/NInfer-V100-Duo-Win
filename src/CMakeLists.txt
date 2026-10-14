@@ -403,6 +403,39 @@ target_link_libraries(ninfer_engine
 add_library(ninfer::engine ALIAS ninfer_engine)
 
 if(NINFER_BUILD_SERVE)
+  # The web panel (serve/web) is embedded into web_assets.cpp at build time so the server binary
+  # stays self-contained. The asset list is explicit: adding a file is a build change.
+  set(NINFER_WEB_ASSET_DIR ${PROJECT_SOURCE_DIR}/src/serve/web)
+  set(NINFER_WEB_ASSETS
+    index.html
+    app.js
+    tokens.css
+    components.css
+    app.css
+    sprite.svg
+    favicon.svg
+    fonts/outfit-latin-wght.woff2
+    fonts/outfit-latin-ext-wght.woff2
+    fonts/OFL.txt)
+  set(NINFER_WEB_ASSETS_CPP ${CMAKE_CURRENT_BINARY_DIR}/generated/serve/web_assets.cpp)
+  set(NINFER_WEB_ASSET_DEPENDS
+    ${PROJECT_SOURCE_DIR}/cmake/embed_web_assets.cmake
+    ${PROJECT_SOURCE_DIR}/src/serve/web_assets.cpp.in)
+  foreach(NINFER_WEB_ASSET IN LISTS NINFER_WEB_ASSETS)
+    list(APPEND NINFER_WEB_ASSET_DEPENDS ${NINFER_WEB_ASSET_DIR}/${NINFER_WEB_ASSET})
+  endforeach()
+  add_custom_command(
+    OUTPUT ${NINFER_WEB_ASSETS_CPP}
+    COMMAND ${CMAKE_COMMAND}
+      -DINPUT_DIR=${NINFER_WEB_ASSET_DIR}
+      -DTEMPLATE=${PROJECT_SOURCE_DIR}/src/serve/web_assets.cpp.in
+      -DOUTPUT=${NINFER_WEB_ASSETS_CPP}
+      "-DASSETS=${NINFER_WEB_ASSETS}"
+      -P ${PROJECT_SOURCE_DIR}/cmake/embed_web_assets.cmake
+    DEPENDS ${NINFER_WEB_ASSET_DEPENDS}
+    COMMENT "Embedding web panel assets"
+    VERBATIM)
+
   # HTTP protocol/product adapter. No serving header is part of the public API.
   add_library(ninfer_serve STATIC
     serve/openai_schema.cpp
@@ -415,12 +448,14 @@ if(NINFER_BUILD_SERVE)
     serve/generation_service.cpp
     serve/request_log.cpp
     serve/http_server.cpp
+    serve/system_monitor.cpp
     serve/responses_http.cpp
-    serve/serve_options.cpp)
+    serve/serve_options.cpp
+    ${NINFER_WEB_ASSETS_CPP})
   ninfer_internal_includes(ninfer_serve)
   target_include_directories(ninfer_serve PRIVATE
     ${PROJECT_SOURCE_DIR}/third_party/cpp-httplib)
   target_link_libraries(ninfer_serve
     PUBLIC ninfer_engine Threads::Threads
-    PRIVATE ninfer_media_acquire CUDA::cudart)
+    PRIVATE ninfer_media_acquire CUDA::cudart ${CMAKE_DL_LIBS})
 endif()

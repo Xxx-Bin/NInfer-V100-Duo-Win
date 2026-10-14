@@ -375,6 +375,23 @@ std::string format_request_rejected(const RequestRejectionLogContext& context) {
     return out.str();
 }
 
+RequestRates request_rates(const GenerationOutcome& outcome) {
+    const GenerationMetrics& metrics = outcome.metrics;
+    // Prefill emits the first token; the remaining (gen - 1) come from decode.
+    const double decode_tokens =
+        outcome.completion_tokens > 0 ? static_cast<double>(outcome.completion_tokens - 1) : 0.0;
+    const double computed_prefill_tokens = static_cast<double>(
+        std::max(0, outcome.prompt_tokens - static_cast<int>(metrics.prefix_cache_hit_tokens)));
+    RequestRates rates;
+    if (metrics.prefill_seconds > 0.0 && computed_prefill_tokens > 0.0) {
+        rates.prefill_tok_s = computed_prefill_tokens / metrics.prefill_seconds;
+    }
+    if (metrics.decode_seconds > 0.0 && decode_tokens > 0.0) {
+        rates.decode_tok_s = decode_tokens / metrics.decode_seconds;
+    }
+    return rates;
+}
+
 std::string format_request_done(const RequestLogContext& context,
                                 const GenerationOutcome& outcome) {
     const GenerationMetrics& metrics = outcome.metrics;
