@@ -10,6 +10,17 @@ compile_commands.json
 CMakeUserPresets.json
 .cache/
 
+# Local Windows port toolchain and scratch trees (never part of a commit)
+_toolchain/
+_ref/
+_scratch/
+probe/
+build-win*
+vc140.pdb
+*.exe
+*.dll
+*.pdb
+
 # CUDA / profiling artifacts
 *.nsys-rep
 *.ncu-rep

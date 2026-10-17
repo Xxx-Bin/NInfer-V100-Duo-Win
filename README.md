@@ -30,6 +30,9 @@ Build with `tools/v100/build.sh`. To start the official NVFP4 artifact:
 tools/v100/ninfer-v100-duo.sh model=/absolute/path/to/qwen3_8_27b_nvfp4.ninfer
 ```
 
+On Windows 11 with two V100s in TCC mode, use the native build instead:
+[Windows guide](docs/windows.md) and the [rebuild recipe](REBUILD.md).
+
 The launcher defaults to TP2 on GPUs 0/1, INT8 KV, CUDA Graph, MTP3 with the
 optimized proposal head, one active request, and `127.0.0.1:8080`. Run any
 other artifact by replacing `model=...` with **one** downloaded artifact
