@@ -1,0 +1,182 @@
+From 9e51e9c78fb97c499e3da08369b858906cc7fb92 Mon Sep 17 00:00:00 2001
+From: lwb6 <lwb.6@qq.com>
+Date: Sun, 18 Oct 2026 04:49:33 +0800
+Subject: [PATCH 3/5] feat: add an inspect mode for artifact identity
+
+`ninfer inspect <artifact>` reads the container header only and prints model_id, weights_id, file
+size, payload offset and object count without creating a CUDA context, so an artifact can be
+screened while the GPUs are busy or absent. The ids are the same identity the Engine validates
+against the registered target set.
+
+The command also compares the mapped view with the aligned direct-read path on the first object; on
+Windows that exercises CreateFileW/MapViewOfFile against ReadFile/OVERLAPPED on a real multi-gigabyte
+artifact, where the two routes share the file but not the I/O machinery.
+---
+ apps/cli/main.cpp    | 49 ++++++++++++++++++++++++++++++++++++++++++++
+ apps/cli/options.cpp | 15 +++++++++++++-
+ apps/cli/options.h   |  3 +++
+ docs/cli.md          | 22 ++++++++++++++++++++
+ 4 files changed, 88 insertions(+), 1 deletion(-)
+
+diff --git a/apps/cli/main.cpp b/apps/cli/main.cpp
+index 4d42cfd8..fad91930 100644
+--- a/apps/cli/main.cpp
++++ b/apps/cli/main.cpp
+@@ -1,14 +1,19 @@
+ #include "options.h"
++#include "artifact/reader.h"
+ #include "product/load_progress/load_progress.h"
+ #include "product/prompt_input/prompt_input.h"
+ 
+ #include "ninfer/engine.h"
+ 
++#include <algorithm>
+ #include <chrono>
+ #include <cstdint>
++#include <cstring>
+ #include <exception>
+ #include <iomanip>
+ #include <iostream>
++#include <new>
++#include <span>
+ #include <sstream>
+ #include <string>
+ #include <string_view>
+@@ -271,6 +276,50 @@ int main(int argc, char** argv) {
+             std::cout << ninfer::cli::usage_text(argv[0]);
+             return 0;
+         }
++        // Identity-only path: Reader maps and parses the header, which needs no CUDA context. The
++        // printed ids are exactly what Engine validates against the registered target set, so an
++        // artifact can be screened on a machine whose GPUs are in use.
++        if (cli.inspect_requested) {
++            const ninfer::artifact::Reader reader(cli.artifact_path);
++            const ninfer::artifact::ArtifactIdentity& identity = reader.identity();
++            std::cout << "model_id: " << identity.model_id << '\n'
++                      << "weights_id: " << identity.weights_id << '\n'
++                      << "file_bytes: " << reader.file_bytes() << '\n'
++                      << "payload_offset: " << reader.payload_offset() << '\n'
++                      << "objects: " << reader.objects().size() << '\n';
++
++            // Compare the mapped view with the aligned direct-read path on the first object. The
++            // two routes share the file but not the Windows I/O machinery (MapViewOfFile versus
++            // ReadFile with OVERLAPPED), so a mismatch here is a reader bug, not a model issue.
++            if (!reader.objects().empty()) {
++                const ninfer::artifact::PayloadSpan payload = reader.payload(reader.objects().front());
++                constexpr std::size_t alignment = ninfer::artifact::Reader::direct_io_alignment;
++                constexpr std::uint64_t window_limit = 64 * 1024;
++                const std::uint64_t absolute = payload.absolute_offset;
++                const std::uint64_t start    = absolute - absolute % alignment;
++                const std::uint64_t end      = absolute + payload.data.size();
++                const std::uint64_t span_bytes =
++                    (end + alignment - 1) / alignment * alignment - start;
++                const std::uint64_t window = std::min(span_bytes, window_limit);
++                void* buffer = ::operator new(window, std::align_val_t(alignment));
++                const std::size_t read = reader.read_direct(
++                    start, std::span<std::byte>(static_cast<std::byte*>(buffer), window));
++                const std::size_t skip    = static_cast<std::size_t>(absolute - start);
++                const std::size_t compare =
++                    read > skip ? std::min<std::size_t>(payload.data.size(), read - skip) : 0;
++                const bool matches =
++                    compare != 0 &&
++                    std::memcmp(static_cast<std::byte*>(buffer) + skip, payload.data.data(),
++                                compare) == 0;
++                ::operator delete(buffer, std::align_val_t(alignment));
++                if (!matches) {
++                    std::cerr << "error: direct-io cross-check disagrees with the mapped view\n";
++                    return 1;
++                }
++                std::cout << "direct_io_check: ok (" << compare << " bytes)\n";
++            }
++            return 0;
++        }
+ 
+         ninfer::PromptInput input =
+             cli.messages_path.empty()
+diff --git a/apps/cli/options.cpp b/apps/cli/options.cpp
+index 95fc61bd..590ad644 100644
+--- a/apps/cli/options.cpp
++++ b/apps/cli/options.cpp
+@@ -131,6 +131,8 @@ std::string usage_text(const char* argv0) {
+            "       [--reasoning-effort low|medium|xhigh] [--vision] [--vision-max-tokens N]\n"
+            "       [--no-cuda-graph]\n"
+            "\n"
++           "       " + std::string(argv0) + " inspect <model.ninfer>\n"
++           "\n"
+            "Streams answer content to stdout and reasoning plus diagnostics to stderr.\n"
+            "Structured message content accepts text, image/image_url, and video/video_url parts;\n"
+            "media sources may be local paths, HTTP(S) URLs, or base64 data URIs.\n"
+@@ -160,7 +162,9 @@ std::string usage_text(const char* argv0) {
+            "--no-cuda-graph runs decode eagerly. At --tp 2 that is the same two-stream forward "
+            "pass with cross-device event synchronization, in place of one captured cross-device "
+            "graph; it is the escape hatch if capture ever misbehaves, and it produces the same "
+-           "tokens.\n";
++           "tokens.\n"
++           "`inspect <model.ninfer>` prints the artifact's model_id and weights_id and exits "
++           "before any CUDA context is created.\n";
+ }
+ 
+ Options parse_options(int argc, char** argv) {
+@@ -169,6 +173,15 @@ Options parse_options(int argc, char** argv) {
+         options.help_requested = true;
+         return options;
+     }
++    // `inspect` reads only the artifact's header; it never creates a CUDA context, so identity
++    // validation is available when the GPUs are busy. `ninfer inspect` with no path is a usage
++    // error rather than an attempt to open a model literally named "inspect".
++    if (argc >= 2 && std::string_view(argv[1]) == "inspect") {
++        if (argc < 3) { throw std::invalid_argument("inspect needs a .ninfer artifact path"); }
++        options.inspect_requested = true;
++        options.artifact_path     = argv[2];
++        return options;
++    }
+     if (argc < 2) { throw std::invalid_argument(".ninfer model path is required"); }
+     options.artifact_path     = argv[1];
+     bool kv_capacity_explicit = false;
+diff --git a/apps/cli/options.h b/apps/cli/options.h
+index e1a96af7..e2da1dc2 100644
+--- a/apps/cli/options.h
++++ b/apps/cli/options.h
+@@ -12,6 +12,9 @@ namespace ninfer::cli {
+ 
+ struct Options {
+     bool help_requested = false;
++    // `ninfer inspect <artifact>`: read and report the artifact's identity without constructing an
++    // Engine, so a port can validate framing and identity on a machine whose GPUs are unavailable.
++    bool inspect_requested = false;
+ 
+     std::filesystem::path artifact_path;
+     std::string prompt;
+diff --git a/docs/cli.md b/docs/cli.md
+index 121f10e5..916dea3f 100644
+--- a/docs/cli.md
++++ b/docs/cli.md
+@@ -3,6 +3,28 @@
+ `build/apps/ninfer` runs one request against one registered `.ninfer` artifact. Build NInfer and
+ download an artifact using the [project README](../README.md) before following this guide.
+ 
++## Inspecting an artifact
++
++```bash
++./build/apps/ninfer inspect models/qwen3_6_27b.ninfer
++```
++
++```text
++model_id: qwen3.6-27b
++weights_id: groupwise-int
++file_bytes: 17495538688
++payload_offset: 393216
++objects: 1190
++direct_io_check: ok (65536 bytes)
++```
++
++`inspect` reads the container header only: it creates no CUDA context and loads no weights, so it
++works while the GPUs are busy or on a machine without them. The printed ids are exactly the
++identity the Engine validates against the registered target set, which makes this the fastest way
++to reject a wrong or truncated download. The final line cross-checks the memory-mapped view against
++the aligned direct-read path on the first object; a mismatch there means the file or the platform
++I/O layer is wrong, not the model.
++
+ ## Text input
+ 
+ ```bash

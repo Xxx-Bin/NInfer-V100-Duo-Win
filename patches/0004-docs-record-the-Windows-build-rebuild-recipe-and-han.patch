@@ -1,0 +1,556 @@
+From fbe2d5163b375d829b72df12259ca09ed07442dd Mon Sep 17 00:00:00 2001
+From: lwb6 <lwb.6@qq.com>
+Date: Sun, 18 Oct 2026 05:03:15 +0800
+Subject: [PATCH 4/5] docs: record the Windows build, rebuild recipe and
+ handoff
+
+Add the Windows guide: requirements, portable CUDA 12.8 assembly, the stubbed-media build, TP2
+commands, the four verification gates and the measured load/decode numbers. Add the exact rebuild
+recipe and a handoff that separates what was proven from what remains (independent numerical
+baseline, long-context and soak runs, the Windows system monitor, a media-capable build).
+
+Add the transport stability script, which runs the production collectives test in rounds and scans
+the Windows System log for NVLink/Xid events, and ignore the local toolchain, scratch and probe
+trees.
+---
+ .gitignore                      |  11 ++
+ HANDOFF.md                      |  90 ++++++++++++++++
+ README.md                       |   3 +
+ REBUILD.md                      | 131 +++++++++++++++++++++++
+ docs/README.md                  |   1 +
+ docs/windows.md                 | 182 ++++++++++++++++++++++++++++++++
+ tools/tp2/win/run_stability.ps1 |  53 ++++++++++
+ 7 files changed, 471 insertions(+)
+ create mode 100644 HANDOFF.md
+ create mode 100644 REBUILD.md
+ create mode 100644 docs/windows.md
+ create mode 100644 tools/tp2/win/run_stability.ps1
+
+diff --git a/.gitignore b/.gitignore
+index 3fadc803..5a5ce717 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -10,6 +10,17 @@ compile_commands.json
+ CMakeUserPresets.json
+ .cache/
+ 
++# Local Windows port toolchain and scratch trees (never part of a commit)
++_toolchain/
++_ref/
++_scratch/
++probe/
++build-win*
++vc140.pdb
++*.exe
++*.dll
++*.pdb
++
+ # CUDA / profiling artifacts
+ *.nsys-rep
+ *.ncu-rep
+diff --git a/HANDOFF.md b/HANDOFF.md
+new file mode 100644
+index 00000000..8058b314
+--- /dev/null
++++ b/HANDOFF.md
+@@ -0,0 +1,90 @@
++# Handoff: NInfer Windows TP2 port
++
++## State
++
++The port runs end to end on Windows 11 with two V100-SXM2-16GB cards in TCC:
++
++- `ninfer.exe` and `ninfer-serve.exe` build from a clean tree with MSVC 14.38 and portable
++  CUDA 12.8 (`sm_70`), media stubbed.
++- `--tp 2 --devices 0,1` loads the 23.7 GB Qwen3.8-27B NVFP4 artifact, splits weights 10.08 GiB per
++  card, captures the cross-device decode graph, and generates correct text at ~40 tok/s (batch 1)
++  with 180-220 tok/s prefill.
++- Direct P2P over NVLink qualifies and is used; the host-staged fallback also validates and is
++  exercised by the test suite.
++- Serving answers `/health` and `/v1/chat/completions` with the expected status codes and content.
++
++This satisfies Phase 0 (runtime gate) and the working half of Phase 5 (end-to-end TP2). It does not
++yet include an independent numerical comparison against a Linux baseline, long-context runs, or a
++10-minute soak.
++
++## Evidence
++
++| Check | Result |
++|---|---|
++| `cudaDeviceCanAccessPeer` both directions | 1 / 1, `tccDriver=1`, 6 NVLink links at 25.781 GB/s |
++| Exact 16 KiB cross-device copy, both directions | pass |
++| `ninfer_allreduce_test` (500 iterations per route, capture, skew) | pass, three consecutive runs, `peer access: enabled (direct P2P)` |
++| Artifact size / SHA-256 | 23,719,715,844 B / `74d2c571...b77d82`, matches the published value |
++| `infer.exe inspect` | `qwen3.8-27b` / `nvfp4`, 1190 objects, `direct_io_check: ok (65536 bytes)` |
++| TP2 load | 20.16 GiB weights, 10.08 GiB per card, 73.6 s (70.1 s H2D) |
++| Decode / prefill | 40.3 tok/s / 181-216 tok/s |
++| Graph vs eager | identical token ids (`17 11 220 18 11 220 20 11 220 22 11 220 16 16 248046`) |
++| Chinese artifact path (hard link) | inspect and direct-I/O cross-check pass |
++| Serve smoke | `/health` 200, chat completion 200, content `21` |
++
++## Changes
++
++- `CMakeLists.txt`, `src/CMakeLists.txt`: `NINFER_STUB_MEDIA`, static CUDA runtime on Windows,
++  `UTF8PROC_STATIC`, media target selection; `tests/`/`bench/` use the configured runtime target.
++- `src/media/decode/decode_stub_win.cpp`, `src/product/media_acquire/acquire_stub_win.cpp`: symbols
++  preserved, runtime error on use.
++- `src/artifact/reader.cpp`: Windows mapped-file and aligned-read implementation.
++- `src/core/nvtx*.h`: `<cstdlib>` before NVTX v3; `src/targets/.../api_impl.h`: explicit move
++  definitions for MSVC.
++- `src/product/{load_progress,logging}`, `src/serve/{console_log,request_log,startup_log}`:
++  `_isatty`, `localtime_s`, `_getpid`, console width.
++- `apps/cli`: `inspect` subcommand (identity plus reader cross-check, no CUDA context).
++- `scripts/windows/`: configure/build scripts and the portable toolkit fetcher.
++- `tools/tp2/win/run_stability.ps1`: transport gate with event-log monitoring.
++- `docs/windows.md`, `REBUILD.md`: build and verification documentation.
++
++## Open issues
++
++1. **Independent numerical baseline.** Graph/eager equality and correct answers are strong
++   self-consistency evidence, but Phase 5 L2 asks for a comparison against an independent reference
++   implementation on the same artifact. No such reference output exists on this machine yet.
++2. **Long context and soak.** 8k/32k context, KV-cache growth and a 10-minute stability run have
++   not been executed on Windows. Startup reserves 10.79 GiB per card and leaves 4.75 GiB free at
++   `--max-context 4096`; long context has to be ramped, not jumped to 131072.
++3. **Transient startup failure, not reproduced.** One `--max-context 4096` start exited silently
++   during weight upload (exit -1, no application crash event). Three identical subsequent runs
++   succeeded. Keep an eye on it; capture a dump if it recurs.
++4. **System monitor is empty on Windows.** The implementation is `/proc`-based and has no Windows
++   branch. Serving is unaffected. Porting `cpu_model_name`, memory, CPU load and the NVML loader to
++   Windows APIs is follow-up work.
++5. **Media is stubbed.** Image/video input and URL acquisition require an FFmpeg/libcurl Windows
++   toolchain and `-DNINFER_STUB_MEDIA=OFF`.
++
++## Next steps
++
++1. Produce the independent numerical comparison for Phase 5 L2/L3 (same artifact, same prompts,
++   temperature 0, compare token ids; if only a Linux baseline is available, record its ids).
++2. Ramp context 8k -> 32k, recording free memory per card; then run the 10-minute soak on a Chinese
++   path with concurrency 1.
++3. Port `SystemMonitor` to Windows (`GlobalMemoryStatusEx`, `GetSystemTimes`, NVML via
++   `LoadLibraryW`).
++4. Record the final performance table in `docs/performance.md` only after the soak; the numbers in
++   `docs/windows.md` are a first light-load measurement.
++5. Regenerate `patches/` from the commit series whenever the port changes.
++
++## Layout
++
++```text
++scripts/windows/configure.cmd     configure (portable CUDA, stub media, sm_70)
++scripts/windows/build.cmd         build targets
++scripts/windows/fetch_cuda_toolkit.py
++tools/tp2/win/run_stability.ps1   transport gate + event log
++docs/windows.md                   build/run/verify guide
++REBUILD.md                        exact reproduction recipe
++probe/ (local, untracked)         ad-hoc Phase 0 experiments; not part of the build
++```
+diff --git a/README.md b/README.md
+index 16b943dd..785318a2 100644
+--- a/README.md
++++ b/README.md
+@@ -30,6 +30,9 @@ Build with `tools/v100/build.sh`. To start the official NVFP4 artifact:
+ tools/v100/ninfer-v100-duo.sh model=/absolute/path/to/qwen3_8_27b_nvfp4.ninfer
+ ```
+ 
++On Windows 11 with two V100s in TCC mode, use the native build instead:
++[Windows guide](docs/windows.md) and the [rebuild recipe](REBUILD.md).
++
+ The launcher defaults to TP2 on GPUs 0/1, INT8 KV, CUDA Graph, MTP3 with the
+ optimized proposal head, one active request, and `127.0.0.1:8080`. Run any
+ other artifact by replacing `model=...` with **one** downloaded artifact
+diff --git a/REBUILD.md b/REBUILD.md
+new file mode 100644
+index 00000000..872d9ae2
+--- /dev/null
++++ b/REBUILD.md
+@@ -0,0 +1,131 @@
++# Rebuilding the Windows TP2 port
++
++This file is the exact recipe for reproducing the native Windows build of NInfer on two V100
++SXM2 cards. It assumes a clean checkout of this repository; all local toolchains live under
++`_toolchain/` and `.tools/`, which are git-ignored.
++
++## 0. Prerequisites
++
++- Windows 11 x64.
++- Visual Studio 2022 with **Desktop development with C++** (`vcvars64.bat` must exist).
++- Python 3.10 or newer on `PATH`.
++- Two Tesla V100-SXM2-16GB cards in TCC mode:
++  `nvidia-smi --query-gpu=index,name,driver_model.current,memory.total --format=csv`.
++- About 30 GiB free on the drive that holds the build tree and 30 GiB for the artifact.
++
++## 1. Source and toolchain
++
++```powershell
++git clone https://github.com/plus1998/NInfer-V100-Duo.git C:\src\NInfer-V100-Duo-win
++cd C:\src\NInfer-V100-Duo-win
++git checkout c967449
++
++python -m venv .tools\venv
++.\.tools\venv\Scripts\python.exe -m pip install cmake ninja
++
++python scripts\windows\fetch_cuda_toolkit.py
++git clone --depth 1 --branch v4.4.2 https://github.com/nvidia/cutlass.git _toolchain\cutlass
++```
++
++Expected: `.tools\venv\Scripts\cmake.exe --version` prints 3.31 or newer;
++`_toolchain\cuda-12.8\bin\nvcc.exe --version` prints `release 12.8, V12.8.61`.
++
++## 2. Configure
++
++```powershell
++scripts\windows\configure.cmd
++```
++
++Expected tail:
++
++```text
++-- Configuring done
++-- Generating done
++-- Build files have been written to: .../build-win
++```
++
++The script selects `CMAKE_CUDA_ARCHITECTURES=70`, points CMake at the portable toolkit, enables
++`NINFER_STUB_MEDIA` (no FFmpeg/libcurl), and keeps compiler temporaries inside `build-win-tmp`.
++
++## 3. Build
++
++```powershell
++scripts\windows\build.cmd ninfer ninfer-serve
++```
++
++Expected artifacts:
++
++```text
++build-win\apps\ninfer.exe
++build-win\apps\ninfer-serve.exe
++```
++
++The first build compiles roughly 430 translation units and takes 20-40 minutes on eight cores. If
++`cicc.exe` crashes while several `nvcc` processes run in parallel, the machine is out of memory;
++retry the same command (the failed units are recompiled) or lower the job count in
++`scripts\windows\build.cmd`.
++
++Verify the statically linked CUDA runtime:
++
++```powershell
++dumpbin /dependents build-win\apps\ninfer.exe
++```
++
++The list must not contain `cudart64_*.dll`.
++
++## 4. Transport gate
++
++```powershell
++scripts\windows\configure.cmd -DBUILD_TESTING=ON
++scripts\windows\build.cmd ninfer_allreduce_test
++powershell -ExecutionPolicy Bypass -File tools\tp2\win\run_stability.ps1
++```
++
++Expected: `peer access: enabled (direct P2P)`, `OK allreduce` on every round, and
++`RESULT: GO (all rounds passed, no driver events)`.
++
++## 5. Artifact
++
++Download `qwen3_8_27b_nvfp4.ninfer` from
++<https://huggingface.co/neroued/Qwen3.8-27B-nvfp4-NInfer> (a mirror works when the primary host is
++unreachable), then:
++
++```powershell
++Get-Item F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer | Select-Object Length
++# 23719715844
++(Get-FileHash F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer -Algorithm SHA256).Hash
++# 74D2C57145E6FF11D1D2FAA79594477F9BC903A611AF1FB20218189FBBB77D82
++
++build-win\apps\ninfer.exe inspect F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer
++```
++
++Expected `model_id: qwen3.8-27b`, `weights_id: nvfp4`, `direct_io_check: ok`.
++
++## 6. Run
++
++```powershell
++build-win\apps\ninfer.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
++  --prompt "List the first five prime numbers, comma separated." ^
++  --max-new 40 --no-thinking --greedy ^
++  --max-context 4096 --kv-capacity 4096 --tp 2 --devices 0,1
++```
++
++Expected output `2, 3, 5, 7, 11`, about 40 tok/s decode and 180-220 tok/s prefill after a ~75 s load.
++
++Graph parity check: rerun with `--print-token-ids` once as above and once with `--no-cuda-graph`.
++The `generated ids` lines must be identical.
++
++## 7. Applying the patch series
++
++The port ships as a numbered series generated from the commits that introduced it:
++
++```powershell
++git checkout -b windows-port c967449
++Get-ChildItem patches\*.patch | ForEach-Object { git am $_ }
++```
++
++PowerShell does not expand native-command wildcards, hence the explicit enumeration; in a POSIX
++shell `git am patches/*.patch` is equivalent. Each patch is self-contained and ordered by concern:
++build scaffolding, platform layer, `inspect`, then documentation. If a patch is rejected, resolve it
++against the current tree instead of dropping the change; the series is a snapshot, the repository is
++the authority.
+diff --git a/docs/README.md b/docs/README.md
+index b56b7e03..0f17b2c1 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -10,6 +10,7 @@ published-artifact CLI and HTTP examples for other profiles.
+ |---|---|
+ | [CLI](cli.md) | text, chat-history, image/video input, output streams, sampling, MTP, dual-GPU (`--tp 2`) execution, and common runtime options |
+ | [HTTP serving](serving.md) | OpenAI Responses/Chat Completions, Anthropic Messages, state, streaming, token counting, authentication, tool calls, dual-GPU serving, YaRN extended context, and the embedded web panel (Chat, Monitor, About) |
++| [Windows](windows.md) | native Windows 11 build, portable CUDA 12.8 toolchain, stubbed media, TP2 on two V100s, and the verification gates |
+ | [Performance](performance.md) | V100 Duo performance measurements; inherited RTX 5090 single-request, concurrent-decode, MTP/DFlash and 1M-context results |
+ | [CLI examples](../examples/cli/) | committed text, multimodal, thinking, long-decode, and long-context inputs |
+ 
+diff --git a/docs/windows.md b/docs/windows.md
+new file mode 100644
+index 00000000..4890ab54
+--- /dev/null
++++ b/docs/windows.md
+@@ -0,0 +1,182 @@
++# NInfer on Windows
++
++Native Windows 11 x64 build of NInfer, targeting two Tesla V100-SXM2-16GB cards in **TCC** mode and
++tensor-parallel execution (`--tp 2`). The port keeps the product surface unchanged: one `.ninfer`
++artifact, the `ninfer` CLI and `ninfer-serve`, the same Op contracts and the same serving API. The
++platform work is confined to file I/O, terminal detection, timestamps and build plumbing.
++
++The reproducible step-by-step recipe, including the toolchain installation, is
++[REBUILD.md](../REBUILD.md). This page is the guide: what the build needs, how to run it, how it is
++verified, and what is intentionally missing.
++
++## Why CUDA 12.8 and not 13
++
++The V100 is `sm_70`. CUDA 13 removed offline compilation for Volta, so the build rejects a 13.x
++`nvcc` on `CMAKE_CUDA_ARCHITECTURES=70` and this port pins 12.8. The toolkit is installed as a
++portable tree under `_toolchain/cuda-12.8` (see below); no system-wide CUDA installation or
++elevated installer is required.
++
++## Requirements
++
++- Windows 11 x64; NVIDIA driver supporting CUDA 12.8 (validated with 576.57).
++- Two identical compute-capability-7.0 GPUs, both in TCC (`nvidia-smi --query-gpu=driver_model.current`).
++- Visual Studio 2022 17.8 with the "Desktop development with C++" workload (MSVC 19.38 / 14.38).
++  Other 2022 releases work; the build only needs `vcvars64.bat` and the x64 toolset.
++- CMake 3.28 or newer and Ninja. The scripts use `.tools\venv\Scripts\{cmake,ninja}.exe` when that
++  virtual environment exists and fall back to `PATH`.
++- Python 3.10+ for the toolkit fetcher and for downloading the artifact.
++
++## Toolchain setup
++
++```powershell
++python -m venv .tools\venv
++.\.tools\venv\Scripts\python.exe -m pip install cmake ninja
++
++python scripts\windows\fetch_cuda_toolkit.py
++git clone --depth 1 --branch v4.4.2 https://github.com/nvidia/cutlass.git _toolchain\cutlass
++```
++
++`fetch_cuda_toolkit.py` downloads the four CUDA 12.8 redistributable components the build consumes
++(`cuda_nvcc`, `cuda_cudart`, `cuda_cccl`, `cuda_nvtx`, about 130 MB) and merges them into
++`_toolchain\cuda-12.8`, which CMake receives as `CUDAToolkit_ROOT`. The CUTLASS checkout is optional
++but recommended: CMake's `FetchContent` runs `git submodule update` through MSYS `sh`, which fails in
++restricted environments; the configure script passes the local checkout as
++`FETCHCONTENT_SOURCE_DIR_CUTLASS` when `_toolchain\cutlass` exists.
++
++## Configure and build
++
++From a normal PowerShell window (the scripts call `vcvars64.bat` themselves):
++
++```powershell
++scripts\windows\configure.cmd
++scripts\windows\build.cmd ninfer ninfer-serve
++```
++
++Outputs:
++
++```text
++build-win\apps\ninfer.exe
++build-win\apps\ninfer-serve.exe
++```
++
++Both are self-contained apart from the MSVC runtime: the CUDA runtime is linked statically on
++Windows, so no `cudart64_*.dll` is required at run time. Verify with
++`dumpbin /dependents build-win\apps\ninfer.exe`.
++
++For the test suites (including the transport gate):
++
++```powershell
++scripts\windows\configure.cmd -DBUILD_TESTING=ON
++scripts\windows\build.cmd ninfer_allreduce_test
++```
++
++## Media is stubbed in this build
++
++The Windows build defaults to `-DNINFER_STUB_MEDIA=ON`, which removes the FFmpeg and libcurl
++dependencies while keeping every target and its link graph. Text, chat, tools and serving work
++normally; image/video prompts and HTTP(S) media acquisition throw a clear runtime error instead of
++returning partial data:
++
++```text
++media decode is unavailable in this build (decode_image): it was configured with
++NINFER_STUB_MEDIA=ON, which omits the FFmpeg dependency
++```
++
++Build a media-capable Windows tree by providing FFmpeg and libcurl through vcpkg or a system
++prefix and configuring with `-DNINFER_STUB_MEDIA=OFF`.
++
++## Artifact
++
++The port was validated with the official Qwen3.8-27B NVFP4 artifact:
++
++```text
++qwen3_8_27b_nvfp4.ninfer
++23,719,715,844 bytes
++sha256 74d2c57145e6ff11d1d2faa79594477f9bc903a611af1fb20218189fbbb77d82
++```
++
++Check the size and hash after downloading (`Get-FileHash -Algorithm SHA256`), then read the identity
++without creating a CUDA context:
++
++```powershell
++build-win\apps\ninfer.exe inspect F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer
++```
++
++```text
++model_id: qwen3.8-27b
++weights_id: nvfp4
++file_bytes: 23719715844
++payload_offset: 393216
++objects: 1190
++direct_io_check: ok (65536 bytes)
++```
++
++`inspect` also cross-checks the mapped view against the aligned `ReadFile`/`OVERLAPPED` path on the
++first object, which is how the Windows reader is validated on a real file without a GPU.
++
++## Running TP2
++
++```powershell
++build-win\apps\ninfer.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
++  --prompt "List the first five prime numbers, comma separated." ^
++  --max-new 40 --no-thinking --greedy ^
++  --max-context 4096 --kv-capacity 4096 ^
++  --tp 2 --devices 0,1
++```
++
++Serving:
++
++```powershell
++build-win\apps\ninfer-serve.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
++  --host 127.0.0.1 --port 18080 ^
++  --max-context 4096 --kv-capacity 4096 --tp 2 --devices 0,1 --max-concurrency 1
++```
++
++`GET /health` returns `{"model":"qwen3.8-27b","status":"ok"}` once loading finishes;
++`POST /v1/chat/completions` behaves as documented in [serving.md](serving.md).
++
++## Verification
++
++1. **Transport gate.** `tools\tp2\win\run_stability.ps1` runs `ninfer_allreduce_test` several times
++   and checks the Windows System event log for NVLink/Xid failures. The test covers both transport
++   routes (event/copy and the one-shot kernel), 500 host-drained iterations each, graph capture and
++   rank skew, and prints `peer access: enabled (direct P2P)` when peer access qualified.
++2. **Reader gate.** `infer.exe inspect <artifact>` must print the expected `model_id`/`weights_id`
++   and `direct_io_check: ok`.
++3. **Graph parity.** The same prompt with and without `--no-cuda-graph` must produce identical token
++   ids (`--print-token-ids`). This is the check that a captured cross-device decode graph replays
++   the same arithmetic as eager execution.
++4. **Serving smoke.** `/health` returns 200 and a chat completion returns 200 with the expected
++   content.
++
++Measured on 2 x V100-SXM2-16GB (TCC, NVLink), CUDA 12.8.61, MSVC 19.38, driver 576.57:
++
++| Quantity | Value |
++|---|---|
++| Artifact load, 20.16 GiB weights | 73.6 s (H2D 70.1 s) |
++| Per-card weight residency | 10.08 GiB (reserved 10.79 GiB, 4.75 GiB free) |
++| Prefill | 181-216 tok/s |
++| Decode, batch 1 | 40.3 tok/s |
++| All-reduce, 5120 BF16 | one-shot mean 28-32 us, copy mean 43-52 us (host-drained) |
++
++## Known limitations
++
++- Media decode and URL acquisition are unavailable in the default (stubbed) build.
++- `SystemMonitor` reports no host/GPU readings on Windows yet: its implementation is `/proc`-based
++  on Linux and returns empty rows elsewhere. Serving is unaffected; the monitor page simply has no
++  data. Porting it to `GlobalMemoryStatusEx`/NVML is follow-up work, not a dependency.
++- The one-shot all-reduce route is admitted for payloads up to 131,072 BF16 elements; larger
++  prefill reductions use the event/copy route, exactly as on Linux.
++- The Windows event-log check needs a readable System log. When the log is unavailable the script
++  warns and relies on the test's own exit code.
++
++## Troubleshooting
++
++| Symptom | Cause and fix |
++|---|---|
++| `nvcc fatal: Could not open output file ...\Temp\tmpxft_*` | The session temp directory is not writable for the compiler. The scripts set `TMP`/`TEMP` to `build-win-tmp`; do the same when invoking `nvcc` manually. |
++| CMake fails in `cutlass-populate` with `sh.exe: ... NtCreateDirectoryObject` | MSYS `sh` cannot create its shared-memory object. Pre-clone CUTLASS into `_toolchain\cutlass` (the configure script picks it up). |
++| `LNK2019` for `SequencePlan`/`RequestPlan` move constructors | MSVC does not emit an out-of-line `template <> ... = default;` that the defining TU never uses. The definitions in `api_impl.h` are spelled out; keep them that way. |
++| `error C3861: '_wgetenv'` from `nvtx3` | Include `<cstdlib>` before `<nvtx3/nvToolsExt.h>`; `src/core/nvtx.h` does this. |
++| Ninja hangs during configure or build | The harness sandbox can block compiler child-process pipes; run the build in a normal shell. |
++| `cudaErrorMemoryAllocation` from `cudaSetDevice` | Another process owns the GPUs. Check `nvidia-smi --query-compute-apps`. |
+diff --git a/tools/tp2/win/run_stability.ps1 b/tools/tp2/win/run_stability.ps1
+new file mode 100644
+index 00000000..97ae3dcb
+--- /dev/null
++++ b/tools/tp2/win/run_stability.ps1
+@@ -0,0 +1,53 @@
++# Stability gate for the dual-V100 TP2 transport.
++#
++# Runs the production collectives test (500 host-drained iterations of both transport routes,
++# including graph capture and skew cases) several times and checks the Windows System event log for
++# driver-level failures that never surface as CUDA return codes: NVLink fatal errors and Xid
++# resets. This is the authoritative Phase 0 gate; a one-off smoke probe is not a substitute.
++#
++# Usage: powershell -ExecutionPolicy Bypass -File tools\tp2\win\run_stability.ps1 [-Rounds 3]
++param(
++    [int]$Rounds = 3,
++    [string]$TestExe = ""
++)
++
++$ErrorActionPreference = "Stop"
++$repo = Resolve-Path (Join-Path $PSScriptRoot "..\..\..")
++if ($TestExe -eq "") { $TestExe = Join-Path $repo "build-win\tests\ninfer_allreduce_test.exe" }
++if (-not (Test-Path $TestExe)) {
++    throw "missing $TestExe; configure with -DBUILD_TESTING=ON and run: scripts\windows\build.cmd ninfer_allreduce_test"
++}
++
++function Get-DriverEvents([datetime]$since) {
++    try {
++        Get-WinEvent -FilterHashtable @{ LogName = 'System'; StartTime = $since } -ErrorAction Stop |
++            Where-Object { $_.ProviderName -match 'nvlddmkm|Display' -or $_.Message -match 'NVLink|Xid|GPU has fallen' }
++    } catch {
++        @()
++    }
++}
++
++$start = Get-Date
++$failed = 0
++for ($round = 1; $round -le $Rounds; $round++) {
++    Write-Host "round $round/$Rounds"
++    & $TestExe
++    if ($LASTEXITCODE -ne 0) {
++        Write-Warning "round $round exited $LASTEXITCODE"
++        $failed++
++    }
++}
++
++$events = @(Get-DriverEvents $start)
++Write-Host "driver events during the run: $($events.Count)"
++foreach ($event in $events) {
++    Write-Host ("  {0} id={1} {2}: {3}" -f $event.TimeCreated, $event.Id, $event.LevelDisplayName,
++        ($event.Message -replace "`r?`n", ' '))
++}
++
++if ($failed -eq 0 -and $events.Count -eq 0) {
++    Write-Host "RESULT: GO (all rounds passed, no driver events)"
++    exit 0
++}
++Write-Host "RESULT: NO-GO ($failed failed round(s), $($events.Count) driver event(s))"
++exit 1

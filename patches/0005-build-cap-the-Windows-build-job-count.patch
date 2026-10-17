@@ -1,0 +1,67 @@
+From 1f6532cf9455f547c5d99534bcab2d32fde1503f Mon Sep 17 00:00:00 2001
+From: lwb6 <lwb.6@qq.com>
+Date: Sun, 18 Oct 2026 05:11:33 +0800
+Subject: [PATCH 5/5] build: cap the Windows build job count
+
+Eight parallel nvcc processes can exhaust host memory while expanding CUTLASS templates, and the
+failure surfaces as a cicc.exe crash with a dump in build-win-tmp rather than a useful diagnostic.
+Honour NINFER_BUILD_JOBS (default 8) so a constrained machine can build without editing the script,
+and document the knob next to the build instructions and in the troubleshooting table.
+---
+ REBUILD.md                |  8 ++++++--
+ docs/windows.md           |  1 +
+ scripts/windows/build.cmd | 10 ++++++++--
+ 3 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/REBUILD.md b/REBUILD.md
+index 872d9ae2..b6972d0c 100644
+--- a/REBUILD.md
++++ b/REBUILD.md
+@@ -62,8 +62,12 @@ build-win\apps\ninfer-serve.exe
+ 
+ The first build compiles roughly 430 translation units and takes 20-40 minutes on eight cores. If
+ `cicc.exe` crashes while several `nvcc` processes run in parallel, the machine is out of memory;
+-retry the same command (the failed units are recompiled) or lower the job count in
+-`scripts\windows\build.cmd`.
++retry the same command (the failed units are recompiled) or cap the parallelism:
++
++```powershell
++set NINFER_BUILD_JOBS=4
++scripts\windows\build.cmd ninfer ninfer-serve
++```
+ 
+ Verify the statically linked CUDA runtime:
+ 
+diff --git a/docs/windows.md b/docs/windows.md
+index 4890ab54..0f3cd311 100644
+--- a/docs/windows.md
++++ b/docs/windows.md
+@@ -178,5 +178,6 @@ Measured on 2 x V100-SXM2-16GB (TCC, NVLink), CUDA 12.8.61, MSVC 19.38, driver 5
+ | CMake fails in `cutlass-populate` with `sh.exe: ... NtCreateDirectoryObject` | MSYS `sh` cannot create its shared-memory object. Pre-clone CUTLASS into `_toolchain\cutlass` (the configure script picks it up). |
+ | `LNK2019` for `SequencePlan`/`RequestPlan` move constructors | MSVC does not emit an out-of-line `template <> ... = default;` that the defining TU never uses. The definitions in `api_impl.h` are spelled out; keep them that way. |
+ | `error C3861: '_wgetenv'` from `nvtx3` | Include `<cstdlib>` before `<nvtx3/nvToolsExt.h>`; `src/core/nvtx.h` does this. |
++| `cicc.exe` crash dump in `build-win-tmp` while several CUDA objects compile | Parallel `nvcc` processes exhausted host memory. Rerun, or cap parallelism with `set NINFER_BUILD_JOBS=4` before `scripts\windows\build.cmd`. |
+ | Ninja hangs during configure or build | The harness sandbox can block compiler child-process pipes; run the build in a normal shell. |
+ | `cudaErrorMemoryAllocation` from `cudaSetDevice` | Another process owns the GPUs. Check `nvidia-smi --query-compute-apps`. |
+diff --git a/scripts/windows/build.cmd b/scripts/windows/build.cmd
+index c6530b04..617697b6 100644
+--- a/scripts/windows/build.cmd
++++ b/scripts/windows/build.cmd
+@@ -32,9 +32,15 @@ set "VSCMD_SKIP_SENDTELEMETRY=1"
+ call "%VCVARS%" >nul
+ if errorlevel 1 exit /b 1
+ 
++rem Each nvcc process can hold several GB while expanding CUTLASS templates. On a memory-constrained
++rem machine the parallel set can push cicc.exe into an out-of-memory crash, which surfaces as a
++rem failed CUDA object with a crash dump in build-win-tmp. Lower the cap with, for example,
++rem   set NINFER_BUILD_JOBS=4
++if not defined NINFER_BUILD_JOBS set "NINFER_BUILD_JOBS=8"
++
+ if "%~1"=="" (
+-  "%CMAKE%" --build "%ROOT%\build-win" -j 8
++  "%CMAKE%" --build "%ROOT%\build-win" -j %NINFER_BUILD_JOBS%
+ ) else (
+-  "%CMAKE%" --build "%ROOT%\build-win" -j 8 --target %*
++  "%CMAKE%" --build "%ROOT%\build-win" -j %NINFER_BUILD_JOBS% --target %*
+ )
+ exit /b %errorlevel%
