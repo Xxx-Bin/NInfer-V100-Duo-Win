@@ -1,14 +1,19 @@
 #include "options.h"
+#include "artifact/reader.h"
 #include "product/load_progress/load_progress.h"
 #include "product/prompt_input/prompt_input.h"
 
 #include "ninfer/engine.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <iomanip>
 #include <iostream>
+#include <new>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -269,6 +274,50 @@ int main(int argc, char** argv) {
         const ninfer::cli::Options cli = ninfer::cli::parse_options(argc, argv);
         if (cli.help_requested) {
             std::cout << ninfer::cli::usage_text(argv[0]);
+            return 0;
+        }
+        // Identity-only path: Reader maps and parses the header, which needs no CUDA context. The
+        // printed ids are exactly what Engine validates against the registered target set, so an
+        // artifact can be screened on a machine whose GPUs are in use.
+        if (cli.inspect_requested) {
+            const ninfer::artifact::Reader reader(cli.artifact_path);
+            const ninfer::artifact::ArtifactIdentity& identity = reader.identity();
+            std::cout << "model_id: " << identity.model_id << '\n'
+                      << "weights_id: " << identity.weights_id << '\n'
+                      << "file_bytes: " << reader.file_bytes() << '\n'
+                      << "payload_offset: " << reader.payload_offset() << '\n'
+                      << "objects: " << reader.objects().size() << '\n';
+
+            // Compare the mapped view with the aligned direct-read path on the first object. The
+            // two routes share the file but not the Windows I/O machinery (MapViewOfFile versus
+            // ReadFile with OVERLAPPED), so a mismatch here is a reader bug, not a model issue.
+            if (!reader.objects().empty()) {
+                const ninfer::artifact::PayloadSpan payload = reader.payload(reader.objects().front());
+                constexpr std::size_t alignment = ninfer::artifact::Reader::direct_io_alignment;
+                constexpr std::uint64_t window_limit = 64 * 1024;
+                const std::uint64_t absolute = payload.absolute_offset;
+                const std::uint64_t start    = absolute - absolute % alignment;
+                const std::uint64_t end      = absolute + payload.data.size();
+                const std::uint64_t span_bytes =
+                    (end + alignment - 1) / alignment * alignment - start;
+                const std::uint64_t window = std::min(span_bytes, window_limit);
+                void* buffer = ::operator new(window, std::align_val_t(alignment));
+                const std::size_t read = reader.read_direct(
+                    start, std::span<std::byte>(static_cast<std::byte*>(buffer), window));
+                const std::size_t skip    = static_cast<std::size_t>(absolute - start);
+                const std::size_t compare =
+                    read > skip ? std::min<std::size_t>(payload.data.size(), read - skip) : 0;
+                const bool matches =
+                    compare != 0 &&
+                    std::memcmp(static_cast<std::byte*>(buffer) + skip, payload.data.data(),
+                                compare) == 0;
+                ::operator delete(buffer, std::align_val_t(alignment));
+                if (!matches) {
+                    std::cerr << "error: direct-io cross-check disagrees with the mapped view\n";
+                    return 1;
+                }
+                std::cout << "direct_io_check: ok (" << compare << " bytes)\n";
+            }
             return 0;
         }
 

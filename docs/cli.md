@@ -3,6 +3,28 @@
 `build/apps/ninfer` runs one request against one registered `.ninfer` artifact. Build NInfer and
 download an artifact using the [project README](../README.md) before following this guide.
 
+## Inspecting an artifact
+
+```bash
+./build/apps/ninfer inspect models/qwen3_6_27b.ninfer
+```
+
+```text
+model_id: qwen3.6-27b
+weights_id: groupwise-int
+file_bytes: 17495538688
+payload_offset: 393216
+objects: 1190
+direct_io_check: ok (65536 bytes)
+```
+
+`inspect` reads the container header only: it creates no CUDA context and loads no weights, so it
+works while the GPUs are busy or on a machine without them. The printed ids are exactly the
+identity the Engine validates against the registered target set, which makes this the fastest way
+to reject a wrong or truncated download. The final line cross-checks the memory-mapped view against
+the aligned direct-read path on the first object; a mismatch there means the file or the platform
+I/O layer is wrong, not the model.
+
 ## Text input
 
 ```bash

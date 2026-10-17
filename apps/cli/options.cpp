@@ -131,6 +131,8 @@ std::string usage_text(const char* argv0) {
            "       [--reasoning-effort low|medium|xhigh] [--vision] [--vision-max-tokens N]\n"
            "       [--no-cuda-graph]\n"
            "\n"
+           "       " + std::string(argv0) + " inspect <model.ninfer>\n"
+           "\n"
            "Streams answer content to stdout and reasoning plus diagnostics to stderr.\n"
            "Structured message content accepts text, image/image_url, and video/video_url parts;\n"
            "media sources may be local paths, HTTP(S) URLs, or base64 data URIs.\n"
@@ -160,13 +162,24 @@ std::string usage_text(const char* argv0) {
            "--no-cuda-graph runs decode eagerly. At --tp 2 that is the same two-stream forward "
            "pass with cross-device event synchronization, in place of one captured cross-device "
            "graph; it is the escape hatch if capture ever misbehaves, and it produces the same "
-           "tokens.\n";
+           "tokens.\n"
+           "`inspect <model.ninfer>` prints the artifact's model_id and weights_id and exits "
+           "before any CUDA context is created.\n";
 }
 
 Options parse_options(int argc, char** argv) {
     Options options;
     if (argc >= 2 && (std::string_view(argv[1]) == "--help" || std::string_view(argv[1]) == "-h")) {
         options.help_requested = true;
+        return options;
+    }
+    // `inspect` reads only the artifact's header; it never creates a CUDA context, so identity
+    // validation is available when the GPUs are busy. `ninfer inspect` with no path is a usage
+    // error rather than an attempt to open a model literally named "inspect".
+    if (argc >= 2 && std::string_view(argv[1]) == "inspect") {
+        if (argc < 3) { throw std::invalid_argument("inspect needs a .ninfer artifact path"); }
+        options.inspect_requested = true;
+        options.artifact_path     = argv[2];
         return options;
     }
     if (argc < 2) { throw std::invalid_argument(".ninfer model path is required"); }

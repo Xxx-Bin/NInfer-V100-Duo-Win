@@ -12,6 +12,9 @@ namespace ninfer::cli {
 
 struct Options {
     bool help_requested = false;
+    // `ninfer inspect <artifact>`: read and report the artifact's identity without constructing an
+    // Engine, so a port can validate framing and identity on a machine whose GPUs are unavailable.
+    bool inspect_requested = false;
 
     std::filesystem::path artifact_path;
     std::string prompt;
