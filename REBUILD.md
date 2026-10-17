@@ -62,8 +62,12 @@ build-win\apps\ninfer-serve.exe
 
 The first build compiles roughly 430 translation units and takes 20-40 minutes on eight cores. If
 `cicc.exe` crashes while several `nvcc` processes run in parallel, the machine is out of memory;
-retry the same command (the failed units are recompiled) or lower the job count in
-`scripts\windows\build.cmd`.
+retry the same command (the failed units are recompiled) or cap the parallelism:
+
+```powershell
+set NINFER_BUILD_JOBS=4
+scripts\windows\build.cmd ninfer ninfer-serve
+```
 
 Verify the statically linked CUDA runtime:
 

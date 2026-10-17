@@ -178,5 +178,6 @@ Measured on 2 x V100-SXM2-16GB (TCC, NVLink), CUDA 12.8.61, MSVC 19.38, driver 5
 | CMake fails in `cutlass-populate` with `sh.exe: ... NtCreateDirectoryObject` | MSYS `sh` cannot create its shared-memory object. Pre-clone CUTLASS into `_toolchain\cutlass` (the configure script picks it up). |
 | `LNK2019` for `SequencePlan`/`RequestPlan` move constructors | MSVC does not emit an out-of-line `template <> ... = default;` that the defining TU never uses. The definitions in `api_impl.h` are spelled out; keep them that way. |
 | `error C3861: '_wgetenv'` from `nvtx3` | Include `<cstdlib>` before `<nvtx3/nvToolsExt.h>`; `src/core/nvtx.h` does this. |
+| `cicc.exe` crash dump in `build-win-tmp` while several CUDA objects compile | Parallel `nvcc` processes exhausted host memory. Rerun, or cap parallelism with `set NINFER_BUILD_JOBS=4` before `scripts\windows\build.cmd`. |
 | Ninja hangs during configure or build | The harness sandbox can block compiler child-process pipes; run the build in a normal shell. |
 | `cudaErrorMemoryAllocation` from `cudaSetDevice` | Another process owns the GPUs. Check `nvidia-smi --query-compute-apps`. |

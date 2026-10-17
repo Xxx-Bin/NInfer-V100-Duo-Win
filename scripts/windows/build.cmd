@@ -32,9 +32,15 @@ set "VSCMD_SKIP_SENDTELEMETRY=1"
 call "%VCVARS%" >nul
 if errorlevel 1 exit /b 1
 
+rem Each nvcc process can hold several GB while expanding CUTLASS templates. On a memory-constrained
+rem machine the parallel set can push cicc.exe into an out-of-memory crash, which surfaces as a
+rem failed CUDA object with a crash dump in build-win-tmp. Lower the cap with, for example,
+rem   set NINFER_BUILD_JOBS=4
+if not defined NINFER_BUILD_JOBS set "NINFER_BUILD_JOBS=8"
+
 if "%~1"=="" (
-  "%CMAKE%" --build "%ROOT%\build-win" -j 8
+  "%CMAKE%" --build "%ROOT%\build-win" -j %NINFER_BUILD_JOBS%
 ) else (
-  "%CMAKE%" --build "%ROOT%\build-win" -j 8 --target %*
+  "%CMAKE%" --build "%ROOT%\build-win" -j %NINFER_BUILD_JOBS% --target %*
 )
 exit /b %errorlevel%
