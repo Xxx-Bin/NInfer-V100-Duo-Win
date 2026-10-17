@@ -1,5 +1,10 @@
 #pragma once
 
+// NVTX v3's init path calls _wgetenv() on MSVC (nvtxInit.h), whose declaration lives in
+// <cstdlib>. Including it first keeps a translation unit that reaches this header before any other
+// CRT header from failing with C3861.
+#include <cstdlib>
+
 #include <nvtx3/nvToolsExt.h>
 
 #include <array>

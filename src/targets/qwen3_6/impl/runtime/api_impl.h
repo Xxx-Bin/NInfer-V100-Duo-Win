@@ -17,10 +17,16 @@ SequencePlan<Variant>::SequencePlan(
     std::unique_ptr<detail::SequencePlanImpl<Variant>> impl) noexcept
     : impl_(std::move(impl)) {}
 
+// MSVC does not emit an out-of-line `template <> ... = default;` body that the defining
+// translation unit never odr-uses, which leaves the move operations undefined at link time (GCC
+// emits them as weak definitions). Spell the bodies out so every specialization has a definition.
 template <>
-SequencePlan<Variant>::SequencePlan(SequencePlan&&) noexcept = default;
+SequencePlan<Variant>::SequencePlan(SequencePlan&& other) noexcept : impl_(std::move(other.impl_)) {}
 template <>
-SequencePlan<Variant>& SequencePlan<Variant>::operator=(SequencePlan&&) noexcept = default;
+SequencePlan<Variant>& SequencePlan<Variant>::operator=(SequencePlan&& other) noexcept {
+    impl_ = std::move(other.impl_);
+    return *this;
+}
 template <>
 SequencePlan<Variant>::~SequencePlan() = default;
 
@@ -60,9 +66,13 @@ SequencePlanner<Variant>::SequencePlanner(
     : impl_(std::move(impl)) {}
 
 template <>
-SequencePlanner<Variant>::SequencePlanner(SequencePlanner&&) noexcept = default;
+SequencePlanner<Variant>::SequencePlanner(SequencePlanner&& other) noexcept
+    : impl_(std::move(other.impl_)) {}
 template <>
-SequencePlanner<Variant>& SequencePlanner<Variant>::operator=(SequencePlanner&&) noexcept = default;
+SequencePlanner<Variant>& SequencePlanner<Variant>::operator=(SequencePlanner&& other) noexcept {
+    impl_ = std::move(other.impl_);
+    return *this;
+}
 template <>
 SequencePlanner<Variant>::~SequencePlanner() = default;
 
@@ -85,9 +95,13 @@ RequestBasePlan<Variant>::RequestBasePlan(
     : impl_(std::move(impl)) {}
 
 template <>
-RequestBasePlan<Variant>::RequestBasePlan(RequestBasePlan&&) noexcept = default;
+RequestBasePlan<Variant>::RequestBasePlan(RequestBasePlan&& other) noexcept
+    : impl_(std::move(other.impl_)) {}
 template <>
-RequestBasePlan<Variant>& RequestBasePlan<Variant>::operator=(RequestBasePlan&&) noexcept = default;
+RequestBasePlan<Variant>& RequestBasePlan<Variant>::operator=(RequestBasePlan&& other) noexcept {
+    impl_ = std::move(other.impl_);
+    return *this;
+}
 template <>
 RequestBasePlan<Variant>::~RequestBasePlan() = default;
 
@@ -102,9 +116,12 @@ RequestPlan<Variant>::RequestPlan(std::unique_ptr<detail::RequestPlanImpl<Varian
     : impl_(std::move(impl)) {}
 
 template <>
-RequestPlan<Variant>::RequestPlan(RequestPlan&&) noexcept = default;
+RequestPlan<Variant>::RequestPlan(RequestPlan&& other) noexcept : impl_(std::move(other.impl_)) {}
 template <>
-RequestPlan<Variant>& RequestPlan<Variant>::operator=(RequestPlan&&) noexcept = default;
+RequestPlan<Variant>& RequestPlan<Variant>::operator=(RequestPlan&& other) noexcept {
+    impl_ = std::move(other.impl_);
+    return *this;
+}
 template <>
 RequestPlan<Variant>::~RequestPlan() = default;
 

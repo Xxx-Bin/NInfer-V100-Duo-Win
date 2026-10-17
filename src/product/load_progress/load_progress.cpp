@@ -1,6 +1,10 @@
 #include "product/load_progress/load_progress.h"
 
+#if defined(_WIN32)
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -12,6 +16,16 @@
 
 namespace ninfer::product {
 namespace {
+
+// One definition of "stderr is a terminal" for both CRT families: Windows spells it
+// _isatty(_fileno(...)), POSIX isatty(STDERR_FILENO).
+bool stderr_is_interactive() noexcept {
+#if defined(_WIN32)
+    return ::_isatty(::_fileno(stderr)) == 1;
+#else
+    return ::isatty(STDERR_FILENO) == 1;
+#endif
+}
 
 std::string format_seconds(double seconds) {
     std::ostringstream output;
@@ -60,7 +74,7 @@ std::string format_line(std::string_view phase, std::uint64_t done, std::uint64_
 } // namespace
 
 LoadProgressRendererOptions stderr_load_progress_options() noexcept {
-    if (::isatty(STDERR_FILENO) == 1) {
+    if (stderr_is_interactive()) {
         return LoadProgressRendererOptions{
             .mode                 = LoadProgressOutputMode::Interactive,
             .min_refresh_interval = std::chrono::milliseconds(200),

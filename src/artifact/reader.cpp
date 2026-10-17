@@ -17,10 +17,14 @@
 #include <unordered_map>
 #include <utility>
 
+#if defined(_WIN32)
+#include <windows.h>
+#else
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#endif
 
 namespace ninfer::artifact {
 namespace {
@@ -199,12 +203,142 @@ struct TransparentStringHash {
     }
 };
 
+// UTF-8 rendering of a path for diagnostics. std::filesystem::path::string() uses the ANSI code
+// page on Windows and throws for names outside it (a Chinese artifact path is a supported input),
+// while u8string() is always UTF-8; the byte string is what stderr/logging consumes.
+std::string display_path(const std::filesystem::path& path) {
+#if defined(_WIN32)
+    const std::u8string utf8 = path.u8string();
+    return std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size());
+#else
+    return display_path(path);
+#endif
+}
+
+#if defined(_WIN32)
+class MappedFile {
+public:
+    explicit MappedFile(const std::filesystem::path& path) {
+        // FILE_FLAG_OVERLAPPED makes every read explicitly positional, so concurrent uses of one
+        // Reader never share a file pointer. This handle is deliberately buffered: FILE_FLAG_NO_BUFFERING
+        // would impose 4096-byte sector alignment on the mapping and on every header read. The
+        // aligned read_direct() path keeps working through the cache; switching it to unbuffered
+        // I/O is a measured decision for later, not a correctness requirement.
+        // FILE_SHARE_WRITE as well as FILE_SHARE_READ: Windows rejects a read open unless the new
+        // share mode also permits whatever access existing handles hold (POSIX O_RDONLY coexists
+        // with a writer). A reader of a file being repaired or downloaded must not fail to open it.
+        file_ = ::CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
+        if (file_ == INVALID_HANDLE_VALUE) {
+            throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(),
+                                    "open " + display_path(path));
+        }
+
+        LARGE_INTEGER size{};
+        if (::GetFileSizeEx(file_, &size) == 0) {
+            const int error = static_cast<int>(::GetLastError());
+            ::CloseHandle(file_);
+            file_ = INVALID_HANDLE_VALUE;
+            throw std::system_error(error, std::system_category(), "stat " + display_path(path));
+        }
+        if (size.QuadPart < 0 ||
+            static_cast<std::uint64_t>(size.QuadPart) > std::numeric_limits<std::size_t>::max()) {
+            ::CloseHandle(file_);
+            file_ = INVALID_HANDLE_VALUE;
+            throw ArtifactError("artifact size does not fit the process address space");
+        }
+
+        size_ = static_cast<std::size_t>(size.QuadPart);
+        if (size_ != 0) {
+            // CreateFileMappingW's fourth argument is dwMaximumSizeHigh and its fifth is
+            // dwMaximumSizeLow. Both zero means "map the whole file"; they must not be swapped.
+            mapping_ = ::CreateFileMappingW(file_, nullptr, PAGE_READONLY, 0, 0, nullptr);
+            if (mapping_ == nullptr) {
+                const int error = static_cast<int>(::GetLastError());
+                ::CloseHandle(file_);
+                file_ = INVALID_HANDLE_VALUE;
+                throw std::system_error(error, std::system_category(),
+                                        "map " + display_path(path));
+            }
+            data_ = static_cast<const std::byte*>(::MapViewOfFile(mapping_, FILE_MAP_READ, 0, 0, size_));
+            if (data_ == nullptr) {
+                const int error = static_cast<int>(::GetLastError());
+                ::CloseHandle(mapping_);
+                ::CloseHandle(file_);
+                mapping_ = nullptr;
+                file_    = INVALID_HANDLE_VALUE;
+                throw std::system_error(error, std::system_category(),
+                                        "view " + display_path(path));
+            }
+        }
+    }
+
+    ~MappedFile() {
+        if (data_ != nullptr) { ::UnmapViewOfFile(data_); }
+        if (mapping_ != nullptr) { ::CloseHandle(mapping_); }
+        if (file_ != INVALID_HANDLE_VALUE) { ::CloseHandle(file_); }
+    }
+
+    MappedFile(const MappedFile&)            = delete;
+    MappedFile& operator=(const MappedFile&) = delete;
+
+    const std::byte* data() const noexcept { return data_; }
+
+    std::size_t size() const noexcept { return size_; }
+
+    std::size_t read_direct(std::uint64_t absolute_offset, std::span<std::byte> destination) const {
+        constexpr std::size_t alignment = Reader::direct_io_alignment;
+        if (absolute_offset % alignment != 0 || destination.size() % alignment != 0 ||
+            reinterpret_cast<std::uintptr_t>(destination.data()) % alignment != 0) {
+            throw ArtifactError("direct artifact read is not 4096-byte aligned");
+        }
+
+        std::size_t done = 0;
+        while (done < destination.size()) {
+            // ReadFile takes a DWORD length, so a request above 4 GiB is split. Normal artifact
+            // reads are far smaller; the loop exists so the type never truncates.
+            const DWORD request =
+                static_cast<DWORD>(std::min<std::size_t>(destination.size() - done, 1ULL << 30));
+            const std::uint64_t offset = absolute_offset + done;
+            OVERLAPPED overlapped{};
+            overlapped.Offset     = static_cast<DWORD>(offset & 0xffffffffULL);
+            overlapped.OffsetHigh = static_cast<DWORD>(offset >> 32);
+            DWORD bytes           = 0;
+            if (::ReadFile(file_, destination.data() + done, request, &bytes, &overlapped) == 0) {
+                const DWORD error = ::GetLastError();
+                // Reading exactly at end of file is EOF, not a failure; a shorter-than-requested
+                // transfer is also a legal short read and is reported to the caller as such.
+                if (error == ERROR_HANDLE_EOF) { return done; }
+                if (error != ERROR_IO_PENDING) {
+                    throw std::system_error(static_cast<int>(error), std::system_category(),
+                                            "direct artifact read at " + std::to_string(offset));
+                }
+                if (::GetOverlappedResult(file_, &overlapped, &bytes, TRUE) == 0) {
+                    const DWORD result = ::GetLastError();
+                    if (result == ERROR_HANDLE_EOF) { return done; }
+                    throw std::system_error(static_cast<int>(result), std::system_category(),
+                                            "direct artifact read at " + std::to_string(offset));
+                }
+            }
+            done += bytes;
+            if (bytes < request) { return done; }
+        }
+        return done;
+    }
+
+private:
+    HANDLE file_       = INVALID_HANDLE_VALUE;
+    HANDLE mapping_    = nullptr;
+    const std::byte* data_ = nullptr;
+    std::size_t size_  = 0;
+};
+#else
 class MappedFile {
 public:
     explicit MappedFile(const std::filesystem::path& path) {
         const int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC | O_DIRECT);
         if (fd < 0) {
-            throw std::system_error(errno, std::generic_category(), "open " + path.string());
+            throw std::system_error(errno, std::generic_category(), "open " + display_path(path));
         }
 
         struct stat status {};
@@ -212,7 +346,7 @@ public:
         if (::fstat(fd, &status) != 0) {
             const int error = errno;
             ::close(fd);
-            throw std::system_error(error, std::generic_category(), "fstat " + path.string());
+            throw std::system_error(error, std::generic_category(), "fstat " + display_path(path));
         }
         if (status.st_size < 0 ||
             static_cast<std::uintmax_t>(status.st_size) > std::numeric_limits<std::size_t>::max()) {
@@ -227,7 +361,7 @@ public:
             if (mapping == MAP_FAILED) {
                 const int error = errno;
                 ::close(fd);
-                throw std::system_error(error, std::generic_category(), "mmap " + path.string());
+                throw std::system_error(error, std::generic_category(), "mmap " + display_path(path));
             }
         }
         fd_   = fd;
@@ -274,6 +408,7 @@ private:
     const std::byte* data_ = nullptr;
     std::size_t size_      = 0;
 };
+#endif
 
 struct V3CompatibilityDirectory {
     Json directory;

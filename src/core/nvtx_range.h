@@ -1,5 +1,8 @@
 #pragma once
 
+// NVTX v3's init path calls _wgetenv() on MSVC; see src/core/nvtx.h for why this must precede it.
+#include <cstdlib>
+
 #include <nvtx3/nvToolsExt.h>
 
 #include <string>
