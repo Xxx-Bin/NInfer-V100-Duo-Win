@@ -27,7 +27,7 @@ soak). It does not yet include an independent numerical comparison against a Lin
 | Exact 16 KiB cross-device copy, both directions | pass |
 | `ninfer_allreduce_test` (500 iterations per route, capture, skew) | pass, three consecutive runs, `peer access: enabled (direct P2P)` |
 | Artifact size / SHA-256 | 23,719,715,844 B / `74d2c571...b77d82`, matches the published value |
-| `infer.exe inspect` | `qwen3.8-27b` / `nvfp4`, 1190 objects, `direct_io_check: ok (65536 bytes)` |
+| `ninfer.exe inspect` | `qwen3.8-27b` / `nvfp4`, 1190 objects, `direct_io_check: ok (65536 bytes)` |
 | TP2 load | 20.16 GiB weights, 10.08 GiB per card, 73.6 s (70.1 s H2D) |
 | Decode / prefill | 40.3 tok/s; 980/978/944 tok/s prefill at 5.6k/15.3k/31.2k prompt |
 | Graph vs eager | identical token ids (`17 11 220 18 11 220 20 11 220 22 11 220 16 16 248046`) |
@@ -79,7 +79,6 @@ soak). It does not yet include an independent numerical comparison against a Lin
 2. Port `SystemMonitor` to Windows (`GlobalMemoryStatusEx`, `GetSystemTimes`, NVML via
    `LoadLibraryW`).
 3. Promote the measured numbers into `docs/performance.md` if the port becomes a supported target.
-4. Regenerate `patches/` from the commit series whenever the port changes.
 
 ## Layout
 

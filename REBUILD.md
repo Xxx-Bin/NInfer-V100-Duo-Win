@@ -16,9 +16,9 @@ SXM2 cards. It assumes a clean checkout of this repository; all local toolchains
 ## 1. Source and toolchain
 
 ```powershell
-git clone https://github.com/plus1998/NInfer-V100-Duo.git C:\src\NInfer-V100-Duo-win
+git clone https://github.com/Xxx-Bin/NInfer-V100-Duo-Win.git C:\src\NInfer-V100-Duo-win
 cd C:\src\NInfer-V100-Duo-win
-git checkout c967449
+git checkout master
 
 python -m venv .tools\venv
 .\.tools\venv\Scripts\python.exe -m pip install cmake ninja
@@ -118,18 +118,3 @@ Expected output `2, 3, 5, 7, 11`, about 40 tok/s decode and 180-220 tok/s prefil
 
 Graph parity check: rerun with `--print-token-ids` once as above and once with `--no-cuda-graph`.
 The `generated ids` lines must be identical.
-
-## 7. Applying the patch series
-
-The port ships as a numbered series generated from the commits that introduced it:
-
-```powershell
-git checkout -b windows-port c967449
-Get-ChildItem patches\*.patch | ForEach-Object { git am $_ }
-```
-
-PowerShell does not expand native-command wildcards, hence the explicit enumeration; in a POSIX
-shell `git am patches/*.patch` is equivalent. Each patch is self-contained and ordered by concern:
-build scaffolding, platform layer, `inspect`, then documentation. If a patch is rejected, resolve it
-against the current tree instead of dropping the change; the series is a snapshot, the repository is
-the authority.

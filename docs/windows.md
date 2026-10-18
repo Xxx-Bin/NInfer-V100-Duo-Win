@@ -153,7 +153,7 @@ build-win\apps\ninfer-serve.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
    and checks the Windows System event log for NVLink/Xid failures. The test covers both transport
    routes (event/copy and the one-shot kernel), 500 host-drained iterations each, graph capture and
    rank skew, and prints `peer access: enabled (direct P2P)` when peer access qualified.
-2. **Reader gate.** `infer.exe inspect <artifact>` must print the expected `model_id`/`weights_id`
+2. **Reader gate.** `ninfer.exe inspect <artifact>` must print the expected `model_id`/`weights_id`
    and `direct_io_check: ok`.
 3. **Graph parity.** The same prompt with and without `--no-cuda-graph` must produce identical token
    ids (`--print-token-ids`). This is the check that a captured cross-device decode graph replays
