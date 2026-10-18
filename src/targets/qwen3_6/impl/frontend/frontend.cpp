@@ -141,7 +141,19 @@ void validate_pixel_pipeline(const Json& config, std::string_view resource) {
     }
 }
 
-fi::ProcessorOptions processor_options(const FrontendResources& resources) {
+fi::ProcessorOptions processor_options(const FrontendResources& resources, bool vision_enabled) {
+    if (resources.preprocessor_config_json.empty() ||
+        resources.video_preprocessor_config_json.empty()) {
+        // Text-only artifacts (the v2 V100 packages) carry no Vision preprocessor resources.
+        // Without --vision there is no media pipeline to configure, so the compiled defaults are
+        // the complete configuration; asking for --vision must fail loudly instead.
+        if (vision_enabled) {
+            throw std::invalid_argument(
+                "artifact has no Vision preprocessor configuration (frontend/preprocessor_config"
+                ".json); start the server without --vision to serve text only");
+        }
+        return fi::ProcessorOptions{};
+    }
     const Json image =
         parse_resource_json(resources.preprocessor_config_json, "preprocessor_config.json");
     const Json video = parse_resource_json(resources.video_preprocessor_config_json,
@@ -193,15 +205,23 @@ void validate_tokenizer_config(const FrontendResources& resources) {
         throw std::invalid_argument(
             "tokenizer_config.json does not use the official <|endoftext|> pad token");
     }
-    if (!tokenizer_config.contains("chat_template") ||
-        !tokenizer_config.at("chat_template").is_string()) {
+    if (tokenizer_config.contains("chat_template")) {
+        if (!tokenizer_config.at("chat_template").is_string()) {
+            throw std::invalid_argument(
+                "tokenizer_config.json.chat_template must contain the loaded chat template");
+        }
+        if (tokenizer_config.at("chat_template").get_ref<const std::string&>() !=
+            resources.chat_template_jinja) {
+            throw std::invalid_argument(
+                "tokenizer_config.json.chat_template does not match frontend/chat_template.jinja");
+        }
+    } else if (resources.chat_template_jinja.empty()) {
+        // Some derivative packers keep the template only as the separate frontend resource.
+        // The compiled template already comes from that resource, so an absent duplicate in
+        // tokenizer_config.json is fine as long as the resource itself exists.
         throw std::invalid_argument(
-            "tokenizer_config.json.chat_template must contain the loaded chat template");
-    }
-    if (tokenizer_config.at("chat_template").get_ref<const std::string&>() !=
-        resources.chat_template_jinja) {
-        throw std::invalid_argument(
-            "tokenizer_config.json.chat_template does not match frontend/chat_template.jinja");
+            "artifact has no chat template: tokenizer_config.json.chat_template and "
+            "frontend/chat_template.jinja are both absent");
     }
 }
 
@@ -635,7 +655,8 @@ public:
               fi::TokenizerResources{.tokenizer_json         = resources.tokenizer_json,
                                      .tokenizer_config_json  = resources.tokenizer_config_json,
                                      .generation_config_json = resources.generation_config_json})),
-          processor(processor_options(resources)), vision_enabled(options.vision_enabled) {
+          processor(processor_options(resources, options.vision_enabled)),
+          vision_enabled(options.vision_enabled) {
         if (options.max_context == 0) {
             throw std::invalid_argument("frontend max_context must be nonzero");
         }

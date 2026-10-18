@@ -19,6 +19,11 @@ struct FrontendResourcePlan {
     artifact::ObjectHandle generation_config_json;
     artifact::ObjectHandle preprocessor_config_json;
     artifact::ObjectHandle video_preprocessor_config_json;
+    // Text-only artifacts (the v2 packages published for the V100 branch) carry no Vision
+    // preprocessor resources at all. They are optional: absent means "no media pipeline", which
+    // is only an error once --vision is requested.
+    bool has_preprocessor_config       = true;
+    bool has_video_preprocessor_config = true;
 };
 
 struct FrontendResources {

@@ -1154,13 +1154,22 @@ ArtifactLoadPlan bind_artifact(artifact::Binder& binder, WeightsProfile weights_
     out.mtp.mlp.down    = mtp_matrix("mtp/layer/mlp/down", 5120, 17408);
     out.mtp.final_norm  = bind_mtp("mtp/final_norm", NumericFormat::BF16, {5120});
 
+    // Text-only V2 packages (the V100 media-stubbed profile) omit the Vision component
+    // entirely. Bind it only when the artifact carries it: a full package still validates the
+    // unselected Vision weights, while --vision against a text-only package fails here with a
+    // direct diagnostic instead of a generic missing-object error from the binder.
+    const bool has_vision = binder.find("vision/patch_embedding") != nullptr;
+    if (features.vision && !has_vision) {
+        throw std::invalid_argument(
+            "this artifact is text-only (no vision/patch_embedding); start without --vision");
+    }
     const artifact::TensorPlacement vision_placement =
         features.vision ? (tp == 2 ? artifact::TensorPlacement::PrimaryDevice
                                    : artifact::TensorPlacement::Device)
                         : artifact::TensorPlacement::ValidateOnly;
     if (ggml_k) {
         binder.validate_unconsumed_matching("vision/gguf/");
-    } else {
+    } else if (has_vision) {
         out.vision_backbone     = qwen3_6::bind_vision_backbone(binder, vision_placement);
         out.vision_merger_input = qwen3_6::bind_vision_merger_input(binder, vision_placement);
         out.vision_merger_fc2   = artifact::bind_tensor(

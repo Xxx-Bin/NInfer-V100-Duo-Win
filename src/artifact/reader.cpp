@@ -781,6 +781,56 @@ private:
             }
         }
 
+        // The official v3 layout stores the tied DFlash2 context projections as row ranges of the
+        // fused query_key_value object. A derivative packer may materialize them as standalone
+        // tensors with the same shape/format instead. The runtime already consumes the fused
+        // key/value rows, so accept those copies as validated duplicates without projecting a
+        // second set; a genuinely different context projection still fails here.
+        std::set<std::string> tied_context_duplicates;
+        if (directory_.at("components").contains("dflash2")) {
+            const auto& bindings = directory_.at("bindings");
+            for (int layer = 0; layer < 5; ++layer) {
+                const std::string prefix = "dflash2/layers/" + std::to_string(layer) + "/";
+                const bool has_key = bindings.contains(prefix + "attention/context_key");
+                const bool has_value = bindings.contains(prefix + "attention/context_value");
+                if (!has_key && !has_value) { continue; }
+                if (has_key != has_value) {
+                    throw ArtifactError(prefix +
+                                        "attention: DFlash2 context key/value bindings disagree");
+                }
+                const std::string qkv_id = require_string(
+                    binding_parts(prefix + "attention/query").at(0).at("object"),
+                    "v3 binding object");
+                const auto& qkv = object(qkv_id);
+                for (const char* role : {"context_key", "context_value"}) {
+                    const auto parts = binding_parts(prefix + "attention/" + role);
+                    if (parts.size() != 1) {
+                        throw ArtifactError(prefix + "attention/" + role +
+                                            ": tied context binding is not a single object");
+                    }
+                    const auto id = require_string(parts.at(0).at("object"),
+                                                   "v3 binding object");
+                    if (id == qkv_id) { continue; } // official alias form, projected as qkv
+                    const auto& value = object(id);
+                    if (require_string(value.at("kind"), "v3 object kind") != "tensor" ||
+                        !value.at("shape").is_array() || value.at("shape").size() != 2 ||
+                        require_v3_unsigned(value.at("shape").at(0), "v3 shape", true) != 1024 ||
+                        require_v3_unsigned(value.at("shape").at(1), "v3 shape", true) != 5120) {
+                        throw ArtifactError(
+                            prefix + "attention/" + role +
+                            ": separate DFlash2 context tensor has an unexpected shape");
+                    }
+                    if (require_string(value.at("format"), "v3 format") !=
+                        require_string(qkv.at("format"), "v3 format")) {
+                        throw ArtifactError(
+                            prefix + "attention/" + role +
+                            ": separate DFlash2 context tensor has an unexpected format");
+                    }
+                    tied_context_duplicates.insert(id);
+                }
+            }
+        }
+
         // Every object reachable from a Text, MTP, proposal, Vision or DFlash2 parameter must be projected
         // exactly once; `select` already rejects a second selection.
         std::set<std::string> required;
@@ -795,7 +845,7 @@ private:
             }
         }
         for (const auto& id : required) {
-            if (!physical_names_.contains(id)) {
+            if (!physical_names_.contains(id) && !tied_context_duplicates.contains(id)) {
                 throw ArtifactError("qwen3.8-27b v3 object was not projected: " + id);
             }
         }
@@ -1109,9 +1159,23 @@ private:
         } catch (const Json::exception& error) {
             throw ArtifactError(std::string("invalid tokenizer_config.json: ") + error.what());
         }
-        const auto& value = require_string(config.at("chat_template"), "chat_template");
-        const auto raw = std::as_bytes(std::span(value.data(), value.size()));
-        return {raw.begin(), raw.end()};
+        if (config.contains("chat_template")) {
+            const auto& value = require_string(config.at("chat_template"), "chat_template");
+            const auto raw = std::as_bytes(std::span(value.data(), value.size()));
+            return {raw.begin(), raw.end()};
+        }
+        // Some derivative v3 packers keep the large template out of tokenizer_config.json and
+        // store it only as the separate frontend resource.
+        const auto& resources = components.at("text").at("resources");
+        if (!resources.contains("chat_template.jinja")) {
+            throw ArtifactError("tokenizer_config.json has no chat_template and the artifact has "
+                                "no chat_template.jinja resource");
+        }
+        const auto template_id = require_string(resources.at("chat_template.jinja"),
+                                                "chat_template.jinja resource");
+        const auto template_bytes = object_payload(object(template_id));
+        if (template_bytes.empty()) { throw ArtifactError("artifact chat template is empty"); }
+        return {template_bytes.begin(), template_bytes.end()};
     }
 
     const Json& directory_;
