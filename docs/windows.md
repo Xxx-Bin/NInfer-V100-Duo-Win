@@ -135,6 +135,18 @@ build-win\apps\ninfer-serve.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
 `GET /health` returns `{"model":"qwen3.8-27b","status":"ok"}` once loading finishes;
 `POST /v1/chat/completions` behaves as documented in [serving.md](serving.md).
 
+Long context is bounded by device memory, not by the artifact's 262,144-position ceiling: the KV
+pool and the per-sequence reservation each grow by about 32 KiB per token per card, so the pair
+costs about 64 KiB per token per card. `--max-context 32768 --kv-capacity 32768` still leaves
+3.81 GiB free per card. Raise the pair one step at a time and read the `gpuN free/total` lines in
+the load summary instead of jumping to the ceiling.
+
+```powershell
+build-win\apps\ninfer-serve.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
+  --host 127.0.0.1 --port 18080 ^
+  --max-context 32768 --kv-capacity 32768 --tp 2 --devices 0,1 --max-concurrency 1
+```
+
 ## Verification
 
 1. **Transport gate.** `tools\tp2\win\run_stability.ps1` runs `ninfer_allreduce_test` several times
@@ -148,16 +160,31 @@ build-win\apps\ninfer-serve.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
    the same arithmetic as eager execution.
 4. **Serving smoke.** `/health` returns 200 and a chat completion returns 200 with the expected
    content.
+5. **Long-context ladder.** `python tools\tp2\win\make_prompt.py --reps 280 --out long.json` builds
+   a prompt whose first sentence carries a six-digit code, pads with filler, and asks for the code
+   at the end. Run it at `--max-context`/`--kv-capacity` 8192, 16384 and 32768 with reps 280, 763
+   and 1556 (about 5.6k, 15.3k and 31.2k prompt tokens), `--no-thinking --greedy --max-new 16`, and
+   require the answer to contain the code. This checks that attention still reaches the start of
+   the window, not just that the allocation succeeded.
+6. **Soak.** `python tools\tp2\win\soak.py --minutes 10` starts `ninfer-serve` on the Chinese-named
+   artifact path at 32k context with `--max-concurrency 1`, cycles 8k/16k/24k/32k prompts, and
+   samples VRAM at 1 Hz. A pass ends with `fail=0`, `concurrent_ok=True`, `gpu_released=True`, and
+   an unchanged VRAM high-water mark between the first and last cycle.
 
 Measured on 2 x V100-SXM2-16GB (TCC, NVLink), CUDA 12.8.61, MSVC 19.38, driver 576.57:
 
 | Quantity | Value |
 |---|---|
-| Artifact load, 20.16 GiB weights | 73.6 s (H2D 70.1 s) |
-| Per-card weight residency | 10.08 GiB (reserved 10.79 GiB, 4.75 GiB free) |
-| Prefill | 181-216 tok/s |
-| Decode, batch 1 | 40.3 tok/s |
+| Artifact load, 20.16 GiB weights | 73.6 s (H2D 70.1 s); `infer-serve` load plus warmup 81.7 s cold, 25.4 s with the artifact in the OS cache |
+| Per-card weight residency | 10.08 GiB (reserved 10.79 GiB, 4.75 GiB free at 4k context) |
+| Prefill, 5.6k / 15.3k / 31.2k prompt | 980 / 978 / 944 tok/s |
+| Decode, batch 1 | 40.3 tok/s at 4k; 37.9 / 35.7 / 32.6 tok/s at 8k / 16k / 32k |
+| Long context 8k / 16k / 32k, per card | KV pool 256 MiB / 512 MiB / 1.00 GiB; free after startup 4.56 / 4.31 / 3.81 GiB; peak 11,574 / 11,830 / 12,342 MiB |
+| 10-minute soak, 32k, Chinese path, concurrency 1 | 32/32 requests returned the code; VRAM flat at 12,342 MiB per card |
 | All-reduce, 5120 BF16 | one-shot mean 28-32 us, copy mean 43-52 us (host-drained) |
+
+A 25-token prompt reports about 200 tok/s prefill because fixed per-request cost dominates it; the
+throughput figure above is the one that scales with context.
 
 ## Known limitations
 
