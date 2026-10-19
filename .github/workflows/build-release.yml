@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CUDA_ROOT: /usr/local/cuda-12.8.1
-      CUDA_RUNFILE: cuda_12.8.1_570.86.10_linux.run
+      CUDA_RUNFILE: cuda_12.8.1_570.124.06_linux.run
     steps:
       - name: Checkout
         uses: actions/checkout@v4
