@@ -33,7 +33,10 @@ jobs:
       - name: Install CUDA 12.8.1 toolkit
         run: |
           wget https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/${CUDA_RUNFILE}
-          sh ${CUDA_RUNFILE} --toolkit --silent --override --path=${CUDA_ROOT}
+          # The runfile's default prefix for 12.8.1 is /usr/local/cuda-12.8.1 (= CUDA_ROOT);
+          # it has no --path option, so rely on the default and verify the location afterwards.
+          sh ${CUDA_RUNFILE} --toolkit --silent --override
+          test -x ${CUDA_ROOT}/bin/nvcc
           ${CUDA_ROOT}/bin/nvcc --version
 
       - name: Configure
