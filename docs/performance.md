@@ -1570,6 +1570,164 @@ the reservation rejection on the idle measured host. The local raw
 server logs and responses are under
 `profiles/bench/coder390_20261011/`.
 
+## V100 Duo coding benchmark: NVFP4, Coder390 W4A4 and Coder390 Q6_K
+
+October 19-20, 2026: the release server binary (`ninfer-serve.exe`, SHA256
+`ffd20b9de0aa3e91f4e3dc2595051fe07172284e275bdc3b58df62bf8dbae7b5`, built from commit
+`b0c7ffc0`) served three `qwen3.8-27b` artifacts on 2 x Tesla V100-SXM2 16 GB (TP2 over NVLink,
+TCC, CUDA 12.8). Every run uses the same five coding prompts and the same profile, with one fresh
+server per artifact. This is a same-binary cross-artifact throughput comparison; it is not an
+answer-quality or fixed-output comparison. The earlier
+[Coder390 Q6_K MTP](#v100-duo-coder390-q6_k-mtp) section measured the pelican prompt at a
+131,072-token window; these rates use different prompts and are not comparable.
+
+### Profile and artifacts
+
+```text
+--tp 2 --devices 0,1 --kv-dtype int8 --max-concurrency 1 --no-prefix-reuse
+--max-context 196608 --kv-capacity 196608 --prefill-chunk 2048
+--greedy --reasoning-effort medium --spec mtp --draft-tokens 3
+```
+
+INT8 KV is what makes the 196,608-token window fit on a 16 GB card; prefix reuse is off, so every
+request pays a cold prefill. A and C select the optimized proposal head (`--lm-head-draft`); B uses
+the full proposal head.
+
+| Code | Artifact | Weights | Proposal head |
+|---|---|---|---|
+| A | `qwen3_8_27b_nvfp4.ninfer` | official NVFP4 | optimized |
+| B | `Qwen3.8-27B-Coder390-W4A4-MTP-DFlash2-NInferV2-NOT-FOR-V3.ninfer` | Coder390 W4A4 V2 (text-only load) | full |
+| C | `Qwen3.8-27B-Coder390-EfficientThink-W4A4-MTP-DFlash2.ninfer` | Coder390 W4A4 V3 (Vision weights loaded but unused) | optimized |
+
+B and C carry the same Coder390 W4A4 weights in different containers; A is a different model.
+
+### Workloads
+
+| id | Content | Output budget |
+|---|---|---:|
+| s1_geometry | plane quadrilateral / minimum dihedral-angle cosine, full derivation | 6,144 |
+| s2_impl | C++20 bounded blocking queue plus GoogleTest | 4,096 |
+| s3_debug | root cause and minimal fix for a concurrent-LRU use-after-free | 4,096 |
+| s4_refactor | byte-equivalent refactor of a hot `build_report` | 4,096 |
+| s5_long_context | ~189,000-character real repository source, cross-file lookup | 2,560 |
+
+Each server executes the five non-streaming Chat Completions requests in order. They share the
+process but not a cached prefix. The analyzer reads token counts and phase timings from the
+server's `--request-log-jsonl` `request_done` events; HTTP transport and client-side decoding are
+excluded. Decode rate is `(completion_tokens - 1) / decode_seconds`.
+
+### Three-artifact results
+
+| Code | Prompt tok | Completion tok | Startup s | Request s | Process s | Decode tok/s | End-to-end tok/s | MTP accept | Truncated / empty |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| A | 49,790 | 20,992 | 71.9 | 239.0 | 313.3 | **112.77** | **87.84** | 70.6% | 5 / 2 |
+| B | 49,790 | 20,992 | 31.2 | 248.2 | 281.8 | 107.48 | 84.57 | 71.3% | 5 / 1 |
+| C | 49,790 | 19,710 | 73.5 | 228.2 | 304.0 | 112.43 | 86.35 | 70.3% | 3 / 2 |
+| Total | 149,370 | 61,694 | 176.6 | 715.4 | 899.2 | 110.81 | 86.23 | - | 13 / 5 |
+
+Aggregate prefill for the run is 949.5 / 948.2 / 947.5 tok/s (A/B/C). The 48,056-token s5 prompt
+prefills at 958.1 / 956.8 / 955.9 tok/s and takes 50.4 / 50.4 / 50.5 s to first token, which
+dominates that scenario. A and C run within 0.3% of each other on decode; B trails by about 5%,
+consistent with the full-vocabulary proposal head.
+
+Per-scenario decode rates:
+
+| Scenario | A | B | C |
+|---|---:|---:|---:|
+| s1_geometry | 112.20 | 108.70 | **114.32** |
+| s2_impl | **118.88** | 112.42 | 117.19 |
+| s3_debug | **110.01** | 102.57 | 107.15 |
+| s4_refactor | **115.39** | 108.00 | 113.41 |
+| s5_long_context | 105.75 | 104.48 | **107.46** |
+
+A and C split the five scenarios 3-2, with gaps of 1.4%-2.7%, below the run-to-run resolution of a
+single repetition. The only material split is B, which is 4.9%-6.8% behind the best artifact on
+the four short prompts.
+
+### DFlash2 on Coder390
+
+C's DFlash2 companion cannot start at 196,608: the runtime reservation needs 5,323,270,656 B and
+only 4,386,459,648 B remain after the DFlash2 weights load, 893 MiB short. `--kv-capacity auto`
+does not help because the minimum 196,608 reservation already exceeds the free budget. Probing in
+64-token steps puts the largest feasible window at **155,648** with `--prefill-chunk 2048`
+(5.1 MiB of slack after startup).
+
+The DFlash2 K=7 run therefore changes the speculative block to
+`--spec dflash2 --draft-tokens 7 --lm-head-draft` and the window to
+`--max-context 155648 --kv-capacity 155648`; everything else matches the main profile. All five
+prompts fit in 155,648 tokens, so the smaller pool does not truncate the workload.
+
+| Metric | C MTP3 K=3 @196,608 | C DFlash2 K=7 @155,648 |
+|---|---:|---:|
+| Completion tok | 19,710 | 19,198 |
+| Decode tok/s | **112.43** | 108.71 |
+| Request s | **228.2** | 230.2 |
+| Acceptance | **70.3%** | 43.9% |
+| Process s | **304.0** | 312.4 |
+
+DFlash2 decodes 3.3% slower and its acceptance rate is 26 points lower, so the wider draft window
+does not pay for its extra verification cost. Per scenario DFlash2 is +4.6% (s1), -0.2% (s2),
+-14.0% (s3), -4.5% (s4) and -4.9% (s5) on decode rate.
+
+A same-context control (C MTP3 at 155,648) separates the backend difference from the window change:
+
+| Metric | MTP3 @155,648 | DFlash2 @155,648 | Delta |
+|---|---:|---:|---:|
+| Decode tok/s | **112.33** | 108.71 | -3.2% |
+| Request s | **228.4** | 230.2 | +0.8% |
+| Acceptance | **70.3%** | 43.9% | -26.4 pp |
+| Startup slack | 1,101.8 MiB | 5.1 MiB | -1,096.7 MiB |
+
+MTP3 loses only 0.1% when the window drops from 196,608 to 155,648, so the 3.3% gap against
+DFlash2 is the backend, not the context ceiling. Per-scenario deltas match the table above:
++4.7%, -0.1%, -13.9%, -4.4% and -4.9%.
+
+### Q6_K on Coder390
+
+`Qwen3.8-27B-Coder390-EfficientThink-Q6_K-MTP.ninfer` (`qwen3.8-27b/gguf-blocks-full`, full
+proposal head) also fails at 196,608: it needs 5,304,856,832 B against 4,486,056,960 B available,
+781 MiB short. It starts at 155,648 with 165.7 MiB of slack. The comparison below uses the same five
+prompts, greedy decoding, `reasoning_effort=medium`, chunk 2,048, INT8 KV and the 155,648 window;
+Q6_K runs MTP3 without `--lm-head-draft`, so its proposal head differs from the W4A4 column.
+
+| Metric | W4A4 MTP3 | Q6_K MTP3 | Delta |
+|---|---:|---:|---:|
+| Completion tok | 19,710 | 20,385 | +3.4% |
+| Prefill tok/s | 947.8 | **1,501.0** | **+58.4%** |
+| Decode tok/s | **112.33** | 82.30 | **-26.7%** |
+| Request s | **228.4** | 281.3 | +23.1% |
+| s5 TTFT | 50.5 s | **31.7 s** | -37.2% |
+| s5 total | 74.3 s | **62.2 s** | **-16.3%** |
+| Acceptance | 70.3% | 68.9% | -1.4 pp |
+| Startup slack | 1,101.8 MiB | 165.7 MiB | -936.1 MiB |
+
+Q6_K is a prefill-oriented profile: long prompts prefill about 58% faster, while decode is about
+27% slower. On the four short prompts it is 26%-61% slower end to end; only the 48K-token s5
+scenario wins (62.2 s vs 74.3 s). A coding workload dominated by long repository context and short
+answers favors Q6_K; short prompts with long generations favor W4A4.
+
+### Caveats
+
+- 13 of 15 requests stopped at `max_tokens`, and five responses had empty `content` because the
+  whole budget went to reasoning. Completion counts are budget-truncated and not full answer
+  lengths; decode rate is unaffected, but totals depend on where each model stopped.
+- Each scenario ran once. Decode differences below roughly 3% are not a stable advantage.
+- B loaded in 29.8 s against about 71 s for A and C because the artifact was in the OS page cache.
+  Startup times here are not a cold-start comparison.
+- Response text was corrupted by Windows PowerShell 5.1 decoding UTF-8 as Latin-1 and was repaired
+  losslessly. Token and timing data come from the server JSONL and were never affected.
+- The largest prompt is 48,056 tokens, 24.4% of the 196,608 window. This campaign does not qualify
+  decode with a fully occupied 196K context.
+
+### Reproduction
+
+The local harness (`run_bench.ps1`, `analyze.py`, the five prompt files) and the raw per-run
+JSONL/responses stay in the uncommitted `_scratch/bench-coding-3models-20261019/` tree; the tables
+above are the published summary. Reproduce a run with the profile block above, the artifact's
+explicit path, one resident server per artifact, and greedy non-streaming requests with
+`reasoning_effort: medium` and the per-scenario `max_tokens`. Read `request_done` from the request
+log for the token counts and `prefill_seconds` / `decode_seconds` used here.
+
 ## V100 Duo maximum-context capacity sweep
 
 The capacity comparison in the README varies only the requested maximum context from 1,024
