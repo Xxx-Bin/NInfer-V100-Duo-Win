@@ -32,6 +32,8 @@ tools/v100/ninfer-v100-duo.sh model=/absolute/path/to/qwen3_8_27b_nvfp4.ninfer
 
 On Windows 11 with two V100s in TCC mode, use the native build instead:
 [Windows guide](docs/windows.md) and the [rebuild recipe](REBUILD.md).
+Current Windows release: **v0.1.0-win.1** (2026-10-19, 2 × V100 TP2) —
+[release verification notes](docs/Releases/v0.1.0-win.1.md).
 
 The launcher defaults to TP2 on GPUs 0/1, INT8 KV, CUDA Graph, MTP3 with the
 optimized proposal head, one active request, and `127.0.0.1:8080`. Run any
