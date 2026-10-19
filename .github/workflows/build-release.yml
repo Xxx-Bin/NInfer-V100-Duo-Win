@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      CUDA_ROOT: /usr/local/cuda-12.8.1
+      CUDA_ROOT: /usr/local/cuda-12.8
       CUDA_RUNFILE: cuda_12.8.1_570.124.06_linux.run
     steps:
       - name: Checkout
@@ -34,9 +34,9 @@ jobs:
         run: |
           df -h /
           wget https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/${CUDA_RUNFILE}
-          # The runfile's default prefix for 12.8.1 is /usr/local/cuda-12.8.1 (= CUDA_ROOT);
-          # it has no --path option, so rely on the default and verify the location afterwards.
-          if ! sh ${CUDA_RUNFILE} --toolkit --silent --override; then
+          # The runfile's default prefix for 12.8.1 is /usr/local/cuda-12.8 (= CUDA_ROOT) and it
+          # needs root to write there, hence sudo. It has no --path option.
+          if ! sudo sh ${CUDA_RUNFILE} --toolkit --silent --override; then
             echo "--- /tmp/cuda-installer.log (tail) ---"
             tail -n 60 /tmp/cuda-installer.log
             df -h /
