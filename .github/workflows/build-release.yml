@@ -47,22 +47,22 @@ jobs:
 
       - name: Configure
         run: |
+          # GitHub's env: block does not shell-expand, so prepend CUDA to PATH inline here
+          # instead; env: PATH would replace the whole PATH and hide /usr/bin (cmake, etc.).
+          export PATH=${CUDA_ROOT}/bin:$PATH
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CUDA_ARCHITECTURES=70 \
+            -DCMAKE_CUDA_COMPILER=${CUDA_ROOT}/bin/nvcc \
             -DNINFER_BUILD_APPS=ON \
             -DBUILD_TESTING=OFF \
             -DNINFER_BUILD_BENCHMARKS=OFF \
             -DNINFER_STUB_MEDIA=OFF
-        env:
-          PATH: ${CUDA_ROOT}/bin:$PATH
-          CMAKE_CUDA_COMPILER: ${CUDA_ROOT}/bin/nvcc
 
       - name: Build
-        run: cmake --build build --parallel 4 --target ninfer ninfer-serve
-        env:
-          PATH: ${CUDA_ROOT}/bin:$PATH
-          CMAKE_CUDA_COMPILER: ${CUDA_ROOT}/bin/nvcc
+        run: |
+          export PATH=${CUDA_ROOT}/bin:$PATH
+          cmake --build build --parallel 4 --target ninfer ninfer-serve
 
       - name: Compute artifact hashes
         run: |
