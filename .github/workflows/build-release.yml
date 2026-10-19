@@ -58,6 +58,11 @@ jobs:
           PATH: ${CUDA_ROOT}/bin:$PATH
           CMAKE_CUDA_COMPILER: ${CUDA_ROOT}/bin/nvcc
 
+      - name: Compute artifact hashes
+        run: |
+          echo "NINFER_SHA256=$(sha256sum build/apps/ninfer | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "NINFER_SERVE_SHA256=$(sha256sum build/apps/ninfer-serve | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
       - name: Tag the commit
         run: |
           git config user.name "lwb6"
@@ -83,8 +88,8 @@ jobs:
 
             | Asset | SHA256 |
             |---|---|
-            | `ninfer` | `$(sha256sum build/apps/ninfer | cut -d' ' -f1)` |
-            | `ninfer-serve` | `$(sha256sum build/apps/ninfer-serve | cut -d' ' -f1)` |
+            | `ninfer` | `${{ env.NINFER_SHA256 }}` |
+            | `ninfer-serve` | `${{ env.NINFER_SERVE_SHA256 }}` |
 
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           files: |
