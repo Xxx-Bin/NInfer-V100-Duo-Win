@@ -135,6 +135,74 @@ non-ASCII media path is reported as "not a regular file").
 `HANDOFF.md`), independent of the media build.
 
 
+## Continuous integration
+
+`.github/workflows/build-windows.yml` is the only build pipeline in this repository — it replaced the
+inherited Linux workflow. It calls the same `scripts\windows\*.cmd` a developer calls, so a CI tree
+and a local tree come from identical CMake arguments: `sm_70`, `NINFER_STUB_MEDIA=OFF`, portable
+CUDA 12.8, FFmpeg 8.1 and libcurl 8.11.1.
+
+Two entry points:
+
+| Trigger | Effect |
+|---|---|
+| Manual dispatch | Inputs `tag` (base tag) and `prefix`. `prefix: test-` publishes a **prerelease**; an empty prefix publishes a real release. |
+| Push of a `v*` tag | Publishes a **real release** under that tag. This is the trap to know about: pushing `v0.1.1-win.3` to publish a tag also starts a build that creates the release for it. |
+
+Selecting a tag manually (`Run workflow`, `prefix: test-`) is the way to exercise the pipeline without
+touching the release list. The run publishes `test-<tag>` and marks it prerelease.
+
+Three constraints shaped the job, each discovered the hard way:
+
+- **`windows-2022`, not `windows-latest`.** The newest runner image ships Visual Studio 2026 (MSVC
+  14.51). CUDA 12.8's front end rejects it (`crt/host_config.h` allows `_MSC_VER < 1950`) and then
+  dies in `cudafe++` with `0xC0000005`. `windows-2022` stays on MSVC 14.4x, inside the accepted range
+  and equal to the toolchain used for local builds.
+- **`NINFER_BUILD_JOBS=4`.** A hosted runner has 4 cores and 16 GB; each `nvcc` can hold several GB
+  while expanding CUTLASS templates, and `-j8` crashed `cicc.exe` on the local tree.
+- **The release tag is created through the Releases API** (`softprops/action-gh-release`), not by
+  `git push`. `GITHUB_TOKEN` acts as a GitHub App and may not create a ref whose commit touches
+  `.github/workflows/*` without the `workflows` scope, which the `permissions:` block cannot grant.
+
+The release ships **one zip archive** (`ninfer-<tag>-windows-x64-cuda12.8-sm70.zip`) plus a
+sha256sum-style `.sha256` sidecar. The archive holds both executables and every FFmpeg and libcurl
+DLL, because the media build loads its libraries from the executable directory: unzip it into one
+directory and run the executables from there. `tar.exe -a -cf` (bsdtar) writes the zip, and a
+separate step extracts it again and compares every file against the staged build output, so a
+truncated or mis-built archive fails the run instead of the download.
+
+A successful run takes 15-19 minutes on a hosted runner (measured: 15m23s for `v0.1.1-win.5`) and
+turns ten files totalling 855,872,132 bytes into a 506,273,857-byte archive. The runner has no GPU,
+so CI proves the tree configures, compiles, links and packages — it does **not** prove the binaries
+produce correct output. Numerical and media verification stay local: the `ctest` suite, the runs in
+[Verification](#verification) below, and the multimodal fixtures under
+[`examples/cli`](../examples/cli/README.md).
+
+### Release flow
+
+CI can build any commit on demand, but it cannot verify one, so a release passes through a test
+build, a local acceptance run, and only then a promotion or a deletion:
+
+1. Push the code to `master`.
+2. `Run workflow` with `tag` set to the next unused `vX.Y.Z-win.N` and `prefix` set to `test-`. The
+   run publishes `test-<tag>` as a **prerelease**, so it never becomes Latest and never replaces a
+   real release.
+3. Download the archive on the V100 host, unzip it into an empty directory, and run the acceptance
+   checks in [Verification](#verification); the media profile additionally replays
+   [`examples/cli/messages/*.json`](../examples/cli/README.md).
+4. Pass: **promote in place** — rename the tag to `<tag>`, clear `prerelease`, drop the `[TEST]`
+   title and the body banner, rename both assets, rewrite the `.sha256` sidecar so it names the
+   renamed archive, and delete the leftover `test-` tag. The promoted release becomes Latest as the
+   newest non-prerelease. Fail: delete the release and its tag, fix the code, and build the next
+   number — `win.N` only moves forward.
+
+Promotion is a handful of Releases API calls, and like tag creation it cannot go through `git push`
+(see the third constraint above). Renaming a tag with `PATCH /releases/:id` creates the new tag but
+leaves the old ref behind, so the stale `test-` tag needs its own `DELETE /git/refs/tags/...`.
+
+Pushing a `v*` tag skips steps 2-4 and publishes a real release straight from CI; use it only for a
+build you are willing to publish unverified.
+
 ## Artifact
 
 The port was validated with the official Qwen3.8-27B NVFP4 artifact:

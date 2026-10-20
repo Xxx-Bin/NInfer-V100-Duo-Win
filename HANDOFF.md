@@ -23,6 +23,13 @@ A second tree, `build-win-media`, builds with `-DNINFER_STUB_MEDIA=OFF` and runs
 path end to end on Windows: local paths (including non-ASCII names), HTTP(S) URLs, base64 data URIs
 and video input.
 
+A GitHub Actions pipeline (`.github/workflows/build-windows.yml`) now rebuilds that same media tree
+from a clean checkout on a hosted `windows-2022` runner and publishes it as one zip archive plus a
+`.sha256` sidecar. It replaced the inherited Linux workflow. CI covers configure/compile/link/package
+and the archive round trip; the numerical and GPU checks below stay local, because the runner has no
+GPU. A run with the `test-` prefix publishes a prerelease, which is accepted on the V100s and then
+promoted in place — see [Release flow](docs/windows.md#release-flow).
+
 ## Evidence
 
 | Check | Result |
@@ -47,6 +54,8 @@ and video input.
 | Serve with `--vision`, `image_url` over HTTP | `/health` ok (vision on), text completion `ready`, image completion 200 in 6.4 s with 2,147 prompt tokens |
 | Unit test suite (`ctest`, 133 registered) | 121 pass, 12 fail, 1 not built — list and signatures in `docs/windows.md` |
 | Text regression in the media build | 40.33 tok/s decode, 190.59 tok/s prefill, `2, 3, 5, 7, 11` |
+| CI `build-windows` run [39437259057](https://github.com/Xxx-Bin/NInfer-V100-Duo-Win/actions/runs/39437259057) (`3a4af000`) | success, 15m23s on `windows-2022`; one 506,273,857 B zip + `.sha256` sidecar, ten files (855,872,132 B) |
+| Media smoke on the CI artifact (`_scratch\smoke\media_smoke.py`, 2×V100, `--tp 2 --vision`) | 10/10 cases: image, JPEG, H.264 video, multi-image, mixed image+video, multi-turn, HTTP(S) `image_url`; published as `v0.1.1-win.5` |
 
 ## Changes
 
@@ -78,6 +87,17 @@ and video input.
   `std::aligned_alloc`, `const` instead of `constexpr` where the initializer calls `std::sqrt`, and
   `/utf-8` for every test target (MSVC decodes sources as the ANSI code page otherwise, which both
   broke multi-byte literals and rejected the Chinese prompt fixtures).
+- `.github/workflows/build-windows.yml`: replaces the inherited Linux workflow. Runs
+  `scripts/windows/*.cmd` unchanged (so CI and local trees share CMake arguments), pins
+  `windows-2022` because CUDA 12.8 rejects the MSVC 14.51 that `windows-latest` now ships, caps
+  `NINFER_BUILD_JOBS` at 4 for the 4-core/16 GB runner, and publishes through the Releases API
+  instead of pushing a tag. `.gitignore` anchors `build-win*` to the repository root — unanchored, the
+  pattern also swallowed `.github/workflows/build-windows.yml`.
+- Release packaging: `tar.exe -a -cf` (bsdtar) writes one archive of both executables and the eight
+  media DLLs, a following step extracts it and compares every file with the staged build output, and
+  `scripts/windows/release-notes.ps1` writes the release body to `release-notes.md`, which the
+  publish action reads via `body_path`. The body used to be a multiline `body: |` input, and the
+  multi-row Contents table reached the release page as one table per row.
 
 ## Open issues
 
@@ -104,6 +124,11 @@ and video input.
 6. **Test runs need a writable `TMP`.** Tests calling `std::filesystem::temp_directory_path()` abort
    silently (`0xC0000409`, no output) when it is unavailable, because MSVC's default terminate
    handler calls `abort()`. Point `TMP`/`TEMP` at a real directory before `ctest`.
+7. **CI builds and packages, but never runs anything.** A hosted runner has no GPU, so a green run
+   proves the tree configures, compiles, links and packages — not that the binaries produce correct
+   output. Acceptance is a manual step on the V100 machine (release flow in `docs/windows.md`), and
+   the CLI `--messages` file-path media route was not re-run for `v0.1.1-win.5`; only the serving
+   media path was.
 
 ## Next steps
 
@@ -114,6 +139,10 @@ and video input.
 2. Port `SystemMonitor` to Windows (`GlobalMemoryStatusEx`, `GetSystemTimes`, NVML via
    `LoadLibraryW`).
 3. Promote the measured numbers into `docs/performance.md` if the port becomes a supported target.
+4. Close the CI gap in open issue 7: add at least an `inspect`/`--help` smoke to the hosted job, and
+   script the acceptance run that `docs/windows.md` currently describes by hand (archive extract, PE
+   and import check, media smoke) so promoting a `test-` build is one command. A self-hosted runner
+   would make the GPU checks part of the pipeline instead of a manual step.
 
 ## Layout
 
@@ -128,5 +157,6 @@ tools/tp2/win/make_prompt.py      long-context needle prompt generator
 tools/tp2/win/soak.py             long-context soak with VRAM sampling
 docs/windows.md                   build/run/verify guide
 REBUILD.md                        exact reproduction recipe
+.github/workflows/build-windows.yml  CI: media tree build + release publish
 probe/ (local, untracked)         ad-hoc Phase 0 experiments; not part of the build
 ```

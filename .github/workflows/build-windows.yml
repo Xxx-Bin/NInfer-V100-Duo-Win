@@ -145,21 +145,28 @@ jobs:
           }
           Write-Output "archive round-trip verified: $($staged.Count) files"
 
-      - name: Compute archive hashes
+      - name: Compute archive hashes and release notes
         shell: pwsh
         run: |
           $zip = Get-Item "package\$env:ZIP_NAME"
           $sha = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower()
-          $rows = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
-            "| ``$($_.Name)`` | $([math]::Round($_.Length / 1MB, 1)) MiB |"
-          }
           "ZIP_SHA256=$sha" >> $env:GITHUB_ENV
           # sha256sum-compatible sidecar ("<hex>  <file>"), the same shape as the local
           # v0.1.1-win.1 release, so `sha256sum -c` works after a download.
           "$sha  $($zip.Name)" | Set-Content "package\$env:ZIP_NAME.sha256" -NoNewline -Encoding ascii
-          "CONTENT_ROWS<<EOF" >> $env:GITHUB_ENV
-          $rows >> $env:GITHUB_ENV
-          "EOF" >> $env:GITHUB_ENV
+          # The body is written to a file rather than passed as a multiline `body: |` input: that
+          # value went through YAML and env-file interpolation, and the Contents table arrived as
+          # one table per row. release-notes.md stays outside package/ so it is not an asset.
+          # Scope-limited so the repository script runs whatever the image's policy is.
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          $notesArgs = @{
+            ZipName       = $zip.Name
+            Sha256        = $sha
+            DistDirectory = 'dist'
+            OutFile       = 'release-notes.md'
+          }
+          if ($env:IS_TEST -eq 'true') { $notesArgs.Test = $true }
+          scripts\windows\release-notes.ps1 @notesArgs
           Write-Output "archive=$($zip.Name) sha256=$sha"
 
       - name: Upload build artifact
@@ -181,31 +188,5 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: ${{ env.RELEASE_TITLE }}
           prerelease: ${{ env.IS_TEST == 'true' }}
-          body: |
-            Windows x64 build for two Tesla V100 (sm_70) with the media path enabled:
-            `NINFER_STUB_MEDIA=OFF` - FFmpeg 8.1 image/video decode plus libcurl 8.11.1 URL
-            acquisition, so `--vision` and `image_url`/`video_url` prompts work.
-
-            | | |
-            |---|---|
-            | Toolchain | MSVC 19.x (Visual Studio 2022), CUDA 12.8.61 (portable redist), CMake + Ninja |
-            | Runner | `windows-2022`, `NINFER_BUILD_JOBS=4` |
-            | Commit | `${{ github.sha }}` |
-            | Run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
-
-            ${{ env.IS_TEST == 'true' && '> **TEST BUILD** - prefixed to distinguish it from a real release. The binaries are produced by the real pipeline; only the tag carries the test prefix.' || '' }}
-
-            Unzip the archive into one directory and run the executables from there: the media
-            build loads FFmpeg and libcurl from the executable directory, so the DLLs must stay
-            beside `ninfer.exe` and `ninfer-serve.exe`.
-
-            | Archive | SHA256 |
-            |---|---|
-            | `${{ env.ZIP_NAME }}` | `${{ env.ZIP_SHA256 }}` |
-
-            `${{ env.ZIP_NAME }}.sha256` is the sha256sum-style sidecar for the same archive.
-
-            | Contents | Size |
-            |---|---|
-            ${{ env.CONTENT_ROWS }}
+          body_path: release-notes.md
           files: package/*

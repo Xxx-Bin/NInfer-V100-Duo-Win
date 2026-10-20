@@ -4,6 +4,11 @@ This file is the exact recipe for reproducing the native Windows build of NInfer
 SXM2 cards. It assumes a clean checkout of this repository; all local toolchains live under
 `_toolchain/` and `.tools/`, which are git-ignored.
 
+A GPU-free version of these steps runs in CI: `.github/workflows/build-windows.yml` executes the same
+`scripts\windows\*.cmd` on a `windows-2022` runner and publishes the executables. Use it to check the
+recipe still works without a local machine; use this file when you need the resulting binaries to run
+on the V100s.
+
 ## 0. Prerequisites
 
 - Windows 11 x64.
