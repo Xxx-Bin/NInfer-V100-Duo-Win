@@ -2,9 +2,14 @@
 
 #include <curl/curl.h>
 
+#if defined(_WIN32)
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -26,6 +31,44 @@ namespace ninfer::product::media_acquire {
 namespace {
 
 using Clock = std::chrono::steady_clock;
+
+// Winsock has to be initialised once per process before getaddrinfo or inet_ntop are usable; the
+// POSIX builds need nothing here.
+void ensure_socket_runtime() {
+#if defined(_WIN32)
+    static std::once_flag once;
+    std::call_once(once, [] {
+        WSADATA data{};
+        if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
+            throw std::runtime_error("failed to initialize Winsock");
+        }
+    });
+#endif
+}
+
+std::string resolver_error(int code) {
+#if defined(_WIN32)
+    return gai_strerrorA(code);
+#else
+    return gai_strerror(code);
+#endif
+}
+
+// Media sources arrive as UTF-8 (JSON message content). Constructing a std::filesystem::path from
+// a narrow std::string on Windows decodes it with the ANSI code page, which mangles any non-ASCII
+// path, so build the wide path explicitly there.
+std::filesystem::path media_path(std::string_view value) {
+#if defined(_WIN32)
+    return std::filesystem::path(std::u8string(value.begin(), value.end()));
+#else
+    return std::filesystem::path(std::string(value));
+#endif
+}
+
+std::string path_text(const std::filesystem::path& path) {
+    const std::u8string utf8 = path.u8string();
+    return std::string(utf8.begin(), utf8.end());
+}
 
 void check_control(const Policy& policy) {
     if (policy.is_cancelled && policy.is_cancelled()) {
@@ -143,6 +186,7 @@ UrlParts parse_url(std::string_view value) {
 }
 
 std::string resolve_public(const UrlParts& url, bool allow_private) {
+    ensure_socket_runtime();
     addrinfo hints{};
     hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -150,7 +194,7 @@ std::string resolve_public(const UrlParts& url, bool allow_private) {
     const int rc      = getaddrinfo(url.host.c_str(), url.port.c_str(), &hints, &raw);
     if (rc != 0) {
         throw Error(ErrorKind::RemoteUnavailable,
-                    "failed to resolve media URL host: " + std::string(gai_strerror(rc)));
+                    "failed to resolve media URL host: " + resolver_error(rc));
     }
     std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> addresses(raw, freeaddrinfo);
     std::string selected;
@@ -280,14 +324,18 @@ std::vector<std::uint8_t> fetch_url(std::string url, const Policy& policy) {
 std::vector<std::uint8_t> read_path(const Source& source, const Policy& policy) {
     check_control(policy);
     std::error_code ec;
-    std::filesystem::path path = std::filesystem::weakly_canonical(source.value, ec);
+    std::filesystem::path path = std::filesystem::weakly_canonical(media_path(source.value), ec);
     if (ec || !std::filesystem::is_regular_file(path, ec)) {
         throw std::invalid_argument("media path is not a regular file: " + source.value);
     }
     if (!policy.media_root.empty()) {
-        const std::filesystem::path root = std::filesystem::weakly_canonical(policy.media_root, ec);
+        const std::filesystem::path root =
+            std::filesystem::weakly_canonical(policy.media_root, ec);
         const auto relative              = std::filesystem::relative(path, root, ec);
-        if (ec || relative.empty() || relative.native().starts_with("..")) {
+        // native() is std::wstring on Windows, so compare against a native parent path rather than
+        // a narrow literal.
+        if (ec || relative.empty() ||
+            relative.native().starts_with(std::filesystem::path("..").native())) {
             throw std::invalid_argument("media path is outside configured media root");
         }
     }
@@ -299,7 +347,7 @@ std::vector<std::uint8_t> read_path(const Source& source, const Policy& policy) 
     }
 
     std::ifstream stream(path, std::ios::binary);
-    if (!stream) { throw std::invalid_argument("failed to open media path: " + path.string()); }
+    if (!stream) { throw std::invalid_argument("failed to open media path: " + path_text(path)); }
     stream.seekg(0, std::ios::end);
     const std::streamoff end = stream.tellg();
     if (end < 0 || static_cast<std::uintmax_t>(end) > policy.max_bytes) {
@@ -310,7 +358,7 @@ std::vector<std::uint8_t> read_path(const Source& source, const Policy& policy) 
     if (!bytes.empty()) {
         stream.read(reinterpret_cast<char*>(bytes.data()),
                     static_cast<std::streamsize>(bytes.size()));
-        if (!stream) { throw std::invalid_argument("failed to read media path: " + path.string()); }
+        if (!stream) { throw std::invalid_argument("failed to read media path: " + path_text(path)); }
     }
     check_control(policy);
     return bytes;
