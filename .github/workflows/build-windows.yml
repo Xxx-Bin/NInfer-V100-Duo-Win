@@ -106,22 +106,40 @@ jobs:
           "IS_TEST=$isTest" >> $env:GITHUB_ENV
           Write-Output "tag=$releaseTag title=$title test=$isTest"
 
-      - name: Compute artifact hashes
+      - name: Package release archive
         shell: pwsh
         run: |
+          $zipName = "ninfer-$env:RELEASE_TAG-windows-x64-cuda12.8-sm70.zip"
+          New-Item -ItemType Directory -Force package | Out-Null
+          # bsdtar ships with Windows and writes a real zip when the name ends in .zip. One
+          # archive holds both executables and every FFmpeg/libcurl DLL, so a release can never
+          # be downloaded without the runtime files the media build loads next to the binary.
+          $entries = Get-ChildItem dist -File | Select-Object -ExpandProperty Name
+          & tar.exe -a -cf "package\$zipName" -C dist @entries
+          if ($LASTEXITCODE -ne 0) { throw "packaging $zipName failed" }
+          $zip = Get-Item "package\$zipName"
+          "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
+          Get-Item $zip | Select-Object Name, Length
+
+      - name: Compute archive hashes
+        shell: pwsh
+        run: |
+          $zip = Get-Item "package\$env:ZIP_NAME"
+          $sha = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower()
           $rows = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
-            "| ``$($_.Name)`` | ``$hash`` |"
+            "| ``$($_.Name)`` | $([math]::Round($_.Length / 1MB, 1)) MiB |"
           }
-          "HASH_ROWS<<EOF" >> $env:GITHUB_ENV
+          "ZIP_SHA256=$sha" >> $env:GITHUB_ENV
+          "CONTENT_ROWS<<EOF" >> $env:GITHUB_ENV
           $rows >> $env:GITHUB_ENV
           "EOF" >> $env:GITHUB_ENV
+          Write-Output "archive=$($zip.Name) sha256=$sha"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64-cuda12.8-sm70-media
-          path: dist/**
+          path: package/*.zip
 
       # The tag is created by the release action through the Releases API. Pushing it with
       # `git push` is rejected here: GITHUB_TOKEN acts as a GitHub App and is not allowed to
@@ -150,10 +168,15 @@ jobs:
 
             ${{ env.IS_TEST == 'true' && '> **TEST BUILD** - prefixed to distinguish it from a real release. The binaries are produced by the real pipeline; only the tag carries the test prefix.' || '' }}
 
-            Keep the `.dll` files next to the executables: the media build loads FFmpeg and libcurl
-            from the executable directory.
+            Unzip the archive into one directory and run the executables from there: the media
+            build loads FFmpeg and libcurl from the executable directory, so the DLLs must stay
+            beside `ninfer.exe` and `ninfer-serve.exe`.
 
-            | File | SHA256 |
+            | Archive | SHA256 |
             |---|---|
-            ${{ env.HASH_ROWS }}
-          files: dist/*
+            | `${{ env.ZIP_NAME }}` | `${{ env.ZIP_SHA256 }}` |
+
+            | Contents | Size |
+            |---|---|
+            ${{ env.CONTENT_ROWS }}
+          files: package/*.zip
