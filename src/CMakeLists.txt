@@ -380,6 +380,10 @@ if(NINFER_BUILD_MEDIA_ACQUIRE)
   ninfer_internal_includes(ninfer_media_acquire)
   if(NOT NINFER_STUB_MEDIA)
     target_link_libraries(ninfer_media_acquire PRIVATE ${NINFER_CURL_TARGET})
+    if(WIN32)
+      # getaddrinfo and inet_ntop live in winsock; the POSIX builds get them from libc.
+      target_link_libraries(ninfer_media_acquire PRIVATE ws2_32)
+    endif()
   endif()
 endif()
 

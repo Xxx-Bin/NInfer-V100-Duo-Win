@@ -38,9 +38,13 @@ rem failed CUDA object with a crash dump in build-win-tmp. Lower the cap with, f
 rem   set NINFER_BUILD_JOBS=4
 if not defined NINFER_BUILD_JOBS set "NINFER_BUILD_JOBS=8"
 
+rem The media-enabled tree is configured into build-win-media by configure-media.cmd; point the
+rem build at it with NINFER_BUILD_DIR instead of hard-coding a second script.
+if not defined NINFER_BUILD_DIR set "NINFER_BUILD_DIR=%ROOT%\build-win"
+
 if "%~1"=="" (
-  "%CMAKE%" --build "%ROOT%\build-win" -j %NINFER_BUILD_JOBS%
+  "%CMAKE%" --build "%NINFER_BUILD_DIR%" -j %NINFER_BUILD_JOBS%
 ) else (
-  "%CMAKE%" --build "%ROOT%\build-win" -j %NINFER_BUILD_JOBS% --target %*
+  "%CMAKE%" --build "%NINFER_BUILD_DIR%" -j %NINFER_BUILD_JOBS% --target %*
 )
 exit /b %errorlevel%

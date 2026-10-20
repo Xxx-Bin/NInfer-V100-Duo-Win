@@ -14,6 +14,10 @@ endif()
 
 project(ninfer LANGUAGES C CXX CUDA)
 
+# FindFFMPEG.cmake resolves the media decoder's headers and libraries on platforms without
+# pkg-config (Windows, vcpkg prefix trees).
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 if(CMAKE_CUDA_ARCHITECTURES STREQUAL "70")
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
     message(FATAL_ERROR "Volta sm_70 requires CUDA 12.8; CUDA 13 removed Volta compilation")
