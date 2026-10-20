@@ -126,8 +126,9 @@ jobs:
         run: |
           # Extract the archive that is about to be published and compare every file with the
           # staged build output, so a truncated or mis-built zip fails here instead of at the
-          # user's machine.
-          $check = "package\verify"
+          # user's machine. The extraction root stays outside package/ so it never becomes a
+          # release asset.
+          $check = "archive-check"
           New-Item -ItemType Directory -Force $check | Out-Null
           & tar.exe -xf "package\$env:ZIP_NAME" -C $check
           if ($LASTEXITCODE -ne 0) { throw "archive extraction failed" }
@@ -153,6 +154,9 @@ jobs:
             "| ``$($_.Name)`` | $([math]::Round($_.Length / 1MB, 1)) MiB |"
           }
           "ZIP_SHA256=$sha" >> $env:GITHUB_ENV
+          # sha256sum-compatible sidecar ("<hex>  <file>"), the same shape as the local
+          # v0.1.1-win.1 release, so `sha256sum -c` works after a download.
+          "$sha  $($zip.Name)" | Set-Content "package\$env:ZIP_NAME.sha256" -NoNewline -Encoding ascii
           "CONTENT_ROWS<<EOF" >> $env:GITHUB_ENV
           $rows >> $env:GITHUB_ENV
           "EOF" >> $env:GITHUB_ENV
@@ -162,7 +166,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64-cuda12.8-sm70-media
-          path: package/*.zip
+          path: package/*
 
       # The tag is created by the release action through the Releases API. Pushing it with
       # `git push` is rejected here: GITHUB_TOKEN acts as a GitHub App and is not allowed to
@@ -199,7 +203,9 @@ jobs:
             |---|---|
             | `${{ env.ZIP_NAME }}` | `${{ env.ZIP_SHA256 }}` |
 
+            `${{ env.ZIP_NAME }}.sha256` is the sha256sum-style sidecar for the same archive.
+
             | Contents | Size |
             |---|---|
             ${{ env.CONTENT_ROWS }}
-          files: package/*.zip
+          files: package/*
