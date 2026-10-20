@@ -63,6 +63,10 @@ Both are self-contained apart from the MSVC runtime: the CUDA runtime is linked 
 Windows, so no `cudart64_*.dll` is required at run time. Verify with
 `dumpbin /dependents build-win\apps\ninfer.exe`.
 
+This tree has media stubbed. For image/video input see
+[Media: stubbed by default, enabled on demand](#media-stubbed-by-default-enabled-on-demand), which
+adds FFmpeg and libcurl DLL dependencies.
+
 For the test suites (including the transport gate):
 
 ```powershell
@@ -70,7 +74,7 @@ scripts\windows\configure.cmd -DBUILD_TESTING=ON
 scripts\windows\build.cmd ninfer_allreduce_test
 ```
 
-## Media is stubbed in this build
+## Media: stubbed by default, enabled on demand
 
 The Windows build defaults to `-DNINFER_STUB_MEDIA=ON`, which removes the FFmpeg and libcurl
 dependencies while keeping every target and its link graph. Text, chat, tools and serving work
@@ -82,8 +86,54 @@ media decode is unavailable in this build (decode_image): it was configured with
 NINFER_STUB_MEDIA=ON, which omits the FFmpeg dependency
 ```
 
-Build a media-capable Windows tree by providing FFmpeg and libcurl through vcpkg or a system
-prefix and configuring with `-DNINFER_STUB_MEDIA=OFF`.
+### Building the multimodal (media-enabled) tree
+
+The media path needs development trees, not just runtimes: headers plus MSVC import libraries. Two
+steps, both offline-friendly once the archives are cached under `_toolchain\media\`:
+
+```powershell
+scripts\windows\fetch-media-deps.cmd     # FFmpeg 8.1 shared + libcurl 8.11.1 (Schannel)
+scripts\windows\configure-media.cmd      # build-win-media, NINFER_STUB_MEDIA=OFF
+$env:NINFER_BUILD_DIR = "$PWD\build-win-media"
+scripts\windows\build.cmd ninfer ninfer-serve
+```
+
+`fetch-media-deps.cmd` honours `NINFER_FFMPEG_URL` and `NINFER_CURL_URL` so a mirror can replace
+the upstream hosts. It builds libcurl from source rather than downloading a binary because every
+prebuilt curl for Windows ships either a MinGW import library or no headers at all.
+
+Keep the two trees separate: `build-win` stays the stub build, `build-win-media` carries the media
+build, and `scripts\windows\build.cmd` selects the tree through `NINFER_BUILD_DIR` (default
+`build-win`).
+
+`apps/CMakeLists.txt` stages the FFmpeg and libcurl DLLs next to both executables after linking, so
+the media build runs from the tree without touching `PATH`. `ffmpeg-n8.1-...-shared` means shared
+FFmpeg libraries: the DLL set must stay next to the binaries when they are copied elsewhere.
+
+### Measured on this port (2×V100, `qwen3_8_27b_nvfp4`, `--tp 2`, `--vision`)
+
+| Input form | Result |
+|---|---|
+| Local path with a non-ASCII name (`图纸.jpg`) | correct floor-plan description, vision 4.41 s, 2,144 prompt tokens |
+| `http://127.0.0.1:8765/plan.jpg` | fetched through libcurl/Winsock, vision 4.41 s |
+| `data:image/jpeg;base64,...` (230 KB URI) | correct, vision 4.54 s |
+| 256×256 / 8 fps H.264 clip, `video_url` | "Based on the two frames provided", 170 prompt tokens, vision 0.16 s |
+| `POST /v1/chat/completions` with `image_url` (`ninfer-serve --vision`) | 200 in 6.4 s, 2,147 prompt tokens, correct floor-plan answer |
+| Text-only prompt regression | unchanged: 40.3 tok/s decode, 190.6 tok/s prefill |
+
+Prompt tokens are the quickest sanity check: 57 tokens for a 64×64 clip means the frame produced
+almost no merged patches, while 170 tokens for a 256×256 clip means the visual tokens arrived.
+
+Two Windows-specific fixes were required in `src/product/media_acquire/acquire.cpp`:
+`winsock2.h`/`ws2tcpip.h` with a one-shot `WSAStartup` and `gai_strerrorA`, and building
+`std::filesystem::path` from the UTF-8 JSON value instead of the ANSI code page (otherwise every
+non-ASCII media path is reported as "not a regular file").
+
+### Still stubbed
+
+`src/` has no `/proc`-based fallbacks: the Windows system monitor remains empty (open issue in
+`HANDOFF.md`), independent of the media build.
+
 
 ## Artifact
 
@@ -185,6 +235,42 @@ Measured on 2 x V100-SXM2-16GB (TCC, NVLink), CUDA 12.8.61, MSVC 19.38, driver 5
 
 A 25-token prompt reports about 200 tok/s prefill because fixed per-request cost dominates it; the
 throughput figure above is the one that scales with context.
+
+### Unit test suite (`ctest` on the media tree)
+
+`BUILD_TESTING=ON` in `build-win-media` registers 133 tests. On 2026-10-20 the suite ran to
+completion: **121 pass, 12 fail, 1 not built**. The media-decoder regression
+(`ninfer_media_decode_test`, the swscale width-tight RGB24 reproducer from upstream issue #20) and the
+vision-attention op test both pass.
+
+Requirements to reproduce the pass rate:
+
+- Put `build-win-media\apps` on `PATH` or copy its DLLs — the test executables import the same
+  FFmpeg/libcurl DLLs as the apps.
+- Point `TMP`/`TEMP` at a writable directory. Tests that call
+  `std::filesystem::temp_directory_path()` throw when it is not; MSVC's default `std::terminate`
+  calls `abort()` without printing, so the failure surfaces only as exit code `0xC0000409` with no
+  output. 12 of the 24 initial failures were this and pass once `TMP` is fixed.
+
+The 12 remaining failures, with the signature each reports:
+
+| Test | Signature |
+|---|---|
+| `ninfer_qwen3_6_frontend_test`, `ninfer_concurrent_executor_test` | `0xC0000409`, no output |
+| `ninfer_linear_add_split_test`, `ninfer_linear_swiglu_split_test`, `ninfer_attn_input_proj_split_test`, `ninfer_gdn_projections_split_test` | `0xC0000409`, no output |
+| `ninfer_attn_input_proj_test`, `ninfer_gdn_input_proj_test`, `ninfer_gdn_input_proj_conv_snapshot_test`, `ninfer_linear_add_nvfp4_test` | `0xC0000409`, no output |
+| `ninfer_gdn_headsplit_test` | FP criterion: `shard relative_l2 0.000000 is worse than the tp1 geometry's 0.000000` |
+| `ninfer_linear_swiglu_nvfp4_test` | `NVFP4 A4 execution requires an sm_120a GPU`, and `bad allocation` for `T=49`/`T=128` |
+
+The `0xC0000409` group produces no output at all and exits within a second, i.e. the exception is
+thrown before anything is flushed; the same fast-fail code and offset already appear in this tree's
+WER archive for the pre-media `ninfer-compat.exe`, so the signature predates the media work. The two
+numeric failures state capability/size expectations (sm_120a-only kernel, oversized fixture) rather
+than decode or serving behaviour. None of the 12 touches the media path.
+
+`ninfer_qwen3_8_27b_dflash2_real_test` is registered but not built here: it includes
+`cuda_profiler_api.h`, which the portable CUDA toolkit extracted by
+`scripts\windows\fetch_cuda_toolkit.py` does not ship.
 
 ## Three-artifact coding benchmark
 
@@ -346,7 +432,11 @@ log for the token counts and `prefill_seconds` / `decode_seconds` used here.
 
 ## Known limitations
 
-- Media decode and URL acquisition are unavailable in the default (stubbed) build.
+- Media decode and URL acquisition are unavailable in the default (stubbed) build; the separate
+  `build-win-media` tree enables them (see the media section above) and then needs the FFmpeg and
+  libcurl DLLs next to the executables.
+- 12 of the 133 unit tests fail on Windows; the list and signatures are in
+  [Unit test suite](#unit-test-suite-ctest-on-the-media-tree). None of them touches the media path.
 - `SystemMonitor` reports no host/GPU readings on Windows yet: its implementation is `/proc`-based
   on Linux and returns empty rows elsewhere. Serving is unaffected; the monitor page simply has no
   data. Porting it to `GlobalMemoryStatusEx`/NVML is follow-up work, not a dependency.
@@ -366,3 +456,6 @@ log for the token counts and `prefill_seconds` / `decode_seconds` used here.
 | `cicc.exe` crash dump in `build-win-tmp` while several CUDA objects compile | Parallel `nvcc` processes exhausted host memory. Rerun, or cap parallelism with `set NINFER_BUILD_JOBS=4` before `scripts\windows\build.cmd`. |
 | Ninja hangs during configure or build | The harness sandbox can block compiler child-process pipes; run the build in a normal shell. |
 | `cudaErrorMemoryAllocation` from `cudaSetDevice` | Another process owns the GPUs. Check `nvidia-smi --query-compute-apps`. |
+| `cl : 命令行 error D8050: 无法执行 c1.dll` | `TMP`/`TEMP` points at a directory that does not exist, so `cl` cannot write its debug record. Create the directory before configuring or building (the scripts do). |
+| The media build starts but reports `media path is not a regular file` for a correct path | A path was rebuilt from a narrow string, decoding UTF-8 as the ANSI code page. Keep `media_path()` in `acquire.cpp` as the only way a media path becomes a `std::filesystem::path`. |
+| `找不到 avformat-62.dll` at startup in the media build | The FFmpeg/`libcurl` DLLs are not next to the executable. Relink (`cmake --build ... --target ninfer`) so the post-build staging runs, or copy `_toolchain\media\ffmpeg-*/bin/*.dll` and `curl\bin\libcurl.dll` alongside. |

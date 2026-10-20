@@ -19,6 +19,10 @@ The port runs end to end on Windows 11 with two V100-SXM2-16GB cards in TCC:
 This satisfies Phase 0 (runtime gate), Phase 5 (end-to-end TP2), and Phase 6/7 (long context and
 soak). It does not yet include an independent numerical comparison against a Linux baseline.
 
+A second tree, `build-win-media`, builds with `-DNINFER_STUB_MEDIA=OFF` and runs the multimodal
+path end to end on Windows: local paths (including non-ASCII names), HTTP(S) URLs, base64 data URIs
+and video input.
+
 ## Evidence
 
 | Check | Result |
@@ -35,6 +39,14 @@ soak). It does not yet include an independent numerical comparison against a Lin
 | 10-minute soak (32k, Chinese path, concurrency 1) | 32/32 requests correct, concurrent pair ok, VRAM flat at 12,342 MiB per card |
 | Chinese artifact path (hard link) | inspect and direct-I/O cross-check pass |
 | Serve smoke | `/health` 200, chat completion 200, content `21` |
+| Media build (`build-win-media`) | links FFmpeg 8.1 (avformat/avcodec/avutil/swscale) + libcurl 8.11.1 Schannel; no `cudart64_*.dll`, `WS2_32.dll` present |
+| Image prompt, local UTF-8 path (`图纸.jpg`) | correct floor-plan description, vision 4.41 s, 2144 prompt tokens |
+| Image prompt, `http://127.0.0.1:8765/plan.jpg` | fetched over libcurl + Winsock, correct, vision 4.41 s |
+| Image prompt, 230 KB `data:image/jpeg;base64` URI | correct, vision 4.54 s |
+| Video prompt, 256×256 / 8 fps H.264 (`video_url`) | "Based on the two frames provided", 170 prompt tokens, vision 0.16 s |
+| Serve with `--vision`, `image_url` over HTTP | `/health` ok (vision on), text completion `ready`, image completion 200 in 6.4 s with 2,147 prompt tokens |
+| Unit test suite (`ctest`, 133 registered) | 121 pass, 12 fail, 1 not built — list and signatures in `docs/windows.md` |
+| Text regression in the media build | 40.33 tok/s decode, 190.59 tok/s prefill, `2, 3, 5, 7, 11` |
 
 ## Changes
 
@@ -54,6 +66,18 @@ soak). It does not yet include an independent numerical comparison against a Lin
 - `tools/tp2/win/soak.py`: 10-minute soak harness (server lifecycle, 1 Hz VRAM sampling, concurrency
   check); Python avoids the PowerShell 5.1 UTF-8 script decoding problem.
 - `docs/windows.md`, `REBUILD.md`: build and verification documentation.
+- Media build: `cmake/FindFFMPEG.cmake` (upstream assumed pkg-config or a vcpkg config package),
+  `CMAKE_MODULE_PATH` in `CMakeLists.txt`, `scripts/windows/fetch-media-deps.cmd`,
+  `scripts/windows/configure-media.cmd`, `NINFER_BUILD_DIR` in `scripts/windows/build.cmd`, and a
+  post-build DLL staging step in `apps/CMakeLists.txt`.
+- `src/product/media_acquire/acquire.cpp`: `winsock2.h`/`ws2tcpip.h` with a one-shot `WSAStartup`
+  and `gai_strerrorA`, `ws2_32` link, UTF-8 `std::filesystem::path` construction (`media_path`),
+  and a `native()`-typed parent check for the media-root guard.
+- `tests/`: the host suite now builds on Windows. `<unistd.h>`/`<sys/wait.h>` guards and `getpid`
+  wrappers, a `_aligned_malloc`-based `aligned_head`/`aligned_release` pair instead of
+  `std::aligned_alloc`, `const` instead of `constexpr` where the initializer calls `std::sqrt`, and
+  `/utf-8` for every test target (MSVC decodes sources as the ANSI code page otherwise, which both
+  broke multi-byte literals and rejected the Chinese prompt fixtures).
 
 ## Open issues
 
@@ -69,13 +93,24 @@ soak). It does not yet include an independent numerical comparison against a Lin
 3. **System monitor is empty on Windows.** The implementation is `/proc`-based and has no Windows
    branch. Serving is unaffected. Porting `cpu_model_name`, memory, CPU load and the NVML loader to
    Windows APIs is follow-up work.
-4. **Media is stubbed.** Image/video input and URL acquisition require an FFmpeg/libcurl Windows
-   toolchain and `-DNINFER_STUB_MEDIA=OFF`.
+4. **Media is stubbed in the default tree.** `build-win-media` covers it and the serving API with
+   media parts is now driven over HTTP (`_scratch/mediasmoke.ps1`, 5/5). The default `build-win` tree
+   still omits FFmpeg/libcurl by design.
+5. **12 of 133 unit tests fail on Windows.** Signatures and the per-test list are in
+   `docs/windows.md`; none touches the media path. Ten exit `0xC0000409` with no output (the same
+   fast-fail signature already recorded for the pre-media `ninfer-compat.exe`), two are numeric or
+   capability assertions. `ninfer_qwen3_8_27b_dflash2_real_test` does not build because the portable
+   CUDA toolkit ships no `cuda_profiler_api.h`.
+6. **Test runs need a writable `TMP`.** Tests calling `std::filesystem::temp_directory_path()` abort
+   silently (`0xC0000409`, no output) when it is unavailable, because MSVC's default terminate
+   handler calls `abort()`. Point `TMP`/`TEMP` at a real directory before `ctest`.
 
 ## Next steps
 
 1. Produce the independent numerical comparison for Phase 5 L2/L3 (same artifact, same prompts,
    temperature 0, compare token ids; if only a Linux baseline is available, record its ids).
+   Cover the `vision_disabled` guard next: the positive media path over HTTP is done, the negative
+   path (media part sent to a server started without `--vision`) is not.
 2. Port `SystemMonitor` to Windows (`GlobalMemoryStatusEx`, `GetSystemTimes`, NVML via
    `LoadLibraryW`).
 3. Promote the measured numbers into `docs/performance.md` if the port becomes a supported target.
@@ -84,6 +119,8 @@ soak). It does not yet include an independent numerical comparison against a Lin
 
 ```text
 scripts/windows/configure.cmd     configure (portable CUDA, stub media, sm_70)
+scripts/windows/configure-media.cmd  configure the media-enabled tree (build-win-media)
+scripts/windows/fetch-media-deps.cmd FFmpeg dev tree + libcurl (Schannel) into _toolchain\media
 scripts/windows/build.cmd         build targets
 scripts/windows/fetch_cuda_toolkit.py
 tools/tp2/win/run_stability.ps1   transport gate + event log

@@ -60,6 +60,41 @@ build-win\apps\ninfer.exe
 build-win\apps\ninfer-serve.exe
 ```
 
+### 3b. Media-enabled (multimodal) build
+
+The default configure script stubs media. For image/video input, build a second tree instead of
+changing the first one:
+
+```powershell
+scripts\windows\fetch-media-deps.cmd        # FFmpeg 8.1 dev tree + libcurl 8.11.1 (Schannel)
+scripts\windows\configure-media.cmd         # -DNINFER_STUB_MEDIA=OFF, build-win-media
+$env:NINFER_BUILD_DIR = "$PWD\build-win-media"
+scripts\windows\build.cmd ninfer ninfer-serve
+```
+
+Expected: `build-win-media\apps\ninfer.exe`, and the FFmpeg/`libcurl` DLLs staged next to it by the
+post-build step. Reusing an existing `build-win` tree is possible — copy the directory, rewrite
+`CMAKE_CACHEFILE_DIR` inside `CMakeCache.txt` to the new path, then run `configure-media.cmd` — but
+the copied dependency log still points at the old tree, so expect a full recompile anyway.
+
+Verify with one image prompt (the artifact ships vision weights):
+
+```powershell
+build-win-media\apps\ninfer.exe F:\models\ninfer\qwen3_8_27b_nvfp4.ninfer ^
+  --messages _scratch\media-test\image.json --vision --max-new 60 --no-thinking --greedy ^
+  --max-context 4096 --kv-capacity 4096 --tp 2 --devices 0,1
+```
+
+`--messages` takes OpenAI-style content parts:
+`{"type":"text","text":...}` plus `{"type":"image_url","image_url":{"url":"<path|http(s) URL|data: URI>"}}`
+or `{"type":"video_url","video_url":{"url":...}}`. A working run reports a `vision` timing line and
+prompt tokens well above the text-only count.
+
+The media tree also builds the host test suite. Put `build-win-media\apps` on `PATH` (the tests
+import the same FFmpeg/libcurl DLLs) and point `TMP`/`TEMP` at a writable directory before running
+`ctest`; without a usable temp directory the tests that need one abort with `0xC0000409` and no
+output. Current pass rate and the remaining failures: `docs\windows.md`.
+
 The first build compiles roughly 430 translation units and takes 20-40 minutes on eight cores. If
 `cicc.exe` crashes while several `nvcc` processes run in parallel, the machine is out of memory;
 retry the same command (the failed units are recompiled) or cap the parallelism:
