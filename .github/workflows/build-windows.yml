@@ -23,7 +23,11 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    # windows-2022, not windows-latest: the newest image ships Visual Studio 2026 (MSVC 14.51),
+    # which CUDA 12.8's front end rejects (its crt/host_config.h allows _MSC_VER < 1950) and then
+    # crashes in cudafe++ with 0xC0000005. windows-2022 keeps MSVC 14.4x, inside 12.8's accepted
+    # range, and matches the VS2022 toolchain used for local builds.
+    runs-on: windows-2022
     # The first tree compiles ~430 translation units on 4 cores; the cap matches GitHub's
     # hosted-runner job limit so a slow first build fails loudly instead of being killed at the
     # default 6 h boundary without a clear reason.
@@ -64,12 +68,7 @@ jobs:
         run: scripts\windows\fetch-media-deps.cmd
 
       - name: Configure (sm_70, media enabled)
-        shell: pwsh
-        run: |
-          # The hosted image's MSVC is newer than CUDA 12.8's crt/host_config.h accepts (that header
-          # allows VS2017..VS2022, _MSC_VER <= 1943). The flag only skips the version check; the host
-          # compiler stays the runner's cl.exe. A local build with MSVC 14.38 needs no such flag.
-          scripts\windows\configure-media.cmd "-DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler"
+        run: scripts\windows\configure-media.cmd
 
       - name: Build ninfer and ninfer-serve
         run: scripts\windows\build.cmd ninfer ninfer-serve
