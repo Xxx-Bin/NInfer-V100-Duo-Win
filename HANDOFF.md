@@ -97,7 +97,9 @@ promoted in place — see [Release flow](docs/windows.md#release-flow).
   `windows-2022` because CUDA 12.8 rejects the MSVC 14.51 that `windows-latest` now ships, caps
   `NINFER_BUILD_JOBS` at 4 for the 4-core/16 GB runner, and publishes through the Releases API
   instead of pushing a tag. `.gitignore` anchors `build-win*` to the repository root — unanchored, the
-  pattern also swallowed `.github/workflows/build-windows.yml`.
+  pattern also swallowed `.github/workflows/build-windows.yml`. Dispatch-only: the `push` trigger on
+  `v*` tags was removed because creating the promotion tag through the API fires the same event, so
+  every promotion started a duplicate build that failed on the release it had just promoted.
 - Release packaging: `tar.exe -a -cf` (bsdtar) writes one archive of both executables and the eight
   media DLLs, a following step extracts it and compares every file with the staged build output, and
   `scripts/windows/release-notes.ps1` writes the release body to `release-notes.md`, which the

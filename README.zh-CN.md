@@ -102,7 +102,8 @@ scripts\windows\build.cmd ninfer ninfer-serve
    重写 `.sha256`、删除残留 `test-` tag。不通过则删除 release 及其 tag，修代码后换下一个编号。
    验收结论写进 `docs/Releases/<tag>.md`。
 
-`win.N` 只增不减。正式版 tag 由 Releases API 创建，不要用 `git push` 推 `v*` tag：那会跳过验收直接
-发布。细节见 [Release flow](docs/windows.md#release-flow)。
+`win.N` 只增不减。workflow **只响应手动派发**（不会因为推 `v*` tag 自动构建：转正本身会创建 tag，
+旧触发器会因此多跑一次构建并撞上已存在的 release）。细节见
+[Release flow](docs/windows.md#release-flow)。
 
 英文文档是权威版本，本页只是入口（English docs stay authoritative; this page is an entry point）。

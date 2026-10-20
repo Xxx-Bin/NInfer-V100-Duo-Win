@@ -142,17 +142,13 @@ inherited Linux workflow. It calls the same `scripts\windows\*.cmd` a developer 
 and a local tree come from identical CMake arguments: `sm_70`, `NINFER_STUB_MEDIA=OFF`, portable
 CUDA 12.8, FFmpeg 8.1 and libcurl 8.11.1.
 
-Two entry points:
-
-| Trigger | Effect |
-|---|---|
-| Manual dispatch | Inputs `tag` (base tag) and `prefix`. `prefix: test-` publishes a **prerelease**; an empty prefix publishes a real release. |
-| Push of a `v*` tag | Publishes a **real release** under that tag. This is the trap to know about: pushing `v0.1.1-win.3` to publish a tag also starts a build that creates the release for it. |
+One entry point: a manual dispatch with the inputs `tag` (base tag) and `prefix`. `prefix: test-`
+publishes a **prerelease**; an empty prefix publishes a real release. There is no tag-push trigger.
 
 Selecting a tag manually (`Run workflow`, `prefix: test-`) is the way to exercise the pipeline without
 touching the release list. The run publishes `test-<tag>` and marks it prerelease.
 
-Three constraints shaped the job, each discovered the hard way:
+Four constraints shaped the job, each discovered the hard way:
 
 - **`windows-2022`, not `windows-latest`.** The newest runner image ships Visual Studio 2026 (MSVC
   14.51). CUDA 12.8's front end rejects it (`crt/host_config.h` allows `_MSC_VER < 1950`) and then
@@ -163,6 +159,11 @@ Three constraints shaped the job, each discovered the hard way:
 - **The release tag is created through the Releases API** (`softprops/action-gh-release`), not by
   `git push`. `GITHUB_TOKEN` acts as a GitHub App and may not create a ref whose commit touches
   `.github/workflows/*` without the `workflows` scope, which the `permissions:` block cannot grant.
+- **Dispatch-only, no tag-push trigger.** The workflow used to also run on `push` of a `v*` tag.
+  Creating a release tag through the Releases API fires that same push event, so every promotion
+  started a second build, which then failed in `Publish release` because the release already existed
+  (`v0.1.1-win.5`, run 39451451700). Promotion is the one place that creates tags, so the trigger was
+  removed rather than worked around.
 
 The release ships **one zip archive** (`ninfer-<tag>-windows-x64-cuda12.8-sm70.zip`) plus a
 sha256sum-style `.sha256` sidecar. The archive holds both executables and every FFmpeg and libcurl
@@ -210,10 +211,9 @@ archive keeps its bytes and its digest; only names and metadata change.
 
 Promotion is a handful of Releases API calls, and like tag creation it cannot go through `git push`
 (see the third constraint above). Renaming a tag with `PATCH /releases/:id` creates the new tag but
-leaves the old ref behind, which is why the script deletes the stale `test-` tag itself.
-
-Pushing a `v*` tag skips steps 2-4 and publishes a real release straight from CI; use it only for a
-build you are willing to publish unverified.
+leaves the old ref behind, which is why the script deletes the stale `test-` tag itself. That rename
+also fires the push event the removed tag trigger used to listen for; with the trigger gone, a
+promotion is the only thing that runs, and it does not start a build.
 
 ## Artifact
 

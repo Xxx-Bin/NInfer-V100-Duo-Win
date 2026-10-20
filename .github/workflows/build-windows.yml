@@ -4,6 +4,10 @@ name: build-windows
 # (sm_70) with the media path enabled (NINFER_STUB_MEDIA=OFF: FFmpeg decode + libcurl URL
 # acquisition). It reuses the same scripts as a local build (scripts/windows/*.cmd), so a CI tree
 # and a developer tree are produced by identical CMake arguments.
+# Dispatch-only on purpose: creating a release tag through the Releases API - which is what a
+# promotion does - fires the same push event a `git push` of that tag would, so a `push: tags ["v*"]`
+# trigger started a second build on every promotion and that build then failed in `Publish release`
+# because the release already existed (v0.1.1-win.5, run 39451451700).
 on:
   workflow_dispatch:
     inputs:
@@ -15,8 +19,6 @@ on:
         description: "Prefix for a test release (empty = real release)"
         required: false
         default: "test-"
-  push:
-    tags: ["v*"]
 
 permissions:
   contents: write
@@ -91,8 +93,8 @@ jobs:
         id: release
         shell: pwsh
         env:
-          IN_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          IN_PREFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.prefix || '' }}
+          IN_TAG: ${{ inputs.tag }}
+          IN_PREFIX: ${{ inputs.prefix }}
         run: |
           $baseTag = $env:IN_TAG
           $prefix = $env:IN_PREFIX
