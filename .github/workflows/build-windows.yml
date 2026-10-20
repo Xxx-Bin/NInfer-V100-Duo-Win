@@ -138,7 +138,7 @@ jobs:
           prerelease: ${{ env.IS_TEST == 'true' }}
           body: |
             Windows x64 build for two Tesla V100 (sm_70) with the media path enabled:
-            `NINFER_STUB_MEDIA=OFF` — FFmpeg 8.1 image/video decode plus libcurl 8.11.1 URL
+            `NINFER_STUB_MEDIA=OFF` - FFmpeg 8.1 image/video decode plus libcurl 8.11.1 URL
             acquisition, so `--vision` and `image_url`/`video_url` prompts work.
 
             | | |
@@ -148,7 +148,7 @@ jobs:
             | Commit | `${{ github.sha }}` |
             | Run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
 
-            ${{ env.IS_TEST == 'true' && '> **TEST BUILD** — prefixed to distinguish it from a real release. The binaries are produced by the real pipeline; only the tag carries the test prefix.' || '' }}
+            ${{ env.IS_TEST == 'true' && '> **TEST BUILD** - prefixed to distinguish it from a real release. The binaries are produced by the real pipeline; only the tag carries the test prefix.' || '' }}
 
             Keep the `.dll` files next to the executables: the media build loads FFmpeg and libcurl
             from the executable directory.
