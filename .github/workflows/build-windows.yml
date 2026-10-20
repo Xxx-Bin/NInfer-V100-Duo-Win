@@ -149,7 +149,7 @@ jobs:
             | | |
             |---|---|
             | Toolchain | MSVC 19.x (Visual Studio 2022), CUDA 12.8.61 (portable redist), CMake + Ninja |
-            | Runner | `windows-latest`, `NINFER_BUILD_JOBS=4` |
+            | Runner | `windows-2022`, `NINFER_BUILD_JOBS=4` |
             | Commit | `${{ github.sha }}` |
             | Run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
 
