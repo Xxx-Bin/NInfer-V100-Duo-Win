@@ -1,0 +1,156 @@
+name: build-windows
+
+# The only build pipeline for this repository: a native Windows x64 tree for 2x Tesla V100
+# (sm_70) with the media path enabled (NINFER_STUB_MEDIA=OFF: FFmpeg decode + libcurl URL
+# acquisition). It reuses the same scripts as a local build (scripts/windows/*.cmd), so a CI tree
+# and a developer tree are produced by identical CMake arguments.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Base release tag, e.g. v0.1.1-win.2"
+        required: true
+        default: "v0.1.1-win.2"
+      prefix:
+        description: "Prefix for a test release (empty = real release)"
+        required: false
+        default: "test-"
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    # The first tree compiles ~430 translation units on 4 cores; the cap matches GitHub's
+    # hosted-runner job limit so a slow first build fails loudly instead of being killed at the
+    # default 6 h boundary without a clear reason.
+    timeout-minutes: 360
+    env:
+      NINFER_BUILD_DIR: ${{ github.workspace }}\build-win-media
+      # Each nvcc process can hold several GB while expanding CUTLASS templates; the local tree
+      # crashed cicc.exe at -j8. Hosted runners have 4 cores / 16 GB, so cap the job count.
+      NINFER_BUILD_JOBS: "4"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain versions
+        shell: pwsh
+        run: |
+          cmake --version
+          ninja --version
+          python --version
+
+      - name: Fetch portable CUDA 12.8 toolkit
+        # NVIDIA's redistributable archives: nvcc + cudart + CCCL + NVTX into _toolchain\cuda-12.8.
+        # CUDA 13 removed Volta offline compilation, so 12.8 is the last usable toolkit.
+        run: python scripts\windows\fetch_cuda_toolkit.py
+
+      - name: Clone CUTLASS v4.4.2
+        # FetchContent's git submodule update goes through MSYS sh on Windows; a pre-cloned checkout
+        # keeps configure off that path (configure*.cmd pick it up via FETCHCONTENT_SOURCE_DIR_CUTLASS).
+        run: git clone --depth 1 --branch v4.4.2 https://github.com/nvidia/cutlass.git _toolchain\cutlass
+
+      - name: Fetch media dependencies
+        # FFmpeg 8.1 development tree (headers + import libraries) and a libcurl built from source
+        # with Schannel. Only a development tree links; the plain ffmpeg.exe download does not.
+        run: scripts\windows\fetch-media-deps.cmd
+
+      - name: Configure (sm_70, media enabled)
+        run: scripts\windows\configure-media.cmd
+
+      - name: Build ninfer and ninfer-serve
+        run: scripts\windows\build.cmd ninfer ninfer-serve
+
+      - name: Stage release artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build-win-media\apps\ninfer.exe dist\
+          Copy-Item build-win-media\apps\ninfer-serve.exe dist\
+          # The post-build step in apps/CMakeLists.txt stages FFmpeg and libcurl DLLs next to the
+          # executables; they have to travel with the release or the binaries fail to start.
+          Copy-Item build-win-media\apps\*.dll dist\
+          if (-not (Get-ChildItem dist -Filter *.dll)) {
+            throw "no media runtime DLLs were staged next to the executables"
+          }
+          Get-ChildItem dist | Select-Object Name, Length
+
+      - name: Resolve release identity
+        id: release
+        shell: pwsh
+        env:
+          IN_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          IN_PREFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.prefix || '' }}
+        run: |
+          $baseTag = $env:IN_TAG
+          $prefix = $env:IN_PREFIX
+          if (-not $baseTag) { throw "no base tag resolved" }
+          $releaseTag = "$prefix$baseTag"
+          $titlePrefix = if ($prefix) { "[TEST] " } else { "" }
+          $title = "${titlePrefix}NInfer $baseTag (Windows x64, 2x V100, CUDA 12.8, sm_70, media enabled)"
+          $isTest = if ($prefix) { "true" } else { "false" }
+          "RELEASE_TAG=$releaseTag" >> $env:GITHUB_ENV
+          "RELEASE_TITLE=$title" >> $env:GITHUB_ENV
+          "IS_TEST=$isTest" >> $env:GITHUB_ENV
+          Write-Output "tag=$releaseTag title=$title test=$isTest"
+
+      - name: Compute artifact hashes
+        shell: pwsh
+        run: |
+          $rows = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "| ``$($_.Name)`` | ``$hash`` |"
+          }
+          "HASH_ROWS<<EOF" >> $env:GITHUB_ENV
+          $rows >> $env:GITHUB_ENV
+          "EOF" >> $env:GITHUB_ENV
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-cuda12.8-sm70-media
+          path: dist/**
+
+      - name: Tag the commit
+        shell: pwsh
+        run: |
+          git config user.name "lwb6"
+          git config user.email "lwb.6@qq.com"
+          git tag $env:RELEASE_TAG
+          git push origin $env:RELEASE_TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TITLE }}
+          prerelease: ${{ env.IS_TEST == 'true' }}
+          body: |
+            Windows x64 build for two Tesla V100 (sm_70) with the media path enabled:
+            `NINFER_STUB_MEDIA=OFF` — FFmpeg 8.1 image/video decode plus libcurl 8.11.1 URL
+            acquisition, so `--vision` and `image_url`/`video_url` prompts work.
+
+            | | |
+            |---|---|
+            | Toolchain | MSVC 19.x (Visual Studio 2022), CUDA 12.8.61 (portable redist), CMake + Ninja |
+            | Runner | `windows-latest`, `NINFER_BUILD_JOBS=4` |
+            | Commit | `${{ github.sha }}` |
+            | Run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
+
+            ${{ env.IS_TEST == 'true' && '> **TEST BUILD** — prefixed to distinguish it from a real release. The binaries are produced by the real pipeline; only the tag carries the test prefix.' || '' }}
+
+            Keep the `.dll` files next to the executables: the media build loads FFmpeg and libcurl
+            from the executable directory.
+
+            | File | SHA256 |
+            |---|---|
+            ${{ env.HASH_ROWS }}
+          files: dist/*

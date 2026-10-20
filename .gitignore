@@ -10,12 +10,14 @@ compile_commands.json
 CMakeUserPresets.json
 .cache/
 
-# Local Windows port toolchain and scratch trees (never part of a commit)
+# Local Windows port toolchain and scratch trees (never part of a commit). Anchor the build-tree
+# pattern to the repository root: an unanchored `build-win*` also swallows any file whose name
+# starts with it at any depth, including .github/workflows/build-windows.yml.
 _toolchain/
 _ref/
 _scratch/
 probe/
-build-win*
+/build-win*
 vc140.pdb
 *.exe
 *.dll
