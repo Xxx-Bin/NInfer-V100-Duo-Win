@@ -26,8 +26,14 @@
 
 #include <nlohmann/json.hpp>
 
+#if defined(_WIN32)
+// MSVC has neither <sys/wait.h> nor <unistd.h>. std::system() already returns the child's exit
+// code on Windows (no wait-status encoding), so only the pid source differs.
+#include <process.h>
+#else
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -64,9 +70,23 @@ std::filesystem::path reference_json_path(const std::filesystem::path& source_di
     return source_dir / "tests" / "core" / "data" / "yarn_ref_4x.json";
 }
 
-// Single-quote a path for use inside a `/bin/sh -c` command line. Good enough for the fixed,
-// space-free, quote-free paths this test ever builds (repo checkout path, temp directory).
+// Quote a path for use inside a shell command line. Good enough for the fixed, space-free,
+// quote-free paths this test ever builds (repo checkout path, temp directory).
+#if defined(_WIN32)
+// cmd.exe uses double quotes; single quotes are literal characters there.
+std::string shell_quote(const std::string& value) { return "\"" + value + "\""; }
+#else
+// Single quotes for `/bin/sh -c`.
 std::string shell_quote(const std::string& value) { return "'" + value + "'"; }
+#endif
+
+long process_id() {
+#if defined(_WIN32)
+    return static_cast<long>(::_getpid());
+#else
+    return static_cast<long>(::getpid());
+#endif
+}
 
 std::string read_file(const std::filesystem::path& path) {
     std::ifstream stream(path);
@@ -165,15 +185,24 @@ int main() {
 
     const std::filesystem::path stdout_path =
         std::filesystem::temp_directory_path() /
-        ("ninfer_yarn_ref_drift_stdout_" + std::to_string(::getpid()) + ".json");
+        ("ninfer_yarn_ref_drift_stdout_" + std::to_string(process_id()) + ".json");
     const std::filesystem::path stderr_path =
         std::filesystem::temp_directory_path() /
-        ("ninfer_yarn_ref_drift_stderr_" + std::to_string(::getpid()) + ".txt");
+        ("ninfer_yarn_ref_drift_stderr_" + std::to_string(process_id()) + ".txt");
 
+#if defined(_WIN32)
+    // `VAR=value command` is a POSIX-shell construct; cmd.exe would treat it as the program name.
+    // Set the variable in-process so the child inherits it.
+    _putenv_s("VLLM_LOGGING_LEVEL", "WARNING");
+    const std::string command = shell_quote(python) + " " + shell_quote(dump_script.string()) +
+                                " >" + shell_quote(stdout_path.string()) + " 2>" +
+                                shell_quote(stderr_path.string());
+#else
     const std::string command = "VLLM_LOGGING_LEVEL=WARNING " + shell_quote(python) + " " +
                                  shell_quote(dump_script.string()) + " >" +
                                  shell_quote(stdout_path.string()) + " 2>" +
                                  shell_quote(stderr_path.string());
+#endif
 
     std::cout << "running: " << command << '\n';
     const int status = std::system(command.c_str());
@@ -189,6 +218,11 @@ int main() {
         cleanup();
         return 1;
     }
+#if defined(_WIN32)
+    // std::system() on Windows returns the child's exit code verbatim; there is no wait status
+    // to decode, so an abnormal termination is not distinguishable from a normal one.
+    const int exit_code = status;
+#else
     if (!WIFEXITED(status)) {
         std::cerr << "dump_yarn_ref.py terminated abnormally (raw status=" << status << ")\n";
         std::cerr << read_file(stderr_path);
@@ -196,6 +230,7 @@ int main() {
         return 1;
     }
     const int exit_code = WEXITSTATUS(status);
+#endif
     if (exit_code == 77) {
         // dump_yarn_ref.py itself detected that vLLM (or a dependency) is not importable in
         // this python and printed its own "SKIP: ..." message -- surface it and forward the skip.

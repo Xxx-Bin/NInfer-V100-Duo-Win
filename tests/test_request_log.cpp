@@ -13,9 +13,21 @@
 #include <string>
 #include <vector>
 
+#if defined(_WIN32)
+#include <process.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace {
+
+long test_process_id() {
+#if defined(_WIN32)
+    return static_cast<long>(::_getpid());
+#else
+    return static_cast<long>(::getpid());
+#endif
+}
 
 using namespace ninfer::serve;
 using Json = nlohmann::json;
@@ -407,7 +419,7 @@ int main() {
 
     const std::filesystem::path log_path =
         std::filesystem::temp_directory_path() /
-        ("ninfer-request-log-test-" + std::to_string(static_cast<long long>(::getpid())) +
+        ("ninfer-request-log-test-" + std::to_string(static_cast<long long>(test_process_id())) +
          ".jsonl");
     std::filesystem::remove(log_path);
     {

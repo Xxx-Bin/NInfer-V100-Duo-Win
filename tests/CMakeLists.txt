@@ -4,11 +4,21 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 # include root. It proves that the installed product headers stand alone.
 add_executable(ninfer_public_api_test test_public_api.cpp)
 target_include_directories(ninfer_public_api_test PRIVATE ${PROJECT_SOURCE_DIR}/include)
+if(MSVC)
+  # MSVC decodes sources as the system ANSI codepage unless told otherwise; every test source in
+  # this tree is UTF-8. Pinning source and execution charset to UTF-8 matches the Linux builds
+  # and keeps multi-byte literals (Chinese prompts, codepoint checks) intact.
+  target_compile_options(ninfer_public_api_test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+endif()
 add_test(NAME ninfer_public_api_test COMMAND ninfer_public_api_test)
 
 function(ninfer_add_test name)
   cmake_parse_arguments(arg "NEEDS_SOURCE_DIR" "" "SOURCES;LIBRARIES" ${ARGN})
   add_executable(${name} ${arg_SOURCES})
+  if(MSVC)
+    # See ninfer_public_api_test above: sources are UTF-8, MSVC's default is the ANSI codepage.
+    target_compile_options(${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+  endif()
   target_include_directories(${name} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/include
