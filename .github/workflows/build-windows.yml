@@ -121,6 +121,29 @@ jobs:
           "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
           Get-Item $zip | Select-Object Name, Length
 
+      - name: Verify the archive round-trips
+        shell: pwsh
+        run: |
+          # Extract the archive that is about to be published and compare every file with the
+          # staged build output, so a truncated or mis-built zip fails here instead of at the
+          # user's machine.
+          $check = "package\verify"
+          New-Item -ItemType Directory -Force $check | Out-Null
+          & tar.exe -xf "package\$env:ZIP_NAME" -C $check
+          if ($LASTEXITCODE -ne 0) { throw "archive extraction failed" }
+          $staged = Get-ChildItem dist -File
+          foreach ($file in $staged) {
+            $copy = Join-Path $check $file.Name
+            if (-not (Test-Path $copy)) { throw "$($file.Name) is missing from the archive" }
+            $a = (Get-FileHash $file.FullName -Algorithm SHA256).Hash
+            $b = (Get-FileHash $copy -Algorithm SHA256).Hash
+            if ($a -ne $b) { throw "$($file.Name) does not round-trip through the archive" }
+          }
+          if ((Get-ChildItem $check -File).Count -ne $staged.Count) {
+            throw "archive file count differs from the staged build output"
+          }
+          Write-Output "archive round-trip verified: $($staged.Count) files"
+
       - name: Compute archive hashes
         shell: pwsh
         run: |
