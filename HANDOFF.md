@@ -19,6 +19,11 @@ The port runs end to end on Windows 11 with two V100-SXM2-16GB cards in TCC:
 This satisfies Phase 0 (runtime gate), Phase 5 (end-to-end TP2), and Phase 6/7 (long context and
 soak). It does not yet include an independent numerical comparison against a Linux baseline.
 
+The Windows series is 34 linear commits (no merges of its own) on top of upstream
+`plus1998/NInfer-V100-Duo` at `c96744938293e1bbe77124f0d7ba5dd1c3045dd2` (2026-10-15). That base is
+recorded by the annotated tag `fork-base/upstream-c9674493`, because upstream publishes no tags and a
+clone of the fork has no `upstream` remote to look it up.
+
 A second tree, `build-win-media`, builds with `-DNINFER_STUB_MEDIA=OFF` and runs the multimodal
 path end to end on Windows: local paths (including non-ASCII names), HTTP(S) URLs, base64 data URIs
 and video input.

@@ -189,16 +189,28 @@ build, a local acceptance run, and only then a promotion or a deletion:
    real release.
 3. Download the archive on the V100 host, unzip it into an empty directory, and run the acceptance
    checks in [Verification](#verification); the media profile additionally replays
-   [`examples/cli/messages/*.json`](../examples/cli/README.md).
-4. Pass: **promote in place** — rename the tag to `<tag>`, clear `prerelease`, drop the `[TEST]`
-   title and the body banner, rename both assets, rewrite the `.sha256` sidecar so it names the
-   renamed archive, and delete the leftover `test-` tag. The promoted release becomes Latest as the
-   newest non-prerelease. Fail: delete the release and its tag, fix the code, and build the next
-   number — `win.N` only moves forward.
+   [`examples/cli/messages/*.json`](../examples/cli/README.md). Record what was verified in
+   `docs/Releases/<tag>.md` (`v0.1.1-win.5` is the worked example).
+4. Pass: **promote in place** with
+   [`scripts\windows\promote-release.ps1`](../scripts/windows/promote-release.ps1), which renames the
+   tag to `<tag>`, clears `prerelease`, drops the `[TEST]` title prefix, replaces the body's TEST
+   BUILD banner with the acceptance note, renames both assets, rewrites the `.sha256` sidecar so it
+   names the renamed archive, and deletes the leftover `test-` tag. The promoted release becomes
+   Latest as the newest non-prerelease. Fail: delete the release and its tag, fix the code, and build
+   the next number — `win.N` only moves forward.
+
+```powershell
+$env:GH_TOKEN = '<token with repo scope>'
+scripts\windows\promote-release.ps1 -Tag v0.1.1-win.6 `
+  -AcceptanceNote 'Accepted on 2x V100: media smoke 10/10, TP2 text, archive extract.' -DryRun
+```
+
+Dry run first: it prints the tag, title, asset renames and body change and writes nothing. The
+archive keeps its bytes and its digest; only names and metadata change.
 
 Promotion is a handful of Releases API calls, and like tag creation it cannot go through `git push`
 (see the third constraint above). Renaming a tag with `PATCH /releases/:id` creates the new tag but
-leaves the old ref behind, so the stale `test-` tag needs its own `DELETE /git/refs/tags/...`.
+leaves the old ref behind, which is why the script deletes the stale `test-` tag itself.
 
 Pushing a `v*` tag skips steps 2-4 and publishes a real release straight from CI; use it only for a
 build you are willing to publish unverified.
