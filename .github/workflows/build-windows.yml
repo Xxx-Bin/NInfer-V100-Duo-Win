@@ -123,22 +123,17 @@ jobs:
           name: windows-x64-cuda12.8-sm70-media
           path: dist/**
 
-      - name: Tag the commit
-        shell: pwsh
-        run: |
-          git config user.name "lwb6"
-          git config user.email "lwb.6@qq.com"
-          git tag $env:RELEASE_TAG
-          git push origin $env:RELEASE_TAG
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      # The tag is created by the release action through the Releases API. Pushing it with
+      # `git push` is rejected here: GITHUB_TOKEN acts as a GitHub App and is not allowed to
+      # create a ref whose commit touches `.github/workflows/*` without the `workflows` scope,
+      # which the `permissions:` block cannot grant.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           name: ${{ env.RELEASE_TITLE }}
           prerelease: ${{ env.IS_TEST == 'true' }}
           body: |
