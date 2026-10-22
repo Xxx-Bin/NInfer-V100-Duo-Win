@@ -165,3 +165,58 @@ python3 tools/bench/run_serve_concurrency.py \
 Use `--kv-capacity auto` when the fixed corpus needs more shared KV than the default 262,144-token
 pool. A point is intentionally not resumable: combining fragments from separate server processes
 would not preserve either a steady interval or one continuous makespan.
+
+## Peak prefill / decode sweep
+
+`run_peak_sweep.py` answers "how fast can this configuration go", which the panel and the periodic
+throughput log cannot: those divide a monotonically increasing counter by a one-second interval,
+and a prefill counter only moves when a whole chunk lands, so a sampled second can only report one
+chunk divided by its length. This tool reads `request_done.timings_seconds` and divides the
+tokens that phase actually evaluated by that phase's own wall time.
+
+It starts one server per prefill chunk (execution graphs and the memory plan are startup-fixed),
+disables prefix reuse, sends `--reps` requests per point with a fresh nonce so no prompt can hit
+the cache, and reports the maximum over repetitions per `(chunk, suite, prompt length)`.
+
+```bash
+python tools/bench/run_peak_sweep.py \
+  --artifact F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer \
+  --serve build-win/apps/ninfer-serve.exe \
+  --suite both --chunks 1024,2048 --reps 3 \
+  --prefill-tokens 2048,4096,8192,16384,32768 \
+  --decode-contexts 512,8192,32768 --decode-tokens 512 \
+  --output profiles/bench/peak-27b-nvfp4
+```
+
+Outputs `points.json` (every repetition), `peak.csv` (best per point), `summary.json` (the full
+configuration plus the headline peaks), and one server stdout/stderr/request-log triplet per chunk.
+
+The point of a peak number is that it is only comparable to another run with the same
+`tp / devices / kv-dtype / chunk / spec / draft window / greedy` setting; the summary records all
+of them. Repetition count is a peak-vs-sustain choice: a V100 that runs for minutes drops clocks,
+so `--reps 3` reports the peak while a large `--reps` reports something closer to sustainable.
+
+### Decode depends on the draft acceptance rate
+
+A decode point is only meaningful together with its acceptance rate, so the tool measures both and
+the summary records `accepted_tokens / drafted_tokens` per point. The default prompt asks for a
+long ordered enumeration, which the model can predict almost perfectly: acceptance is 100% and the
+reported rate is an upper bound, not a production figure. Pass `--prompt-style prose --no-greedy
+--temperature 0.7` to sample original prose instead, which is the pessimistic end of real traffic
+(36% acceptance at a three-token draft window).
+
+Accepted drafts per round drive the rate, so the draft window has to be measured rather than
+assumed: at 100% acceptance `--draft-tokens 5` beats 3 by 24%, while on sampled prose it loses 6%
+because the fourth and fifth drafts are rejected almost always and still cost a verify slot. The
+window optimum follows the per-position acceptance rate, which the request log records as
+`speculative.accepted_per_position`: sampled prose accepts 67/30/12% at positions 1-3, so its best
+window is 2, while structured output (`--prompt-style json`) accepts 100/94/89% and gains from 3-5.
+
+Before launching anything it refuses to run when the port is taken, a target GPU has less than
+`--min-free-mib` free, or available host memory is below `--min-free-ram-mib` — an artifact that
+does not fit aborts the server with a bare fail-fast code and no diagnostic. `--force` overrides.
+
+`--kv-capacity` defaults to `--max-context`, which is what a peak run wants. Do not pass `auto`:
+it sizes the pool to the card rather than to the window (2,880 of 5,760 page groups stay live at a
+184,320-token window), and the extra pages are what makes an otherwise loadable long-context
+profile abort once an MTP proposal head is resident too.
