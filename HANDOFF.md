@@ -117,21 +117,18 @@ promoted in place — see [Release flow](docs/windows.md#release-flow).
    issued while a previous server is still releasing GPUs fails cleanly with "only N bytes are free
    before loading weights"; `tools/tp2/win/soak.py` now refuses to start on a non-idle GPU instead.
    Keep an eye on it; capture a dump if it recurs.
-3. **System monitor is empty on Windows.** The implementation is `/proc`-based and has no Windows
-   branch. Serving is unaffected. Porting `cpu_model_name`, memory, CPU load and the NVML loader to
-   Windows APIs is follow-up work.
-4. **Media is stubbed in the default tree.** `build-win-media` covers it and the serving API with
+3. **Media is stubbed in the default tree.** `build-win-media` covers it and the serving API with
    media parts is now driven over HTTP (`_scratch/mediasmoke.ps1`, 5/5). The default `build-win` tree
    still omits FFmpeg/libcurl by design.
-5. **12 of 133 unit tests fail on Windows.** Signatures and the per-test list are in
+4. **12 of 133 unit tests fail on Windows.** Signatures and the per-test list are in
    `docs/windows.md`; none touches the media path. Ten exit `0xC0000409` with no output (the same
    fast-fail signature already recorded for the pre-media `ninfer-compat.exe`), two are numeric or
    capability assertions. `ninfer_qwen3_8_27b_dflash2_real_test` does not build because the portable
    CUDA toolkit ships no `cuda_profiler_api.h`.
-6. **Test runs need a writable `TMP`.** Tests calling `std::filesystem::temp_directory_path()` abort
+5. **Test runs need a writable `TMP`.** Tests calling `std::filesystem::temp_directory_path()` abort
    silently (`0xC0000409`, no output) when it is unavailable, because MSVC's default terminate
    handler calls `abort()`. Point `TMP`/`TEMP` at a real directory before `ctest`.
-7. **CI builds and packages, but never runs anything.** A hosted runner has no GPU, so a green run
+6. **CI builds and packages, but never runs anything.** A hosted runner has no GPU, so a green run
    proves the tree configures, compiles, links and packages — not that the binaries produce correct
    output. Acceptance is a manual step on the V100 machine (release flow in `docs/windows.md`), and
    the CLI `--messages` file-path media route was not re-run for `v0.1.1-win.5`; only the serving
@@ -143,10 +140,8 @@ promoted in place — see [Release flow](docs/windows.md#release-flow).
    temperature 0, compare token ids; if only a Linux baseline is available, record its ids).
    Cover the `vision_disabled` guard next: the positive media path over HTTP is done, the negative
    path (media part sent to a server started without `--vision`) is not.
-2. Port `SystemMonitor` to Windows (`GlobalMemoryStatusEx`, `GetSystemTimes`, NVML via
-   `LoadLibraryW`).
-3. Promote the measured numbers into `docs/performance.md` if the port becomes a supported target.
-4. Close the CI gap in open issue 7: add at least an `inspect`/`--help` smoke to the hosted job, and
+2. Promote the measured numbers into `docs/performance.md` if the port becomes a supported target.
+3. Close the CI gap in open issue 6: add at least an `inspect`/`--help` smoke to the hosted job, and
    script the acceptance run that `docs/windows.md` currently describes by hand (archive extract, PE
    and import check, media smoke) so promoting a `test-` build is one command. A self-hosted runner
    would make the GPU checks part of the pipeline instead of a manual step.

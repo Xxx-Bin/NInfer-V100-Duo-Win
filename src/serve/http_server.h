@@ -10,13 +10,12 @@
 
 #include <atomic>
 #include <condition_variable>
-#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
-#include <vector>
 
 namespace ninfer::serve {
 
@@ -66,6 +65,11 @@ private:
     void log_throughput(const ThroughputReport& report);
     void run_stats_reporter();
     void stop_stats_reporter();
+    // The fixed-rate owner of every /metrics-derived number. Keeping sampling off the HTTP
+    // threads makes the rate window and history cadence independent of how many browsers poll
+    // and how fast each one does.
+    void run_monitor_sampler();
+    void stop_monitor_sampler();
 
     GenerationService* service_ = nullptr;
     ServeOptions options_;
@@ -79,24 +83,45 @@ private:
     std::thread stats_thread_;
     bool stats_stopping_ = false;
 
-    // Web panel: engine snapshots captured at attach() plus the /metrics sampling state.
+    // Web panel: engine snapshots captured at attach() plus the fixed-rate monitor sampler.
     ninfer::LoadSummary load_summary_{};
     ninfer::MemorySummary memory_summary_{};
     bool has_load_summary_ = false;
     SystemMonitor system_monitor_;
     std::mutex monitor_mutex_;
-    bool monitor_has_baseline_ = false;
-    std::chrono::steady_clock::time_point monitor_baseline_time_{};
-    ninfer::RuntimeStats monitor_baseline_{};
-    double monitor_tok_s_         = 0.0;
-    double monitor_prefill_tok_s_ = 0.0;
-    // Last completed request's measured rates, so the panel still shows a prefill speed for a
-    // prompt the sub-second sampling interval never caught.
+    std::condition_variable monitor_cv_;
+    std::thread monitor_thread_;
+    bool monitor_stopping_ = false;
+    // Last sample published by run_monitor_sampler(). /metrics only copies this state, so a
+    // request never drives the rate window.
+    ninfer::RuntimeStats monitor_stats_{};
+    HostReading monitor_system_{};
+    double monitor_tok_s_                            = 0.0;
+    double monitor_prefill_tok_s_                    = 0.0;
+    double monitor_cache_hit_tok_s_                  = 0.0;
+    std::uint64_t monitor_prefill_interval_tokens_   = 0;
+    std::uint64_t monitor_decode_interval_tokens_    = 0;
+    std::uint64_t monitor_cache_hit_interval_tokens_ = 0;
+    // Last completed request's measured rates, the panel's only exact per-request figures: their
+    // denominators are the phases' own wall time, not a sampling interval.
     RequestRates last_rates_{};
     bool has_last_rates_ = false;
-    // Fixed-size rings of the last kMonitorHistorySamples /metrics observations, served back as
-    // the panel's sparkline series.
+    // Session maxima of the per-request rates above. -1.0 marks "no request has measured one yet".
+    // These are the panel's peak figures: a sampled counter can only report multiples of the
+    // prefill chunk it lands in, so no sampled series can stand in for a per-request measurement.
+    double peak_prefill_tok_s_ = -1.0;
+    double peak_decode_tok_s_  = -1.0;
+    // TTFT (request preparation to first token) of the last completed request, for the panel.
+    std::optional<double> last_ttft_ = std::nullopt;
+    // Fixed-size rings of the last kMonitorHistorySamples samples, served back as the panel's
+    // series. Every engine ring holds raw per-interval token counts plus the interval length;
+    // a rate is only ever formed by dividing one by the other, so no ring stores a stall the
+    // sampler smoothed over. cache_hit_tokens is the reused-prompt count of the interval.
     static constexpr std::size_t kMonitorHistorySamples = 120;
+    // Intervals averaged into the live rate. One interval can only report 0 or a whole prefill
+    // chunk divided by ~1s, which reads as roughly 2x the real rate at this chunk size; summing
+    // whole intervals is what removes that quantization.
+    static constexpr std::size_t kMonitorRateWindowSamples = 3;
     struct MonitorRing {
         std::deque<double> values;
         void push(double value) {
@@ -104,10 +129,11 @@ private:
             if (values.size() > kMonitorHistorySamples) { values.pop_front(); }
         }
     };
-    MonitorRing ring_tok_s_;
-    MonitorRing ring_prefill_tok_s_;
+    MonitorRing ring_prefill_tokens_;
+    MonitorRing ring_decode_tokens_;
+    MonitorRing ring_interval_seconds_;
+    MonitorRing ring_cache_hit_tokens_;
     MonitorRing ring_cpu_util_;
-    MonitorRing ring_cpu_temp_;
     MonitorRing ring_ram_used_;
 };
 

@@ -93,17 +93,17 @@ async function loadHealth() {
 }
 
 // ------------------------------------------------------------------ Monitor
-// Engine: the two rates the panel exists for. Each device and each host figure has its own card;
-// every card is a metric card with a sparkline, or a per-GPU card with its own bars.
+// Engine: prefill and decode rates, plus cumulative prefix cache hits. Each engine figure and
+// each host figure has its own metric card with a sparkline.
 const ENGINE_METRICS = [
   {key: "prefill", label: "Prefill", icon: "gauge", unit: "t/s", series: "prefill_tok_s"},
   {key: "speed", label: "Decode", icon: "bolt", unit: "t/s", series: "tok_s"},
+  {key: "cache", label: "Cache hits", icon: "layers", unit: "tok"},
 ];
 $("metrics").innerHTML = metricCards(ENGINE_METRICS);
 
 const HOST_METRICS = [
   {key: "cpu", label: "CPU load", icon: "cpu", unit: "%", series: "cpu_util", max: 100},
-  {key: "cputemp", label: "CPU temp", icon: "thermometer", unit: "°C", series: "cpu_temp", max: 100, tone: "warn"},
   {key: "ram", label: "RAM", icon: "memory", unit: "", series: "ram_used", bar: true},
 ];
 $("host").innerHTML = metricCards(HOST_METRICS);
@@ -168,17 +168,55 @@ function render(m) {
   else if (live.state === "generating") setPill("generating", `Generating · ${fmt(live.tok_s, 1)} tok/s`);
   else setPill("idle", "Idle");
   if (live.queued > 0) setPill("queued", `${live.queued} queued`);
-  if (tab === "monitor") renderMonitor(live, hw, st, h, m.last);
+  if (tab === "monitor") renderMonitor(live, hw, st, h, m.last, eng, m.performance || {});
   if (tab === "about") renderAbout(eng, hw, st);
 }
 
 // A rate the engine is producing right now, else the last completed request's own measurement.
-// The sampling interval is one second, so a short prompt's prefill is usually only visible here.
 // "No measurement yet" is shown as "–" rather than 0, which would read as a stalled engine.
 function rateNow(live_value, last_value, active, now_label) {
   if (live_value > 0) return {value: live_value, sub: active ? now_label : "Last request"};
   if (last_value != null && last_value > 0) return {value: last_value, sub: "Last request"};
   return {value: null, sub: active ? now_label : "Idle"};
+}
+// Prefill is a burst, not a gauge: the engine times each request's prefill exactly, so that
+// measurement is the figure. The sampled rate is only a fallback while a request that has not
+// finished prefill yet is the only thing the card could report.
+function lastThenLive(last_value, live_value, active, now_label) {
+  if (last_value != null && last_value > 0) return {value: last_value, sub: "Last request"};
+  if (live_value > 0) return {value: live_value, sub: active ? now_label : "Last request"};
+  return {value: null, sub: active ? now_label : "Idle"};
+}
+// A rate series rebuilt from the backend's raw per-interval token counts and interval lengths. No
+// interval carries a previous one forward, so a single-chunk prefill spike stays one spike.
+function rateSeries(tokens, seconds) {
+  const t = tokens || [], s = seconds || [];
+  const n = Math.min(t.length, s.length);
+  const out = [];
+  for (let i = 0; i < n; ++i) out.push(s[i] > 0 && t[i] != null ? t[i] / s[i] : null);
+  return out;
+}
+// Token-weighted mean over the last five sampling intervals, idle intervals included. That is a
+// real five-second average; dropping the idle seconds would report a number no wall clock saw.
+function recentThroughput(tokens, seconds) {
+  const t = tokens || [], s = seconds || [];
+  const n = Math.min(t.length, s.length);
+  let tok = 0, sec = 0, used = 0;
+  for (let i = n - 1; i >= 0 && used < 5; --i) {
+    if (!(s[i] > 0)) continue;
+    tok += t[i] > 0 ? t[i] : 0;
+    sec += s[i];
+    ++used;
+  }
+  return sec > 0 ? tok / sec : null;
+}
+// Session peak is the engine's own per-request timing, never a sample from the ring: one sampling
+// interval can only report a whole prefill chunk divided by its length.
+function figures(recent, peak, decimals) {
+  const parts = [];
+  if (peak > 0) parts.push(`session peak ${fmt(peak, decimals)} t/s`);
+  if (recent != null) parts.push(`5s throughput ${fmt(recent, decimals)} t/s`);
+  return parts.length ? `\n${parts.join(" · ")}` : "";
 }
 function pct(value, max) {
   if (value == null || !(max > 0)) return 0;
@@ -191,60 +229,62 @@ function bar(id, value, max, tone) {
   $(`pbf-${id}`).style.width = `${pct(value, max)}%`;
 }
 
-// One card per device: the two GPUs of a V100 Duo each show their own utilization, memory and
-// temperature, so a model split across them can be read card by card.
-function gpuCard(g, st) {
-  if (!g.available) {
-    return `<div class="st-card gpu-card">
-      <div class="gpu-card__head"><span class="gpu-card__idx">GPU ${esc(g.index)}</span></div>
-      <p class="muted small">Not readable: NVML is unavailable${st.nvml_available ? " for this device" : ""}.</p></div>`;
-  }
-  const mem = g.mem_total ? `${gb(g.mem_used)}<small>/ ${gb(g.mem_total, 0)} GB</small>` : "–";
-  const power = g.power == null ? "–" : `${fmt(g.power)}<small>W${g.power_limit ? ` / ${fmt(g.power_limit)} W` : ""}</small>`;
-  return `<div class="st-card gpu-card">
-    <div class="gpu-card__head">
-      <span class="gpu-card__idx">GPU ${esc(g.index)}</span>
-      <span class="gpu-card__name" title="${esc(g.name || "")}">${esc(g.name || "")}</span>
-    </div>
-    <div class="gpu-row"><span>Utilization</span><span class="gpu-row__value">${g.util == null ? "–" : `${fmt(g.util)}<small>%</small>`}</span></div>
-    <div class="st-progress"><div class="st-progress__bar" style="width:${pct(g.util, 100)}%"></div></div>
-    <div class="gpu-row"><span>VRAM</span><span class="gpu-row__value">${mem}</span></div>
-    <div class="st-progress"><div class="st-progress__bar" style="width:${pct(g.mem_used, g.mem_total)}%"></div></div>
-    <div class="gpu-row"><span>Temperature</span><span class="gpu-row__value">${g.temp == null ? "–" : `${fmt(g.temp)}<small>°C</small>`}</span></div>
-    <div class="st-progress" data-tone="warn"><div class="st-progress__bar" style="width:${pct(g.temp, 90)}%"></div></div>
-    <div class="gpu-row"><span>Power draw</span><span class="gpu-row__value">${power}</span></div>
-    <div class="st-progress" data-tone="info"><div class="st-progress__bar" style="width:${pct(g.power, g.power_limit)}%"></div></div>
-  </div>`;
-}
-function renderMonitor(live, hw, st, h, last) {
-  // engine: prefill and decode
+function renderMonitor(live, hw, st, h, last, eng, perf) {
+  // engine: prefill and decode. Main figure: the request's own measured rate (decode prefers the
+  // live one because it is a continuous phase). Sub lines: the session peak the engine tracked per
+  // request and the five-second throughput rebuilt from the raw per-interval token counts, plus
+  // TTFT on the prefill card.
   const reading = live.state === "reading", generating = live.state === "generating";
-  const busy = reading || generating;
-  const prefill = rateNow(live.prefill_tok_s, last && last.prefill_tok_s, busy, "Prefilling now");
+  const prefill = lastThenLive(last && last.prefill_tok_s, live.prefill_tok_s, reading, "Prefilling now");
   const decode = rateNow(live.tok_s, last && last.tok_s, generating, "Decoding now");
-  setMetric("prefill", prefill.value == null ? null : fmt(prefill.value), "t/s", prefill.sub);
-  setMetric("speed", decode.value == null ? null : fmt(decode.value, 1), "t/s", decode.sub);
-  spark("sp-prefill", h.prefill_tok_s);
-  spark("sp-speed", h.tok_s);
+  setMetric("prefill", prefill.value == null ? null : fmt(prefill.value), "t/s",
+            prefill.sub +
+            figures(recentThroughput(h.prefill_tokens, h.interval_seconds),
+                    last && last.peak_prefill_tok_s, 0) +
+            (perf.ttft_seconds != null ? `\nTTFT ${fmt(perf.ttft_seconds, 1)} s` : ""));
+  setMetric("speed", decode.value == null ? null : fmt(decode.value, 1), "t/s",
+            decode.sub +
+            figures(recentThroughput(h.decode_tokens, h.interval_seconds),
+                    last && last.peak_tok_s, 1));
+  spark("sp-prefill", rateSeries(h.prefill_tokens, h.interval_seconds));
+  spark("sp-speed", rateSeries(h.decode_tokens, h.interval_seconds));
 
-  // GPUs: one card per device, never an aggregate
-  const gpus = hw.gpus || [];
-  $("gpus").innerHTML = gpus.length
-    ? gpus.map((g) => gpuCard(g, st)).join("")
-    : `<p class="muted">No device is configured for this server.</p>`;
+  // Prefix reuse: the main figure is the cumulative session total (prefix cache is process
+  // state, so it restarts with the server); the sub row is what the most recent request reused.
+  // A rate is misleading here because hits land in one burst at prefill completion. The hit rate
+  // is the session share of prompt tokens answered from the prefix cache; a null (no prompt
+  // completed yet) drops the line instead of reading as a useless cache.
+  const cacheHits = live.cache_hit_tokens || 0;
+  const lastCache = last && last.available && last.cache_hit_tokens != null ? last.cache_hit_tokens : null;
+  const hitRate = perf.cache_hit_rate == null ? ""
+    : `\nhit rate ${Math.round(100 * perf.cache_hit_rate)}% (${fmt(perf.prompt_tokens_reused)} / ${fmt(perf.prompt_tokens_computed + (perf.prompt_tokens_reused || 0))} tok)`;
+  setMetric("cache", cacheHits > 0 ? fmt(cacheHits) : null, "tok",
+            (lastCache != null ? `${fmt(lastCache)} tok reused by the last request`
+                               : "Cumulative prefix hits") + hitRate);
+  spark("sp-cache", h.cache_hit_tokens);
 
-  // host: CPU load, CPU temperature, memory
+  // host: CPU load, memory
   setMetric("cpu", hw.cpu_util == null ? null : fmt(hw.cpu_util), "%",
             st.cpu_name ? `${st.cpu_name}${st.threads ? `, ${st.threads} threads` : ""}` : "");
   spark("sp-cpu", h.cpu_util, 100);
-  setMetric("cputemp", hw.cpu_temp == null ? null : fmt(hw.cpu_temp), "°C",
-            st.cpu_temp_source || "no sensor read");
-  spark("sp-cputemp", h.cpu_temp, 100);
   setMetric("ram", hw.ram_used == null ? null : gb(hw.ram_used), hw.ram_total ? `/ ${gb(hw.ram_total, 0)} GB` : "GB",
             hw.ram_used == null || !hw.ram_total ? "not readable"
                                                  : `${fmt(pct(hw.ram_used, hw.ram_total))}% of system memory`);
   bar("ram", hw.ram_used, hw.ram_total, pct(hw.ram_used, hw.ram_total) > 90 ? "danger" : null);
   spark("sp-ram", h.ram_used, hw.ram_total);
+
+  // Startup parameters: how this server was started. Rows with no value drop out, so a bare
+  // `ninfer-serve artifact` shows only what the server actually knows.
+  facts($("facts-startup"), [
+    ["Weights file", eng.artifact],
+    ["Weights", eng.weights_id],
+    ["Concurrency", eng.max_concurrency != null ? `${fmt(eng.max_concurrency)}` : null],
+    ["KV pool", eng.kv_pool_tokens ? `${fmt(eng.kv_pool_tokens)} tokens${eng.kv_pool_bytes ? `, ${gb(eng.kv_pool_bytes)}` : ""}` : null],
+    ["Vision", eng.vision != null ? (eng.vision ? `on · ${fmt(eng.vision_max_tokens)} max vis. tokens` : "off") : null],
+    ["Draft", eng.speculative_backend && eng.speculative_backend !== "none"
+               ? `${eng.speculative_backend} · ${fmt(eng.speculative_draft_tokens)} tok × ${fmt(eng.speculative_draft_count)}`
+               : null],
+  ]);
 }
 
 function facts(el, rows) {
@@ -252,18 +292,6 @@ function facts(el, rows) {
     `<dt>${esc(k)}</dt><dd>${copy ? `<code>${esc(v)}</code><button class="st-btn st-btn--icon" data-copy="${esc(v)}" aria-label="Copy">${icon("copy")}</button>` : esc(v)}</dd>`).join("");
 }
 function renderAbout(eng, hw, st) {
-  const gpus = hw.gpus || [];
-  const name = (g) => g.name || st.gpu_name || "GPU";
-  let gpuFact = "not readable (NVML)";
-  if (gpus.length > 1) {
-    const same = gpus.every((g) => name(g) === name(gpus[0]));
-    gpuFact = same
-      ? `${name(gpus[0])} × ${gpus.length}${gpus[0].mem_total ? `, ${gpus.length} × ${gb(gpus[0].mem_total, 0)} GB` : ""}`
-      : gpus.map((g) => `${name(g)}${g.mem_total ? ` (${gb(g.mem_total, 0)} GB)` : ""}`).join(", ");
-  } else if (gpus.length === 1 || st.gpu_name) {
-    const g = gpus[0] || {};
-    gpuFact = `${name(g)}${g.mem_total ? `, ${gb(g.mem_total, 0)} GB` : ""}`;
-  }
   facts($("facts-engine"), [
     ["Model", eng.model],
     ["Engine", eng.version ? `NInfer v${eng.version}` : "NInfer"],
@@ -276,7 +304,6 @@ function renderAbout(eng, hw, st) {
     ["Weights", eng.weights_id],
   ]);
   facts($("facts-hw"), [
-    ["GPU", gpuFact],
     ["CPU", st.cpu_name ? `${st.cpu_name}${st.threads ? `, ${st.threads} threads` : ""}` : null],
     ["RAM", hw.ram_total ? `${gb(hw.ram_total, 0)} GB` : null],
   ]);

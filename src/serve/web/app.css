@@ -70,8 +70,9 @@ main { flex: 1; min-height: 0; display: flex; }
 .view--monitor, .view--about { overflow-y: auto; }
 .monitor, .about { max-width: 1240px; width: 100%; margin: 0 auto; padding: var(--st-s-6); display: flex; flex-direction: column;
                    gap: var(--st-s-5); }
-/* Three labelled groups: Engine (the two rates), GPUs (one card per device), Host. */
+/* Labelled groups: Engine (the rates), Performance, Startup parameters, Host. */
 .mon-section { display: flex; flex-direction: column; gap: var(--st-s-3); }
+.mon-section > p { margin: 0; }
 .mon-section__title { margin: 0; font-size: var(--st-fs-xs); font-weight: 600; letter-spacing: .07em;
                       text-transform: uppercase; color: var(--st-ink-muted); }
 /* The engine rates are the headline, so they carry the larger figure. */
@@ -79,23 +80,10 @@ main { flex: 1; min-height: 0; display: flex; }
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--st-s-4); }
 .metric-card { padding: var(--st-s-4) var(--st-s-5); }
 .st-metric__value small { font-size: var(--st-fs-md); font-weight: var(--st-fw-medium); color: var(--st-ink-muted); margin-left: 4px; }
-.st-metric__sub { font-size: var(--st-fs-xs); color: var(--st-ink-muted); font-variant-numeric: tabular-nums; min-height: 1em; }
+.st-metric__sub { font-size: var(--st-fs-xs); color: var(--st-ink-muted); font-variant-numeric: tabular-nums; min-height: 1em; white-space: pre-line; }
 .st-metric__spark { display: block; overflow: visible; }
 .st-metric__spark[data-tone="warn"] { color: var(--st-warn); }
 .st-metric__spark[data-tone="info"] { color: var(--st-info); }
-
-/* one card per device, each with its own utilization / VRAM / temperature bars */
-.gpu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--st-s-4); }
-.gpu-card { display: flex; flex-direction: column; gap: var(--st-s-2); }
-.gpu-card__head { display: flex; align-items: baseline; gap: var(--st-s-3); min-width: 0; }
-.gpu-card__idx { font-weight: var(--st-fw-bold); font-size: var(--st-fs-base); color: var(--st-ink); white-space: nowrap; }
-.gpu-card__name { font-size: var(--st-fs-xs); color: var(--st-ink-muted); overflow: hidden; text-overflow: ellipsis;
-                  white-space: nowrap; }
-.gpu-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--st-s-3);
-           font-size: var(--st-fs-sm); font-weight: var(--st-fw-medium); color: var(--st-ink-muted);
-           font-variant-numeric: tabular-nums; }
-.gpu-row__value { color: var(--st-ink); font-weight: var(--st-fw-bold); }
-.gpu-row__value small { font-size: var(--st-fs-xs); font-weight: var(--st-fw-medium); color: var(--st-ink-muted); margin-left: 3px; }
 
 /* ---------------------------------------------------------------- about */
 .about { max-width: 860px; }

@@ -11,6 +11,11 @@
 
 namespace ninfer::serve {
 
+// Display version of the NInfer build, surfaced by the /metrics engine block and the web panel's
+// About card. Bump together with the release tag (see docs/Releases/). Kept in the serve layer
+// (not include/ninfer) so bumping it does not force a full engine/CUDA rebuild.
+inline constexpr const char* kNinferVersion = "0.1.1-win.5";
+
 // Protocol default when the client omits max_tokens. Engine independently
 // clamps the request to its effective context capacity.
 inline constexpr int kDefaultMaxTokens                    = 8192;

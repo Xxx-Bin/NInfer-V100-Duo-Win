@@ -90,6 +90,8 @@ struct ThroughputReport {
 struct RequestRates {
     double prefill_tok_s = -1.0;
     double decode_tok_s  = -1.0;
+    // Resident prompt tokens the Engine reused from its prefix cache for this request.
+    int cache_hit_tokens = 0;
 };
 
 // RequestRates of one outcome, for consumers that need the numbers rather than the console

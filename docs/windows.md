@@ -131,8 +131,9 @@ non-ASCII media path is reported as "not a regular file").
 
 ### Still stubbed
 
-`src/` has no `/proc`-based fallbacks: the Windows system monitor remains empty (open issue in
-`HANDOFF.md`), independent of the media build.
+Nothing in the system monitor: it reads the CPU load (`GetSystemTimes`), system memory
+(`GlobalMemoryStatusEx`) and the CPU model name (registry) on Windows like its Linux
+counterpart, independent of the media build.
 
 
 ## Continuous integration
@@ -517,9 +518,8 @@ log for the token counts and `prefill_seconds` / `decode_seconds` used here.
   libcurl DLLs next to the executables.
 - 12 of the 133 unit tests fail on Windows; the list and signatures are in
   [Unit test suite](#unit-test-suite-ctest-on-the-media-tree). None of them touches the media path.
-- `SystemMonitor` reports no host/GPU readings on Windows yet: its implementation is `/proc`-based
-  on Linux and returns empty rows elsewhere. Serving is unaffected; the monitor page simply has no
-  data. Porting it to `GlobalMemoryStatusEx`/NVML is follow-up work, not a dependency.
+- `SystemMonitor` reads the CPU load, system memory and CPU model name on both platforms
+  (`GetSystemTimes`, `GlobalMemoryStatusEx` and the registry).
 - The one-shot all-reduce route is admitted for payloads up to 131,072 BF16 elements; larger
   prefill reductions use the event/copy route, exactly as on Linux.
 - The Windows event-log check needs a readable System log. When the log is unavailable the script

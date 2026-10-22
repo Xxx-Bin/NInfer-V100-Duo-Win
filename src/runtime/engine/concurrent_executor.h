@@ -700,6 +700,9 @@ private:
             return;
         }
         if (!step.complete) { return; }
+        // The complete step is the request's begin summary: exactly one reuse count per request,
+        // after the cancel-at-boundary early return above.
+        cumulative_stats_.reused_prompt_tokens += step.summary.reused_prompt_tokens;
         if (!request->lane) { throw std::logic_error("completed prefill has no request lane"); }
         if (prefill_lane_ && *request->lane == *prefill_lane_) {
             instance_.request_memory.deactivate();

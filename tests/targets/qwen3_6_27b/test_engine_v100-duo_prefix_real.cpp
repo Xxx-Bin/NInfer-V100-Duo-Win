@@ -1,4 +1,4 @@
-// Opt-in TP2 + optimized MTP3 prefix-state gate on the real Qwen3.8 GGUF artifact.
+// Opt-in TP2 + optimized MTP3 prefix-state gate on the real Qwen3.8 artifact (nvfp4).
 // Exact token/state replay is the behavioral oracle; the independent numerical
 // Op oracles live in the GGML_K, GDN, and attention tests. Prefix vs cold prefill
 // uses exact greedy output except resident exact-frontier and normalized-response cold comparisons:
@@ -104,10 +104,12 @@ Observation run(ninfer::Engine& engine, std::string name, ninfer::PreparedPrompt
                 ninfer::TokenId stop = -1, std::uint32_t returned = 0) {
     const auto prompt_tokens = prompt.debug_token_ids().size();
     const auto before = engine.runtime_stats().computed_prefill_tokens;
+    const auto before_reused = engine.runtime_stats().reused_prompt_tokens;
     auto options = request_options(reuse, count);
     if (stop >= 0) { options.stop.token_ids.push_back(stop); }
     auto result = engine.generate(std::move(prompt), options);
     const auto computed = engine.runtime_stats().computed_prefill_tokens - before;
+    const auto reused = engine.runtime_stats().reused_prompt_tokens - before_reused;
     require(result.generated_token_ids.size() == (returned ? returned : count),
             name + ": unexpected output count");
     require(result.prefix_reuse_path == path, name + ": unexpected prefix path=" +
@@ -120,6 +122,8 @@ Observation run(ninfer::Engine& engine, std::string name, ninfer::PreparedPrompt
     require(result.reused_prompt_tokens <= prompt_tokens &&
                 computed == prompt_tokens - result.reused_prompt_tokens,
             name + ": computed prefill does not equal the actual suffix");
+    require(reused == result.reused_prompt_tokens,
+            name + ": runtime stats reuse counter does not match the request's prefix hits");
     if (count > 4) {
         require(result.speculative.enabled &&
                     result.speculative.backend == ninfer::SpeculativeBackend::Mtp &&
@@ -230,10 +234,11 @@ struct ExerciseResult {
 ExerciseResult exercise(const char* artifact, bool graphs) {
     ninfer::Engine engine(engine_options(artifact, graphs));
     require(engine.load_summary().tp == 2 && engine.load_summary().model_id == "qwen3.8-27b" &&
-                (engine.load_summary().weights_id == "gguf-q4-k-m" ||
+                (engine.load_summary().weights_id == "nvfp4" ||
+                 engine.load_summary().weights_id == "gguf-q4-k-m" ||
                  engine.load_summary().weights_id == "gguf-blocks" ||
                  engine.load_summary().weights_id == "gguf-blocks-full"),
-            "this test requires a TP2 Qwen3.8 GGUF artifact");
+            "this test requires a TP2 Qwen3.8 nvfp4 or GGUF artifact");
     engine.debug_enable_logit_capture(true);
     engine.debug_enable_peer_egress_check(true);
     const auto input = coding_prompt();

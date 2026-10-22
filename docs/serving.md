@@ -110,7 +110,7 @@ INT8 KV). `--kv-dtype int8` is mandatory at that window.
 |---|---|
 | `GET /health` | process health and the public model id |
 | `GET /` and `GET /web/...` | embedded web panel (Chat, Monitor, About) |
-| `GET /metrics` | live engine throughput and GPU/host readings for the panel |
+| `GET /metrics` | live engine throughput, per-request and session-peak rates, cumulative and per-interval prefix-cache reuse, raw per-interval token counts, and host readings for the panel |
 | `GET /v1/models` | configured OpenAI model alias |
 | `GET /v1/models/{id}` | lookup of the configured alias |
 | `POST /v1/chat/completions` | OpenAI-style chat generation |
@@ -132,11 +132,18 @@ INT8 KV). `--kv-dtype int8` is mandatory at that window.
   selector offers exactly the supported `reasoning_effort` values — shown as Off, Low, Medium
   and Extra High (`none`, `low`, `medium`, `xhigh`; default `medium`) — so the panel cannot
   request an unsupported level. History stays in the browser's local storage.
-- **Monitor** — prefill and decode throughput from the engine's monotonic token counters, one
-  card per device showing that GPU's own utilization, VRAM, temperature and power draw (read
-  through NVML, which is loaded dynamically; a card degrades to "not readable" when it is
-  missing), and the running CPU load, CPU package temperature and system memory.
-- **About** — model/engine identity and context, host CPU/RAM/GPU description, and the
+- **Monitor** — prefill and decode throughput plus cumulative and per-request prefix-cache
+  reuse, sampled once a second from the engine's monotonic token counters. Each engine card shows
+  the request's own measured rate, the session peak of that per-request rate, and a five-second
+  average rebuilt from the raw per-interval token counts with idle intervals included — the slowest
+  of the three to move, and the only one that is an average over real elapsed time. The peak is
+  never taken from a sampled second: a prefill counter only moves when a whole chunk lands, so a
+  sampled second can only report one chunk divided by its length. The live rate itself is a mean
+  over the last three one-second intervals, so it under-reports for roughly that long right after a
+  phase starts; the per-request figure is the one to quote. TTFT is on the prefill card and
+  the session cache-hit rate on the prefix-cache card; then the startup parameters and the running
+  CPU load and system memory.
+- **About** — model/engine identity and context, host CPU/RAM description, and the
   OpenAI/Anthropic base URLs for other clients.
 
 ## OpenAI Chat Completions
@@ -198,6 +205,21 @@ both OpenAI spellings are present they must carry the same boolean value. Unknow
 Streaming begins with an assistant-role chunk, sends separate reasoning and content deltas, then a
 finish-reason chunk and `[DONE]`. When `stream_options.include_usage` is true, a final empty
 `choices` chunk contains completed usage.
+
+Non-streaming responses and the streamed usage chunk both carry
+
+```json
+{
+  "prompt_tokens": 42,
+  "completion_tokens": 12,
+  "total_tokens": 54,
+  "prompt_tokens_details": {"cached_tokens": 17}
+}
+```
+
+`prompt_tokens` includes the chat template and expanded media tokens. `cached_tokens` is the
+exact resident prompt prefix reused by Engine, so it is always a subset of `prompt_tokens`
+and 0 on a cold request or under `--no-prefix-reuse`.
 
 ### Multimodal request
 

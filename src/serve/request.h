@@ -51,6 +51,8 @@ struct RequestLimits {
 struct CompletionUsage {
     int prompt_tokens     = 0;
     int completion_tokens = 0;
+    // Resident prompt tokens reused by the Engine's prefix cache; a subset of prompt_tokens.
+    int cached_tokens     = 0;
 };
 
 enum class ContentKind {

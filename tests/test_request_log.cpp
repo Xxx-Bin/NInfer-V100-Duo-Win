@@ -379,6 +379,8 @@ int main() {
               "request prefill rate does not exclude reused prefix tokens");
     failures += check(std::abs(rates.decode_tok_s - 1023.0 / outcome.metrics.decode_seconds) < 1e-9,
                       "request decode rate does not exclude the prefill-emitted token");
+    failures += check(rates.cache_hit_tokens == 101,
+                      "request rates omit the resident prefix tokens reused by the request");
     // A request with no measurable phase reports "not measured" rather than a divide-by-zero.
     GenerationOutcome instant;
     instant.prompt_tokens     = 4;

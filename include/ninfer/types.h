@@ -521,6 +521,11 @@ struct RuntimeStats {
     std::uint32_t prefilling_requests   = 0;
     std::uint32_t decode_ready_requests = 0;
     std::uint32_t waiting_requests      = 0;
+    // Resident prompt tokens skipped by prefix hits, accumulated over completed requests
+    // (one add per request at prefill completion; cancelled requests never count). Appended
+    // last on purpose: new counters must not move the decode/scheduler offsets, so a stale
+    // translation unit can corrupt at most this field instead of silently rewiring decode.
+    std::uint64_t reused_prompt_tokens  = 0;
 };
 
 struct LoadSummary {

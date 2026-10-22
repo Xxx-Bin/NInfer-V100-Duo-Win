@@ -391,6 +391,8 @@ RequestRates request_rates(const GenerationOutcome& outcome) {
     const double computed_prefill_tokens = static_cast<double>(
         std::max(0, outcome.prompt_tokens - static_cast<int>(metrics.prefix_cache_hit_tokens)));
     RequestRates rates;
+    rates.cache_hit_tokens = std::clamp(
+        static_cast<int>(metrics.prefix_cache_hit_tokens), 0, outcome.prompt_tokens);
     if (metrics.prefill_seconds > 0.0 && computed_prefill_tokens > 0.0) {
         rates.prefill_tok_s = computed_prefill_tokens / metrics.prefill_seconds;
     }

@@ -1,5 +1,6 @@
 #include "serve/http_server.h"
 
+#include "product/speculative_options.h"
 #include "serve/anthropic_schema.h"
 #include "serve/console_log.h"
 #include "serve/openai_schema.h"
@@ -13,13 +14,13 @@
 #include <atomic>
 #include <chrono>
 #include <exception>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 namespace ninfer::serve {
 namespace {
@@ -129,6 +130,34 @@ nlohmann::json ring_json(const std::deque<double>& values) {
     return out;
 }
 
+// Mean throughput over the last `window` published intervals. A phase's token counter moves once
+// per prefill chunk or decode round, so one interval can only report 0 or a whole chunk divided by
+// ~1s - at a 2048-token chunk that reads as roughly twice the real rate. Summing whole intervals is
+// what removes that quantization. A stopped phase returns 0 so the panel falls back to its exact
+// per-request figure instead of showing a decaying ramp.
+double window_rate(const std::deque<double>& tokens, const std::deque<double>& seconds,
+                   std::size_t window, bool active) {
+    if (!active) { return 0.0; }
+    const std::size_t available = std::min(tokens.size(), seconds.size());
+    const std::size_t count     = std::min(available, window);
+    double total_tokens         = 0.0;
+    double total_seconds        = 0.0;
+    for (std::size_t i = available - count; i < available; ++i) {
+        if (!(seconds[i] > 0.0)) { continue; }
+        total_tokens += std::max(0.0, tokens[i]);
+        total_seconds += seconds[i];
+    }
+    return total_seconds > 0.0 ? total_tokens / total_seconds : 0.0;
+}
+
+// Basename of the artifact path, so the panel can name the exact checkpoint file the engine
+// loaded without exposing a full local path. Empty for a missing path.
+std::string artifact_base_name(const std::string& path) {
+    std::filesystem::path p(path);
+    const std::string name = p.filename().string();
+    return name.empty() ? path : name;
+}
+
 } // namespace
 
 httplib::Server::HandlerResponse handle_unrendered_http_error(const ServeOptions& options,
@@ -188,6 +217,14 @@ void HttpServer::log_request_done(const RequestLogContext& context,
         std::lock_guard lock(monitor_mutex_);
         last_rates_     = request_rates(outcome);
         has_last_rates_ = true;
+        if (last_rates_.prefill_tok_s > peak_prefill_tok_s_) {
+            peak_prefill_tok_s_ = last_rates_.prefill_tok_s;
+        }
+        if (last_rates_.decode_tok_s > peak_decode_tok_s_) {
+            peak_decode_tok_s_ = last_rates_.decode_tok_s;
+        }
+        // TTFT (request preparation to first token) of the last completed request, for the panel.
+        if (outcome.metrics.ttft_seconds > 0.0) { last_ttft_ = outcome.metrics.ttft_seconds; }
     }
 }
 
@@ -240,6 +277,102 @@ void HttpServer::stop_stats_reporter() {
     }
     stats_cv_.notify_one();
     stats_thread_.join();
+}
+
+void HttpServer::run_monitor_sampler() {
+    using Clock = std::chrono::steady_clock;
+    constexpr auto kSampleInterval = std::chrono::seconds(1);
+
+    ninfer::RuntimeStats previous   = service_->runtime_stats();
+    Clock::time_point previous_time = Clock::now();
+
+    // Publish one immediate host reading so the panel is not blank for the first interval.
+    {
+        HostReading system = system_monitor_.sample();
+        std::lock_guard lock(monitor_mutex_);
+        monitor_stats_  = previous;
+        monitor_system_ = std::move(system);
+        monitor_tok_s_                     = 0.0;
+        monitor_prefill_tok_s_             = 0.0;
+        monitor_cache_hit_tok_s_           = 0.0;
+        monitor_prefill_interval_tokens_   = 0;
+        monitor_decode_interval_tokens_    = 0;
+        monitor_cache_hit_interval_tokens_ = 0;
+        ring_prefill_tokens_.push(0.0);
+        ring_decode_tokens_.push(0.0);
+        ring_interval_seconds_.push(0.0);
+        ring_cache_hit_tokens_.push(0.0);
+        ring_cpu_util_.push(monitor_system_.cpu_util_available ? monitor_system_.cpu_util
+                                                               : -1.0);
+        ring_ram_used_.push(monitor_system_.ram_total != 0
+                                ? static_cast<double>(monitor_system_.ram_used)
+                                : -1.0);
+    }
+
+    for (;;) {
+        {
+            std::unique_lock lock(monitor_mutex_);
+            if (monitor_cv_.wait_for(lock, kSampleInterval, [this] { return monitor_stopping_; })) {
+                break;
+            }
+        }
+
+        const ninfer::RuntimeStats stats = service_->runtime_stats();
+        const Clock::time_point now      = Clock::now();
+        const double seconds = std::chrono::duration<double>(now - previous_time).count();
+        std::uint64_t prefill_interval_tokens   = 0;
+        std::uint64_t decode_interval_tokens    = 0;
+        std::uint64_t cache_hit_interval_tokens = 0;
+        if (seconds > 0.0) {
+            prefill_interval_tokens =
+                stats.computed_prefill_tokens - previous.computed_prefill_tokens;
+            decode_interval_tokens =
+                stats.committed_decode_tokens - previous.committed_decode_tokens;
+            cache_hit_interval_tokens =
+                stats.reused_prompt_tokens - previous.reused_prompt_tokens;
+        }
+
+        HostReading system = system_monitor_.sample();
+        std::lock_guard lock(monitor_mutex_);
+        monitor_stats_  = stats;
+        monitor_system_ = std::move(system);
+        monitor_prefill_interval_tokens_   = prefill_interval_tokens;
+        monitor_decode_interval_tokens_    = decode_interval_tokens;
+        monitor_cache_hit_interval_tokens_ = cache_hit_interval_tokens;
+        // Rings carry raw counts and interval lengths; every rate the panel shows is formed by
+        // dividing one by the other, never by carrying a previous interval forward.
+        ring_prefill_tokens_.push(static_cast<double>(prefill_interval_tokens));
+        ring_decode_tokens_.push(static_cast<double>(decode_interval_tokens));
+        ring_interval_seconds_.push(seconds > 0.0 ? seconds : 0.0);
+        ring_cache_hit_tokens_.push(static_cast<double>(cache_hit_interval_tokens));
+        ring_cpu_util_.push(monitor_system_.cpu_util_available ? monitor_system_.cpu_util
+                                                              : -1.0);
+        ring_ram_used_.push(monitor_system_.ram_total != 0
+                                ? static_cast<double>(monitor_system_.ram_used)
+                                : -1.0);
+        monitor_prefill_tok_s_ =
+            window_rate(ring_prefill_tokens_.values, ring_interval_seconds_.values,
+                        kMonitorRateWindowSamples, stats.prefilling_requests != 0);
+        monitor_tok_s_ = window_rate(ring_decode_tokens_.values, ring_interval_seconds_.values,
+                                     kMonitorRateWindowSamples, stats.decode_ready_requests != 0);
+        // Prefix reuse lands in one burst per completed request and has no per-request fallback, so
+        // it decays with the window instead of dropping at the phase boundary.
+        monitor_cache_hit_tok_s_ =
+            window_rate(ring_cache_hit_tokens_.values, ring_interval_seconds_.values,
+                        kMonitorRateWindowSamples, true);
+        previous      = stats;
+        previous_time = now;
+    }
+}
+
+void HttpServer::stop_monitor_sampler() {
+    if (!monitor_thread_.joinable()) { return; }
+    {
+        std::lock_guard lock(monitor_mutex_);
+        monitor_stopping_ = true;
+    }
+    monitor_cv_.notify_one();
+    monitor_thread_.join();
 }
 
 void HttpServer::register_routes() {
@@ -411,92 +544,54 @@ void HttpServer::handle_web_asset(const httplib::Request& req, httplib::Response
 }
 
 void HttpServer::handle_metrics(const httplib::Request&, httplib::Response& res) {
-    using Clock                 = std::chrono::steady_clock;
-    const ninfer::RuntimeStats stats = service_->runtime_stats();
-    std::vector<int> devices = options_.devices;
-    if (devices.empty()) { devices.push_back(options_.device); }
-
-    std::deque<double> h_tok, h_prefill, h_cpu, h_cpu_temp, h_ram;
+    ninfer::RuntimeStats stats;
+    HostReading system;
     RequestRates last_rates;
-    bool has_last_rates = false;
-    SystemSample system;
+    bool has_last_rates                      = false;
+    double tok_s                             = 0.0;
+    double prefill_tok_s                     = 0.0;
+    double cache_hit_tok_s                   = 0.0;
+    std::uint64_t prefill_interval_tokens    = 0;
+    std::uint64_t decode_interval_tokens     = 0;
+    std::uint64_t cache_hit_interval_tokens  = 0;
+    std::optional<double> last_ttft_opt = std::nullopt;
+    double peak_prefill_tok_s                = -1.0;
+    double peak_decode_tok_s                 = -1.0;
+    std::deque<double> h_prefill_tokens, h_decode_tokens, h_seconds, h_cache_hit_tokens, h_cpu,
+        h_ram;
+    // The sampler owns the rate window and the sparkline cadence; this handler only copies one
+    // consistent snapshot. A browser poll therefore cannot shorten the interval.
     {
         std::lock_guard lock(monitor_mutex_);
-        last_rates     = last_rates_;
-        has_last_rates = has_last_rates_;
-        // Throughput over the interval since the previous /metrics poll. Derived from the same
-        // monotonic RuntimeStats counters the periodic console reporter uses, so it measures the
-        // whole engine (all requests) rather than one HTTP call.
-        const Clock::time_point now = Clock::now();
-        if (!monitor_has_baseline_) {
-            monitor_has_baseline_    = true;
-            monitor_baseline_time_   = now;
-            monitor_baseline_        = stats;
-        } else {
-            const double seconds = std::chrono::duration<double>(now - monitor_baseline_time_).count();
-            if (seconds >= 0.25) {
-                const std::uint64_t prefill =
-                    stats.computed_prefill_tokens - monitor_baseline_.computed_prefill_tokens;
-                const std::uint64_t decode =
-                    stats.committed_decode_tokens - monitor_baseline_.committed_decode_tokens;
-                // A phase's counter moves in bursts (one per prefill chunk / decode round), so an
-                // interval can straddle a gap and read zero while the phase is still running. Hold
-                // the previous rate while the phase is active; drop to zero once it has stopped.
-                if (prefill != 0) {
-                    monitor_prefill_tok_s_ = static_cast<double>(prefill) / seconds;
-                } else if (stats.prefilling_requests == 0) {
-                    monitor_prefill_tok_s_ = 0.0;
-                }
-                if (decode != 0) {
-                    monitor_tok_s_ = static_cast<double>(decode) / seconds;
-                } else if (stats.decode_ready_requests == 0) {
-                    monitor_tok_s_ = 0.0;
-                }
-                monitor_baseline_time_ = now;
-                monitor_baseline_      = stats;
-                ring_tok_s_.push(monitor_tok_s_);
-                ring_prefill_tok_s_.push(monitor_prefill_tok_s_);
-            }
-        }
-
-        system = system_monitor_.sample(devices);
-        ring_cpu_util_.push(system.host.cpu_util_available ? system.host.cpu_util : -1.0);
-        ring_cpu_temp_.push(system.host.cpu_temp_available ? system.host.cpu_temp : -1.0);
-        ring_ram_used_.push(system.host.ram_total != 0
-                                ? static_cast<double>(system.host.ram_used)
-                                : -1.0);
-        h_tok     = ring_tok_s_.values;
-        h_prefill = ring_prefill_tok_s_.values;
-        h_cpu     = ring_cpu_util_.values;
-        h_cpu_temp = ring_cpu_temp_.values;
-        h_ram     = ring_ram_used_.values;
+        stats                     = monitor_stats_;
+        system                    = monitor_system_;
+        tok_s                     = monitor_tok_s_;
+        prefill_tok_s             = monitor_prefill_tok_s_;
+        cache_hit_tok_s           = monitor_cache_hit_tok_s_;
+        prefill_interval_tokens   = monitor_prefill_interval_tokens_;
+        decode_interval_tokens    = monitor_decode_interval_tokens_;
+        cache_hit_interval_tokens = monitor_cache_hit_interval_tokens_;
+        last_rates                = last_rates_;
+        has_last_rates            = has_last_rates_;
+        last_ttft_opt             = last_ttft_;
+        peak_prefill_tok_s        = peak_prefill_tok_s_;
+        peak_decode_tok_s         = peak_decode_tok_s_;
+        h_prefill_tokens   = ring_prefill_tokens_.values;
+        h_decode_tokens    = ring_decode_tokens_.values;
+        h_seconds          = ring_interval_seconds_.values;
+        h_cache_hit_tokens = ring_cache_hit_tokens_.values;
+        h_cpu              = ring_cpu_util_.values;
+        h_ram              = ring_ram_used_.values;
     }
 
     // Live scheduler state: the prefill lane drives "Reading", decodable slots drive
     // "Generating"; queued requests are reported separately. Prefill and decode run
-    // concurrently, so both rates are always reported - they read 0 when nothing moved
-    // in the interval.
+    // concurrently, so both rates are always reported - they read 0 while nothing moves. Each is
+    // the mean over the sampler's last few intervals, so a phase that just stopped reads 0 rather
+    // than trailing its own decay.
     const bool generating = stats.decode_ready_requests != 0;
     const bool reading    = stats.prefilling_requests != 0;
     const char* state     = reading ? "reading" : generating ? "generating" : "idle";
-
-    // One row per device: the Monitor shows each card's own utilization, memory and temperature.
-    nlohmann::json gpu_rows = nlohmann::json::array();
-    for (const GpuReading& gpu : system.gpus) {
-        gpu_rows.push_back(nlohmann::json{
-            {"index", gpu.index},
-            {"name", gpu.name},
-            {"available", gpu.available},
-            {"mem_used", gpu.mem_total != 0 ? nlohmann::json(gpu.mem_used) : nlohmann::json(nullptr)},
-            {"mem_total", gpu.mem_total},
-            {"util", gpu.available ? nlohmann::json(gpu.util) : nlohmann::json(nullptr)},
-            {"temp", gpu.available ? nlohmann::json(gpu.temp) : nlohmann::json(nullptr)},
-            {"power", gpu.power_available ? nlohmann::json(gpu.power_mw / 1000.0)
-                                          : nlohmann::json(nullptr)},
-            {"power_limit", gpu.power_limit_mw != 0 ? nlohmann::json(gpu.power_limit_mw / 1000.0)
-                                                    : nlohmann::json(nullptr)},
-        });
-    }
 
     // The engine admits a request against `max_context`; `effective_max_context` is only the
     // ceiling that value was validated against (the variant's native capacity, or the YaRN
@@ -504,39 +599,83 @@ void HttpServer::handle_metrics(const httplib::Request&, httplib::Response& res)
     const std::uint32_t admitted_max_context = memory_summary_.max_context != 0
                                                    ? memory_summary_.max_context
                                                    : options_.max_context;
+    // KV pool size: the page-aligned Main KV capacity resolved at load. `kv_payload_bytes` is the
+    // total bytes that pool occupies on rank 0; the page-group figures bracket how much of the
+    // pool the model can actually fill before the next page allocation.
+    const bool spec_enabled = options_.speculative.backend != SpeculativeBackend::None;
+    const std::string artifact_name = artifact_base_name(options_.artifact_path);
     nlohmann::json engine = nlohmann::json{
+        {"version", kNinferVersion},
         {"model", public_model_id_},
+        {"artifact", artifact_name},
         {"tp", load_summary_.tp},
+        {"devices", options_.devices},
         {"max_context", admitted_max_context},
         {"max_context_ceiling", load_summary_.effective_max_context},
+        {"max_concurrency", options_.max_concurrency},
+        {"max_pending_requests", options_.max_pending_requests},
+        {"prefill_chunk", options_.prefill_chunk},
+        {"kv_pool_tokens", memory_summary_.kv_capacity},
+        {"kv_pool_bytes", memory_summary_.kv_payload_bytes},
+        {"kv_page_groups", memory_summary_.kv_capacity_page_groups},
+        {"kv_page_groups_max", memory_summary_.kv_capacity_max_page_groups},
+        {"kv_cache", options_.kv_cache == KvCacheStorage::Int8Group64 ? "int8_g64" : "bfloat16"},
+        {"vision", options_.enable_vision},
+        {"vision_max_tokens", std::min(options_.max_context, options_.vision_max_tokens)},
+        {"cuda_graph", options_.use_cuda_graph},
+        {"prefix_reuse", options_.allow_prefix_reuse},
+        // Speculative decoding: the draft backend type and the configured draft window. One draft
+        // model per server, so "type and quantity" is the backend name plus its window.
+        {"speculative_backend", product::speculative_backend_name(options_.speculative.backend)},
+        {"speculative_draft_tokens", spec_enabled ? options_.speculative.draft_tokens : 0},
+        {"speculative_draft_count", spec_enabled ? 1 : 0},
     };
     if (!load_summary_.weights_id.empty()) { engine["weights_id"] = load_summary_.weights_id; }
 
     nlohmann::json hardware{
-        {"gpus", std::move(gpu_rows)},
-        {"cpu_util", system.host.cpu_util_available ? nlohmann::json(system.host.cpu_util)
-                                                    : nlohmann::json(nullptr)},
-        {"cpu_temp", system.host.cpu_temp_available ? nlohmann::json(system.host.cpu_temp)
-                                                    : nlohmann::json(nullptr)},
-        {"ram_total", system.host.ram_total},
-        {"ram_used", system.host.ram_total != 0 ? nlohmann::json(system.host.ram_used)
-                                                : nlohmann::json(nullptr)},
+        {"cpu_util", system.cpu_util_available ? nlohmann::json(system.cpu_util)
+                                               : nlohmann::json(nullptr)},
+        {"ram_total", system.ram_total},
+        {"ram_used", system.ram_total != 0 ? nlohmann::json(system.ram_used)
+                                           : nlohmann::json(nullptr)},
     };
 
     nlohmann::json hardware_static{
-        {"nvml_available", system_monitor_.host().nvml_available},
-        {"gpu_name", system_monitor_.host().gpu_name},
         {"cpu_name", system_monitor_.host().cpu_name},
         {"threads", system_monitor_.host().threads},
-        {"cpu_temp_source", system_monitor_.host().cpu_temp_source},
     };
 
     nlohmann::json history{
-        {"tok_s", ring_json(h_tok)},
-        {"prefill_tok_s", ring_json(h_prefill)},
+        {"prefill_tokens", ring_json(h_prefill_tokens)},
+        {"decode_tokens", ring_json(h_decode_tokens)},
+        {"interval_seconds", ring_json(h_seconds)},
+        {"cache_hit_tokens", ring_json(h_cache_hit_tokens)},
         {"cpu_util", ring_json(h_cpu)},
-        {"cpu_temp", ring_json(h_cpu_temp)},
         {"ram_used", ring_json(h_ram)},
+    };
+
+    // Session figures the panel's engine cards show. Peaks are the per-request measurements the
+    // engine itself timed, not the sampled counters: one sampling interval can only report a whole
+    // prefill chunk divided by its length, which is several times the real rate above one chunk per
+    // interval. The panel forms every shown average from the raw per-interval token counts against
+    // their interval lengths. The cache-hit rate is the session share of prompt tokens answered
+    // from the prefix cache rather than recomputed; null while no prompt has completed, so the panel
+    // can show a dash instead of a 0% that would read as "the cache is useless". TTFT is the last
+    // completed request's wall time from preparation to its first token.
+    const std::uint64_t computed_prefill = stats.computed_prefill_tokens;
+    const std::uint64_t reused_prompt    = stats.reused_prompt_tokens;
+    const std::uint64_t prompt_total     = computed_prefill + reused_prompt;
+    nlohmann::json cache_hit_rate = nlohmann::json(nullptr);
+    if (prompt_total != 0) {
+        cache_hit_rate = static_cast<double>(reused_prompt) / static_cast<double>(prompt_total);
+    }
+    nlohmann::json ttft_seconds = nlohmann::json(nullptr);
+    if (last_ttft_opt.has_value()) { ttft_seconds = *last_ttft_opt; }
+    nlohmann::json performance = nlohmann::json{
+        {"cache_hit_rate", std::move(cache_hit_rate)},
+        {"prompt_tokens_computed", computed_prefill},
+        {"prompt_tokens_reused", reused_prompt},
+        {"ttft_seconds", std::move(ttft_seconds)},
     };
 
     nlohmann::json body{
@@ -544,15 +683,25 @@ void HttpServer::handle_metrics(const httplib::Request&, httplib::Response& res)
          {{"state", state},
           {"queued", stats.waiting_requests},
           {"running", stats.running_requests},
-          {"tok_s", monitor_tok_s_},
-          {"prefill_tok_s", monitor_prefill_tok_s_}}},
+          {"tok_s", tok_s},
+          {"prefill_tok_s", prefill_tok_s},
+          {"prefill_interval_tokens", prefill_interval_tokens},
+          {"decode_interval_tokens", decode_interval_tokens},
+          {"cache_hit_tokens", stats.reused_prompt_tokens},
+          {"cache_hit_tok_s", cache_hit_tok_s},
+          {"cache_hit_interval_tokens", cache_hit_interval_tokens}}},
         {"last",
          {{"available", has_last_rates},
           {"prefill_tok_s", rate_json(has_last_rates ? last_rates.prefill_tok_s : -1.0)},
-          {"tok_s", rate_json(has_last_rates ? last_rates.decode_tok_s : -1.0)}}},
+          {"tok_s", rate_json(has_last_rates ? last_rates.decode_tok_s : -1.0)},
+          {"peak_prefill_tok_s", rate_json(peak_prefill_tok_s)},
+          {"peak_tok_s", rate_json(peak_decode_tok_s)},
+          {"cache_hit_tokens",
+           has_last_rates ? nlohmann::json(last_rates.cache_hit_tokens) : nlohmann::json(nullptr)}}},
         {"hardware", std::move(hardware)},
         {"hardware_static", std::move(hardware_static)},
         {"engine", std::move(engine)},
+        {"performance", std::move(performance)},
         {"history", std::move(history)},
     };
     res.set_content(body.dump(), "application/json");
@@ -623,7 +772,9 @@ void HttpServer::handle_chat_completions(const httplib::Request& req, httplib::R
                 return req.is_connection_alive && !req.is_connection_alive();
             });
             log_request_done(log_context, outcome);
-            const CompletionUsage usage{outcome.prompt_tokens, outcome.completion_tokens};
+            CompletionUsage usage{outcome.prompt_tokens, outcome.completion_tokens};
+            usage.cached_tokens = std::clamp(
+                static_cast<int>(outcome.metrics.prefix_cache_hit_tokens), 0, outcome.prompt_tokens);
             std::string response_body;
             if (!outcome.tool_calls.empty()) {
                 response_body = make_chat_completion_tool_response(
@@ -708,7 +859,10 @@ void HttpServer::handle_chat_completions(const httplib::Request& req, httplib::R
                                               include_usage));
                 }
                 if (include_usage) {
-                    const CompletionUsage usage{outcome.prompt_tokens, outcome.completion_tokens};
+                    CompletionUsage usage{outcome.prompt_tokens, outcome.completion_tokens};
+                    usage.cached_tokens = std::clamp(
+                        static_cast<int>(outcome.metrics.prefix_cache_hit_tokens),
+                        0, outcome.prompt_tokens);
                     write_stream_item(sink, *stream,
                                       make_chat_chunk_usage(id, model, created, usage));
                 }
@@ -1007,12 +1161,16 @@ bool HttpServer::listen() {
         stats_stopping_ = false;
         stats_thread_   = std::thread([this] { run_stats_reporter(); });
     }
+    monitor_stopping_ = false;
+    monitor_thread_   = std::thread([this] { run_monitor_sampler(); });
     try {
         const bool result = server_.listen_after_bind();
         stop_stats_reporter();
+        stop_monitor_sampler();
         return result;
     } catch (...) {
         stop_stats_reporter();
+        stop_monitor_sampler();
         throw;
     }
 }
