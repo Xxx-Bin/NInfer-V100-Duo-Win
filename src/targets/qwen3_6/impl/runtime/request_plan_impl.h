@@ -191,57 +191,124 @@ RequestPlan ProgramImplCore::plan_request_for_lane(std::uint32_t lane,
     plan->text_kv_page_entitlement    = base.text_kv_page_entitlement;
     plan->backend_kv_page_entitlement = base.backend_kv_page_entitlement;
 
-    if (base.allow_prefix_reuse && prompt.identity.reusable && sequence.retained) {
-        const bool dflash_append_ready =
-            speculative_backend != SpeculativeBackend::DFlash ||
-            sequence.dflash_context_frontier == sequence.execution_frontier;
-        if (sequence.execution_frontier != 0 && dflash_append_ready &&
-            qwen3_6::detail::prefix_matches(prompt, sequence.ledger, sequence.prefix_identity,
-                                            sequence.execution_frontier)) {
-            plan->reuse      = ReusePath::AppendAtFrontier;
-            plan->reuse_base = sequence.execution_frontier;
-        } else if (sequence.rewrite_checkpoint.valid && sequence.rewrite_checkpoint.frontier != 0 &&
-                   sequence.rewrite_checkpoint.frontier <= prompt.token_ids.size() &&
-                   qwen3_6::detail::prefix_matches(prompt, sequence.ledger,
-                                                   sequence.prefix_identity,
-                                                   sequence.rewrite_checkpoint.frontier)) {
-            plan->reuse      = restore_path(sequence.rewrite_checkpoint.kind);
-            plan->reuse_base = sequence.rewrite_checkpoint.frontier;
+    // The reuse base is either this lane's own retained sequence or a detached registry entry.
+    // Both are offered to the same two decisions below (append at frontier, restore a checkpoint);
+    // only the owner differs, and a registry base additionally has to be attached before prefill.
+    const DetachedSequence* attach = nullptr;
+    if (base.allow_prefix_reuse && prompt.identity.reusable) {
+        if (sequence.retained) {
+            const bool dflash_append_ready =
+                speculative_backend != SpeculativeBackend::DFlash ||
+                sequence.dflash_context_frontier == sequence.execution_frontier;
+            if (sequence.execution_frontier != 0 && dflash_append_ready &&
+                qwen3_6::detail::prefix_matches(prompt, sequence.ledger, sequence.prefix_identity,
+                                                sequence.execution_frontier)) {
+                plan->reuse      = ReusePath::AppendAtFrontier;
+                plan->reuse_base = sequence.execution_frontier;
+            } else if (sequence.rewrite_checkpoint.valid &&
+                       sequence.rewrite_checkpoint.frontier != 0 &&
+                       sequence.rewrite_checkpoint.frontier <= prompt.token_ids.size() &&
+                       qwen3_6::detail::prefix_matches(prompt, sequence.ledger,
+                                                       sequence.prefix_identity,
+                                                       sequence.rewrite_checkpoint.frontier)) {
+                plan->reuse      = restore_path(sequence.rewrite_checkpoint.kind);
+                plan->reuse_base = sequence.rewrite_checkpoint.frontier;
+            }
+        }
+        if (plan->reuse == ReusePath::FullReset && !registry.empty()) {
+            // Append candidates win over checkpoint candidates across the whole registry, and
+            // within a class the longest prefix wins, so the choice does not depend on slot order.
+            std::size_t best    = registry.size();
+            for (std::size_t pass = 0; pass < 2 && best == registry.size(); ++pass) {
+                for (std::size_t i = 0; i < registry.size(); ++i) {
+                    const std::optional<DetachedSequence>& entry = registry[i];
+                    if (!entry) { continue; }
+                    const bool dflash_append_ready =
+                        speculative_backend != SpeculativeBackend::DFlash ||
+                        entry->dflash_context_frontier == entry->execution_frontier;
+                    std::uint32_t frontier = 0;
+                    ReusePath path         = ReusePath::FullReset;
+                    if (pass == 0) {
+                        if (entry->execution_frontier != 0 && dflash_append_ready &&
+                            qwen3_6::detail::prefix_matches(prompt, entry->ledger,
+                                                            entry->prefix_identity,
+                                                            entry->execution_frontier)) {
+                            frontier = entry->execution_frontier;
+                            path     = ReusePath::AppendAtFrontier;
+                        }
+                    } else if (entry->rewrite_checkpoint.valid &&
+                               entry->rewrite_checkpoint.frontier != 0 &&
+                               entry->rewrite_checkpoint.frontier <= prompt.token_ids.size() &&
+                               qwen3_6::detail::prefix_matches(
+                                   prompt, entry->ledger, entry->prefix_identity,
+                                   entry->rewrite_checkpoint.frontier)) {
+                        frontier = entry->rewrite_checkpoint.frontier;
+                        path     = restore_path(entry->rewrite_checkpoint.kind);
+                    }
+                    if (path == ReusePath::FullReset) { continue; }
+                    if (best == registry.size() || frontier > plan->reuse_base) {
+                        best            = i;
+                        plan->reuse      = path;
+                        plan->reuse_base = frontier;
+                    }
+                }
+            }
+            if (best != registry.size()) {
+                attach                     = &*registry[best];
+                plan->attach_registry_index = static_cast<std::int32_t>(best);
+            }
         }
     }
 
+    const bool reuse_tail_hidden_valid =
+        attach != nullptr ? attach->tail_hidden_valid : sequence.tail_hidden_valid;
+    const std::uint32_t reuse_mtp_kv_valid =
+        attach != nullptr ? attach->mtp_kv_valid : sequence.mtp_kv_valid;
+    const std::uint32_t reuse_dflash_frontier =
+        attach != nullptr ? attach->dflash_context_frontier : sequence.dflash_context_frontier;
+    const bool reuse_has_backend =
+        attach != nullptr ? attach->kv.backend.has_value()
+                          : (sequence.kv && sequence.kv->backend.has_value());
+    const std::vector<TokenId>& reuse_ledger =
+        attach != nullptr ? attach->ledger : sequence.ledger;
+    const qwen3_6::detail::ResidentPrefixIdentity& reuse_identity =
+        attach != nullptr ? attach->prefix_identity : sequence.prefix_identity;
+    const RewriteCheckpoint& reuse_checkpoint =
+        attach != nullptr ? attach->rewrite_checkpoint : sequence.rewrite_checkpoint;
+
     if (speculative_backend == SpeculativeBackend::Mtp) {
         const bool append_ready =
-            plan->reuse == ReusePath::AppendAtFrontier && sequence.tail_hidden_valid &&
+            plan->reuse == ReusePath::AppendAtFrontier && reuse_tail_hidden_valid &&
             decoder->mtp_cache() != nullptr &&
-            (plan->reuse_base == 0 || sequence.mtp_kv_valid >= plan->reuse_base - 1);
+            (plan->reuse_base == 0 || reuse_mtp_kv_valid >= plan->reuse_base - 1);
         const bool checkpoint_ready = is_rewrite_checkpoint_restore(plan->reuse) &&
                                       decoder->mtp_cache() != nullptr && plan->reuse_base != 0 &&
-                                      sequence.mtp_kv_valid >= plan->reuse_base - 1;
+                                      reuse_mtp_kv_valid >= plan->reuse_base - 1;
         if (plan->reuse != ReusePath::FullReset && !append_ready && !checkpoint_ready) {
-            plan->reuse      = ReusePath::FullReset;
-            plan->reuse_base = 0;
+            plan->reuse                 = ReusePath::FullReset;
+            plan->reuse_base            = 0;
+            plan->attach_registry_index = -1;
+            attach                      = nullptr;
         }
     }
 
     if (is_rewrite_checkpoint_restore(plan->reuse) &&
         speculative_backend == SpeculativeBackend::DFlash &&
-        (!dflash || !sequence.kv || !sequence.kv->backend ||
-         sequence.dflash_context_frontier < plan->reuse_base)) {
-        plan->reuse      = ReusePath::FullReset;
-        plan->reuse_base = 0;
+        (!dflash || !reuse_has_backend || reuse_dflash_frontier < plan->reuse_base)) {
+        plan->reuse                 = ReusePath::FullReset;
+        plan->reuse_base            = 0;
+        plan->attach_registry_index = -1;
     }
 
     const std::optional<RewriteCheckpointSpec>& desired = base.rewrite_checkpoint;
     const bool existing_checkpoint_matches =
-        desired && plan->reuse != ReusePath::FullReset && sequence.rewrite_checkpoint.valid &&
-        sequence.rewrite_checkpoint.frontier == desired->frontier &&
-        qwen3_6::detail::prefix_matches(prompt, sequence.ledger, sequence.prefix_identity,
-                                        desired->frontier);
+        desired && plan->reuse != ReusePath::FullReset && reuse_checkpoint.valid &&
+        reuse_checkpoint.frontier == desired->frontier &&
+        qwen3_6::detail::prefix_matches(prompt, reuse_ledger, reuse_identity, desired->frontier);
     if (!desired) {
         plan->rewrite_checkpoint_action = RewriteCheckpointAction::Drop;
     } else if (existing_checkpoint_matches) {
-        plan->rewrite_checkpoint_action = sequence.rewrite_checkpoint.kind == desired->kind
+        plan->rewrite_checkpoint_action = reuse_checkpoint.kind == desired->kind
                                               ? RewriteCheckpointAction::KeepExisting
                                               : RewriteCheckpointAction::ReclassifyExisting;
     } else if (desired->frontier > plan->reuse_base) {

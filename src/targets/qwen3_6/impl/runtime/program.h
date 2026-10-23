@@ -19,6 +19,7 @@
 
 #include <cstdint>
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <span>
@@ -80,6 +81,10 @@ struct RequestPlanImpl<NINFER_QWEN36_VARIANT> {
         NINFER_QWEN36_RUNTIME_NS::MtpBridgeMode::None;
     bool prepare_mtp = false;
     std::optional<NINFER_QWEN36_RUNTIME_NS::VisionPrefillPlan> vision;
+    // Set when the selected reuse base lives in the detached prefix registry rather than in the
+    // lane. The admission path must attach that entry to its lane before prefill starts; -1 means
+    // the base is the lane's own retained sequence (or there is no base at all).
+    std::int32_t attach_registry_index = -1;
     NINFER_QWEN36_RUNTIME_NS::RewriteCheckpointAction rewrite_checkpoint_action =
         NINFER_QWEN36_RUNTIME_NS::RewriteCheckpointAction::Drop;
     std::optional<qwen3_6::RewriteCheckpointSpec> rewrite_checkpoint_capture;
@@ -135,6 +140,43 @@ struct SequenceKVBundle {
     // Rank 1's allocation in ITS OWN MTP (backend) KV pool at tp == 2. Same lockstep argument as
     // `text_peer`: identical page geometry, every pool operation issued on both in the same order.
     std::optional<PagedKVAllocation> backend_peer;
+};
+
+/**
+ * A sequence that survived the request which produced it and is no longer owned by any lane.
+ *
+ * `SequenceState` cannot simply be moved out of a lane: its `tail_hidden` and
+ * `rewrite_checkpoint_hidden` are per-lane slices of a shared arena, and its linear-attention state
+ * is addressed by lane index. A detached entry therefore owns its own storage for all three:
+ *
+ *   - the KV bundle moves (move-only allocation, no bytes copied, no refcount),
+ *   - the two linear-attention states are copied into this entry's dedicated registry slots,
+ *   - the two hidden vectors are copied out to host bytes (10 KiB each) and copied back on attach.
+ *
+ * A `PagedKVAllocation` is move-only and releasing it returns its pages, so exclusive ownership of
+ * the bundle IS the whole liveness argument: there is no window in which the registry and a lane
+ * both own the same pages.
+ */
+struct DetachedSequence {
+    SequenceKVBundle kv;
+    std::vector<TokenId> ledger;
+    qwen3_6::detail::ResidentPrefixIdentity prefix_identity;
+    RewriteCheckpoint rewrite_checkpoint;
+
+    std::uint32_t execution_frontier      = 0;
+    std::uint32_t text_kv_valid           = 0;
+    std::uint32_t mtp_kv_valid            = 0;
+    std::uint32_t dflash_context_frontier = 0;
+    std::array<TokenId, qwen3_6::kMtpDecodeMaximumDrafts> mtp_drafts{};
+    std::uint32_t mtp_draft_count = 0;
+    std::int32_t rope_delta       = 0;
+    bool tail_hidden_valid        = false;
+
+    std::vector<std::byte> tail_hidden;
+    std::vector<std::byte> rewrite_checkpoint_hidden;
+
+    // Age counter used only to order eviction among equally sized entries.
+    std::uint64_t detached_epoch = 0;
 };
 
 struct DecodeGraphProfile {
@@ -273,6 +315,11 @@ public:
     void abort_lane(std::uint32_t lane) noexcept;
     [[nodiscard]] bool has_retained_lane(std::uint32_t lane) const noexcept;
     void evict_retained_lane(std::uint32_t lane) noexcept;
+    // Count of detached entries currently held. Zero whenever --prefix-registry-slots is zero.
+    [[nodiscard]] std::uint32_t detached_prefix_count() const noexcept;
+    [[nodiscard]] std::uint32_t detached_prefix_capacity() const noexcept {
+        return registry_capacity;
+    }
     [[nodiscard]] GenerationTimings generation_timings_lane(std::uint32_t lane) const noexcept;
     [[nodiscard]] SpeculativeStats speculative_stats_lane(std::uint32_t lane) const noexcept;
 
@@ -287,6 +334,9 @@ public:
     const std::uint32_t capacity;
     const std::uint32_t kv_capacity;
     const std::uint32_t max_concurrency;
+    // Detached prefix-registry entry count. Fixed at construction: every entry owns two
+    // linear-attention slots, so the pool is sized once and never resized.
+    const std::uint32_t registry_capacity;
     const std::uint32_t prefill_chunk;
     const std::uint32_t draft_window;
     const SpeculativeBackend speculative_backend;
@@ -347,6 +397,13 @@ public:
 
     std::array<SequenceState, kMaximumConcurrency> sequences;
     std::array<RequestControl, kMaximumConcurrency> requests;
+    // Detached prefix registry. Declared after `decoder` on purpose: entries hold KV allocations
+    // from the decoder's pools, so they must be destroyed first.
+    std::vector<std::optional<DetachedSequence>> registry;
+    std::uint64_t registry_epoch = 0;
+    // Entry that must survive an eviction triggered by a displace/detach issued from inside
+    // attach. -1 means nothing is protected.
+    std::int32_t registry_protected_index_ = -1;
 
     DecodeGraphFamily ordinary_graphs;
     DecodeGraphFamily mtp_graphs;
@@ -433,6 +490,18 @@ public:
 
 private:
     void clear_lane(SequenceState& sequence, RequestControl& request) noexcept;
+    // Moves a live retained sequence out of its lane and into a free registry entry, copying both
+    // linear-attention states into the entry's dedicated slots. Leaves the lane empty (but does not
+    // zero its state slots: the caller decides when that is safe).
+    void detach_sequence(SequenceState& sequence);
+    // Reverses `detach_sequence` onto `lane`. Displaces whatever that lane currently holds.
+    void attach_registry_sequence(std::int32_t index, SequenceState& sequence);
+    // The entry a plan will attach, or nullptr when the plan uses its lane's own retained state.
+    [[nodiscard]] const DetachedSequence*
+    attached_entry(const RequestPlanImpl& plan) const noexcept;
+    // Frees one entry (pages returned, slots become reusable). Returns false if the registry is
+    // empty. `protect` is never evicted.
+    bool evict_registry_entry(std::int32_t protect = -1) noexcept;
     void ordered_reset(SequenceState& sequence);
     void prepare_graphs();
     // Copies rank 0's counter lane onto rank 1. Called once, after prefill's bonus token is

@@ -112,6 +112,7 @@ std::string serve_usage_text(const char* argv0) {
     return std::string("usage: ") + argv0 +
            " <model.ninfer> [--host H] [--port N] [--api-key KEY] "
            "[--model-id ID] [--max-context N] [--kv-capacity N|auto] [--max-concurrency N] "
+           "[--prefix-registry-slots N] "
            "[--rope native|yarn] [--yarn-factor F] [--yarn-origin O] "
            "[--max-pending-requests N] [--pending-timeout-ms N] "
            "[--prefill-chunk N] [--log-stats-interval-ms N] [--device N] [--tp 1|2] "
@@ -227,6 +228,9 @@ ServeOptions parse_serve_options(int argc, char** argv) {
         } else if (arg == "--max-concurrency") {
             options.max_concurrency = static_cast<std::uint32_t>(
                 parse_nonnegative_int(require_value("--max-concurrency"), "max-concurrency"));
+        } else if (arg == "--prefix-registry-slots") {
+            options.prefix_registry_slots = static_cast<std::uint32_t>(parse_nonnegative_int(
+                require_value("--prefix-registry-slots"), "prefix-registry-slots"));
         } else if (arg == "--max-pending-requests") {
             options.max_pending_requests = static_cast<std::uint32_t>(parse_nonnegative_int(
                 require_value("--max-pending-requests"), "max-pending-requests"));
@@ -373,6 +377,9 @@ ServeOptions parse_serve_options(int argc, char** argv) {
     }
     if (options.max_concurrency == 0 || options.max_concurrency > kMaximumConcurrency) {
         throw std::invalid_argument("--max-concurrency must be in [1,8]");
+    }
+    if (options.prefix_registry_slots > kMaximumPrefixRegistrySlots) {
+        throw std::invalid_argument("--prefix-registry-slots must be in [0,4]");
     }
     if (options.max_pending_requests == 0) {
         throw std::invalid_argument("--max-pending-requests must be positive");

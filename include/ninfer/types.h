@@ -19,6 +19,10 @@ namespace ninfer {
 using TokenId = std::int32_t;
 
 inline constexpr std::uint32_t kMaximumConcurrency = 8;
+// Detached prefix-registry entries. Each costs two linear-attention state slots on every device
+// (continuation + rewrite checkpoint, ~73 MiB per slot for the 27B target), so the bound is small
+// on purpose; zero is the default and leaves the engine byte-identical to the pre-registry build.
+inline constexpr std::uint32_t kMaximumPrefixRegistrySlots = 4;
 // Aggregate encoded image/video payload retained by one prompt, independent of item count.
 inline constexpr std::size_t kMaximumPromptMediaBytes = 256ULL << 20;
 inline constexpr std::size_t kDefaultMediaCacheBytes  = 1ULL << 30;
@@ -112,6 +116,10 @@ struct EngineOptions {
     std::uint32_t yarn_origin          = 262144;
     KvCapacityPolicy kv_capacity       = KvCapacityPolicy::explicit_capacity(2048);
     std::uint32_t max_concurrency      = 1;
+    // Detached prefix-registry entries. A sequence whose lane is reused by an unrelated request is
+    // detached into the registry instead of being released, and re-attached (to any lane) by a
+    // later request that matches its prefix. Zero disables the feature.
+    std::uint32_t prefix_registry_slots = 0;
     std::uint32_t max_pending_requests = 16;
     std::uint32_t pending_timeout_ms   = 30000;
     std::uint32_t prefill_chunk        = 1024;

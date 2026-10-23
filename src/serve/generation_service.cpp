@@ -236,6 +236,7 @@ GenerationService::GenerationService(ServeOptions options, LoadProgress load_pro
     engine_options.yarn_origin              = options_.yarn_origin;
     engine_options.kv_capacity              = options_.kv_capacity;
     engine_options.max_concurrency          = options_.max_concurrency;
+    engine_options.prefix_registry_slots    = options_.prefix_registry_slots;
     engine_options.max_pending_requests     = options_.max_pending_requests;
     engine_options.pending_timeout_ms       = options_.pending_timeout_ms;
     engine_options.prefill_chunk            = options_.prefill_chunk;

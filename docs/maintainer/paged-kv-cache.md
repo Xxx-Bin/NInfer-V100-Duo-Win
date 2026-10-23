@@ -800,6 +800,35 @@ pages 返回各自 pool；随后各 pool 的 exact frontier 和 fixed continuati
 连同 Linear Attention/backend state branching 一起重新设计；仅共享 Main Text pages 不能形成完整
 可继续的 sequence state。
 
+### 10.4 Detached prefix registry
+
+`--prefix-registry-slots N` 打开后，一个被无关请求挤出 lane 的 retained sequence 不被释放，而是整体
+移入 registry，之后可以被任意 lane 重新 claim。它要解决的不是「页不够」，而是「lane 是调度资源、
+缓存却被寄生在 lane 上」——C=1 时没有任何驱逐发生，销毁来自新请求自己的 `FullReset`。
+
+一个 registry entry 持有：
+
+- KV bundle（`PagedKVAllocation`，move-only）。**所有权唯一性就是全部存活证明**：move 之后 lane 不再
+  持有任何 allocation，registry 与 lane 不存在同时拥有同一批页的窗口，因此不需要 page refcount，
+  与 §10.3 的结论一致；
+- 两个线性注意力状态槽（continuation 与 rewrite checkpoint），位于 lane 槽区间之后的
+  `[2C, 2C+2R)`，按 entry 编号寻址，与 lane 槽不相交；
+- `tail_hidden` / `rewrite_checkpoint_hidden` 的 host 副本（每个 10 KiB）。这两者是共享 arena 的
+  per-lane slice，不能随 `SequenceState` 一起移动，attach 时必须按新 lane 重新拷贝进去；
+- ledger、prefix identity、`execution_frontier`、`text_kv_valid`、`mtp_kv_valid`、
+  `dflash_context_frontier`、`rope_delta`、rewrite checkpoint。
+
+Detach 发生在 `FullReset` 分支，并且只在该 lane 仍持有 retained sequence 时发生；`ordered_reset`
+必须在状态槽拷出之后调用，否则会把刚拷出的内容再抹一次。Attach 在 prefill 之前完成，随后照常执行
+既有的 `bind_sequence_kv`，由它按新 lane 取行号并重刷两个 rank 的 block table。
+
+准入记账有一处必须单独处理：attach 的 bundle 是「原地扩容」而不是「释放后重分配」，所以
+`can_admit_lane` 用 entry 自己的 entitlement 作为被替换方，只要求增量部分落在 free pages 内；
+被 displace 的 lane bundle 是 detach 而不是 release，**不能**计入可回收页。
+
+容量治理：registry 满时按 `execution_frontier` 最大者优先保留，同长时淘汰更早 detach 的条目。
+256k 配置下一个 entry 约 147 MiB/卡（两个状态槽），占 KV 的 3.4%。
+
 ---
 
 ## 11. Speculative decoding

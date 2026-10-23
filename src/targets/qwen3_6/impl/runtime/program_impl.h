@@ -248,7 +248,8 @@ ProgramImplCore::ProgramImplCore(const LoadedModelData& model_in,
                                  ExecutionContext& execution_in)
     : model(model_in), execution(execution_in), device(execution_in.primary()), tp(execution_in.tp),
       capacity(plan.capacity), kv_capacity(plan.kv_capacity),
-      max_concurrency(plan.max_concurrency), prefill_chunk(plan.prefill_chunk),
+      max_concurrency(plan.max_concurrency), registry_capacity(plan.prefix_registry_slots),
+      prefill_chunk(plan.prefill_chunk),
       draft_window(plan.draft_window), speculative_backend(plan.speculative_backend),
       kv_dtype(plan.kv_dtype), kv_quant_group(plan.kv_quant_group),
       proposal_head(plan.proposal_head), vision_enabled(plan.features.vision),
@@ -513,6 +514,7 @@ ProgramImplCore::ProgramImplCore(const LoadedModelData& model_in,
         peer->device.synchronize();
     }
     device.synchronize();
+    registry.resize(registry_capacity);
     prepare_graphs();
     work.reset();
     work.reset_peak();
@@ -526,6 +528,14 @@ ProgramImplCore::~ProgramImplCore() noexcept {
     }
 }
 
+const DetachedSequence*
+ProgramImplCore::attached_entry(const RequestPlanImpl& plan) const noexcept {
+    if (plan.attach_registry_index < 0) { return nullptr; }
+    const auto index = static_cast<std::size_t>(plan.attach_registry_index);
+    if (index >= registry.size() || !registry[index]) { return nullptr; }
+    return &*registry[index];
+}
+
 bool ProgramImplCore::can_admit_lane(std::uint32_t lane, const RequestPlan& plan) const noexcept {
     if (lane >= max_concurrency || plan.impl_ == nullptr) { return false; }
     const RequestControl& request = requests[lane];
@@ -533,21 +543,36 @@ bool ProgramImplCore::can_admit_lane(std::uint32_t lane, const RequestPlan& plan
         request.lifecycle == Lifecycle::Pending) {
         return false;
     }
+    // An attached entry is resized in place, so its own entitlement is the "old" side of the
+    // replacement: only the growth beyond what it already holds has to come from free pages. The
+    // lane's own bundle (if any) is detached, not released, so it stays entitled and must not be
+    // counted as reclaimable here.
+    const DetachedSequence* attach = attached_entry(*plan.impl_);
+    if (plan.impl_->attach_registry_index >= 0 && attach == nullptr) { return false; }
     const SequenceState& sequence = sequences[lane];
     const auto can_replace        = [](const PagedKVPool& pool, std::uint32_t old_pages,
                                 std::uint32_t new_pages) {
         return old_pages <= pool.entitled_pages() && new_pages <= pool.logical_page_capacity() &&
                new_pages <= pool.page_group_count() - (pool.entitled_pages() - old_pages);
     };
-    const std::uint32_t old_text = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
-    if (!can_replace(decoder->text_kv.pool(), old_text, plan.impl_->text_kv_page_entitlement)) {
-        return false;
-    }
+    const std::uint32_t resident_text = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
+    const std::uint32_t old_text =
+        attach != nullptr ? attach->kv.text.page_entitlement() : resident_text;
+    const std::uint32_t new_text =
+        attach != nullptr ? std::max(old_text, plan.impl_->text_kv_page_entitlement)
+                          : plan.impl_->text_kv_page_entitlement;
+    if (!can_replace(decoder->text_kv.pool(), old_text, new_text)) { return false; }
     const qwen3_6::PagedKVCache* backend = backend_kv_cache();
     if (backend == nullptr) { return plan.impl_->backend_kv_page_entitlement == 0; }
-    const std::uint32_t old_backend =
+    const std::uint32_t resident_backend =
         sequence.kv && sequence.kv->backend ? sequence.kv->backend->page_entitlement() : 0;
-    return can_replace(backend->pool(), old_backend, plan.impl_->backend_kv_page_entitlement);
+    const std::uint32_t attach_backend =
+        attach != nullptr && attach->kv.backend ? attach->kv.backend->page_entitlement() : 0;
+    const std::uint32_t old_backend = attach != nullptr ? attach_backend : resident_backend;
+    const std::uint32_t new_backend =
+        attach != nullptr ? std::max(old_backend, plan.impl_->backend_kv_page_entitlement)
+                          : plan.impl_->backend_kv_page_entitlement;
+    return can_replace(backend->pool(), old_backend, new_backend);
 }
 
 bool ProgramImplCore::can_admit_lane_after_retained_eviction(
@@ -559,6 +584,9 @@ bool ProgramImplCore::can_admit_lane_after_retained_eviction(
         return false;
     }
 
+    const DetachedSequence* attach = attached_entry(*plan.impl_);
+    if (plan.impl_->attach_registry_index >= 0 && attach == nullptr) { return false; }
+
     std::uint32_t reclaimable_text    = 0;
     std::uint32_t reclaimable_backend = 0;
     for (std::uint32_t other = 0; other < max_concurrency; ++other) {
@@ -567,6 +595,12 @@ bool ProgramImplCore::can_admit_lane_after_retained_eviction(
         if (sequences[other].kv->backend) {
             reclaimable_backend += sequences[other].kv->backend->page_entitlement();
         }
+    }
+    // Detached entries are evictable too, except the one this plan is about to attach.
+    for (const std::optional<DetachedSequence>& entry : registry) {
+        if (!entry || &*entry == attach) { continue; }
+        reclaimable_text += entry->kv.text.page_entitlement();
+        if (entry->kv.backend) { reclaimable_backend += entry->kv.backend->page_entitlement(); }
     }
 
     const auto can_replace = [](const PagedKVPool& pool, std::uint32_t old_pages,
@@ -580,19 +614,28 @@ bool ProgramImplCore::can_admit_lane_after_retained_eviction(
         return new_pages <= pool.page_group_count() - committed;
     };
 
-    const SequenceState& sequence = sequences[lane];
-    const std::uint32_t old_text  = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
-    if (!can_replace(decoder->text_kv.pool(), old_text, reclaimable_text,
-                     plan.impl_->text_kv_page_entitlement)) {
+    const SequenceState& sequence      = sequences[lane];
+    const std::uint32_t resident_text  = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
+    const std::uint32_t old_text =
+        attach != nullptr ? attach->kv.text.page_entitlement() : resident_text;
+    const std::uint32_t new_text =
+        attach != nullptr ? std::max(old_text, plan.impl_->text_kv_page_entitlement)
+                          : plan.impl_->text_kv_page_entitlement;
+    if (!can_replace(decoder->text_kv.pool(), old_text, reclaimable_text, new_text)) {
         return false;
     }
 
     const qwen3_6::PagedKVCache* backend = backend_kv_cache();
     if (backend == nullptr) { return plan.impl_->backend_kv_page_entitlement == 0; }
-    const std::uint32_t old_backend =
+    const std::uint32_t resident_backend =
         sequence.kv && sequence.kv->backend ? sequence.kv->backend->page_entitlement() : 0;
-    return can_replace(backend->pool(), old_backend, reclaimable_backend,
-                       plan.impl_->backend_kv_page_entitlement);
+    const std::uint32_t attach_backend =
+        attach != nullptr && attach->kv.backend ? attach->kv.backend->page_entitlement() : 0;
+    const std::uint32_t old_backend = attach != nullptr ? attach_backend : resident_backend;
+    const std::uint32_t new_backend =
+        attach != nullptr ? std::max(old_backend, plan.impl_->backend_kv_page_entitlement)
+                          : plan.impl_->backend_kv_page_entitlement;
+    return can_replace(backend->pool(), old_backend, reclaimable_backend, new_backend);
 }
 
 runtime::AdmissionResources ProgramImplCore::admission_capacity() const noexcept {
@@ -639,34 +682,55 @@ runtime::PrefillStepResult ProgramImplCore::start_prefill_lane(std::uint32_t lan
          transient.alignment < request_plan.summary.transient_alignment)) {
         throw std::invalid_argument("request transient region does not satisfy the plan");
     }
-    if (request_plan.reuse != ReusePath::FullReset &&
-        (!sequence.retained ||
-         !qwen3_6::detail::prefix_matches(prompt, sequence.ledger, sequence.prefix_identity,
-                                          request_plan.reuse_base))) {
-        throw std::logic_error("planned resident prefix is no longer reusable");
+    // The reuse base is either this lane's retained sequence or a detached registry entry. Both
+    // must still match the prompt here: the plan was computed before admission, and an entry can
+    // be re-attached to a different lane in between.
+    if (request_plan.reuse != ReusePath::FullReset) {
+        if (request_plan.attach_registry_index >= 0) {
+            const DetachedSequence* entry = attached_entry(request_plan);
+            if (entry == nullptr ||
+                !qwen3_6::detail::prefix_matches(prompt, entry->ledger, entry->prefix_identity,
+                                                 request_plan.reuse_base)) {
+                throw std::logic_error("planned registry prefix is no longer reusable");
+            }
+        } else if (!sequence.retained ||
+                   !qwen3_6::detail::prefix_matches(prompt, sequence.ledger,
+                                                    sequence.prefix_identity,
+                                                    request_plan.reuse_base)) {
+            throw std::logic_error("planned resident prefix is no longer reusable");
+        }
     }
+    // The base these checks describe lives in the lane or in the entry the plan will attach.
+    const DetachedSequence* planned_attach = attached_entry(request_plan);
+    const RewriteCheckpoint& planned_checkpoint =
+        planned_attach != nullptr ? planned_attach->rewrite_checkpoint
+                                  : sequence.rewrite_checkpoint;
+    const std::vector<TokenId>& planned_ledger =
+        planned_attach != nullptr ? planned_attach->ledger : sequence.ledger;
+    const qwen3_6::detail::ResidentPrefixIdentity& planned_identity =
+        planned_attach != nullptr ? planned_attach->prefix_identity : sequence.prefix_identity;
     if (is_rewrite_checkpoint_restore(request_plan.reuse) &&
-        (!sequence.rewrite_checkpoint.valid ||
-         sequence.rewrite_checkpoint.frontier != request_plan.reuse_base ||
-         request_plan.reuse != restore_path(sequence.rewrite_checkpoint.kind))) {
+        (!planned_checkpoint.valid ||
+         planned_checkpoint.frontier != request_plan.reuse_base ||
+         request_plan.reuse != restore_path(planned_checkpoint.kind))) {
         throw std::logic_error("planned rewrite checkpoint is unavailable");
     }
     if (request_plan.rewrite_checkpoint_action == RewriteCheckpointAction::KeepExisting &&
-        (!prompt.identity.rewrite_checkpoint || !sequence.rewrite_checkpoint.valid ||
-         sequence.rewrite_checkpoint.kind != prompt.identity.rewrite_checkpoint->kind ||
-         sequence.rewrite_checkpoint.frontier != prompt.identity.rewrite_checkpoint->frontier ||
+        (!prompt.identity.rewrite_checkpoint || !planned_checkpoint.valid ||
+         planned_checkpoint.kind != prompt.identity.rewrite_checkpoint->kind ||
+         planned_checkpoint.frontier != prompt.identity.rewrite_checkpoint->frontier ||
          request_plan.reuse == ReusePath::FullReset ||
-         !qwen3_6::detail::prefix_matches(prompt, sequence.ledger, sequence.prefix_identity,
-                                          sequence.rewrite_checkpoint.frontier))) {
+         !qwen3_6::detail::prefix_matches(prompt, planned_ledger, planned_identity,
+                                          planned_checkpoint.frontier))) {
         throw std::logic_error("planned rewrite checkpoint retention is unavailable");
     }
     if (request_plan.rewrite_checkpoint_action == RewriteCheckpointAction::ReclassifyExisting &&
-        (!prompt.identity.rewrite_checkpoint || !sequence.rewrite_checkpoint.valid ||
-         sequence.rewrite_checkpoint.kind == prompt.identity.rewrite_checkpoint->kind ||
-         sequence.rewrite_checkpoint.frontier != prompt.identity.rewrite_checkpoint->frontier ||
+        (!prompt.identity.rewrite_checkpoint || !planned_checkpoint.valid ||
+         planned_checkpoint.kind == prompt.identity.rewrite_checkpoint->kind ||
+         planned_checkpoint.frontier != prompt.identity.rewrite_checkpoint->frontier ||
          request_plan.reuse == ReusePath::FullReset ||
-         !qwen3_6::detail::prefix_matches(prompt, sequence.ledger, sequence.prefix_identity,
-                                          sequence.rewrite_checkpoint.frontier))) {
+         !qwen3_6::detail::prefix_matches(prompt, planned_ledger, planned_identity,
+                                          planned_checkpoint.frontier))) {
         throw std::logic_error("planned rewrite checkpoint reclassification is unavailable");
     }
     if (request_plan.rewrite_checkpoint_action == RewriteCheckpointAction::CaptureNew &&
@@ -700,11 +764,30 @@ runtime::PrefillStepResult ProgramImplCore::start_prefill_lane(std::uint32_t lan
                         capacity - prompt_tokens > 0 ? capacity - prompt_tokens - 1 : 0U})
             : 0U;
     request.lifecycle = Lifecycle::Empty;
-    sequence.retained = false;
+    // Read before the flag is cleared: the reset branch needs to know whether this lane still owns
+    // a reusable sequence, because that sequence is detached rather than released.
+    const bool was_retained = sequence.retained;
+    sequence.retained       = false;
     try {
+        if (request_plan.attach_registry_index >= 0) {
+            if (request_plan.reuse == ReusePath::FullReset) {
+                throw std::logic_error("a registry attach requires a reuse base");
+            }
+            // A registry entry carries its own KV bundle and both linear-attention states, so it
+            // replaces whatever this lane held. Every check below then runs against real state.
+            attach_registry_sequence(request_plan.attach_registry_index, sequence);
+        }
         if (request_plan.reuse == ReusePath::FullReset) {
-            sequence.kv.reset();
-            ordered_reset(sequence);
+            if (was_retained && sequence.kv && registry_capacity > 0) {
+                // Detach instead of destroy: the pages and both states stay alive in the registry.
+                // `ordered_reset` must come AFTER the copy out, and it is the only thing allowed to
+                // zero this lane's state slots.
+                detach_sequence(sequence);
+                ordered_reset(sequence);
+            } else {
+                sequence.kv.reset();
+                ordered_reset(sequence);
+            }
             sequence.ledger.clear();
             sequence.text_kv_valid = 0;
             sequence.mtp_kv_valid  = 0;
@@ -1165,6 +1248,22 @@ bool ProgramImplCore::has_retained_lane(std::uint32_t lane) const noexcept {
 
 void ProgramImplCore::evict_retained_lane(std::uint32_t lane) noexcept {
     if (!has_retained_lane(lane)) { return; }
+    if (registry_capacity > 0 && sequences[lane].kv) {
+        // With a registry the evicted sequence is preserved, not destroyed: admission needed the
+        // lane, not the bytes.
+        try {
+            SequenceState& sequence = sequences[lane];
+            detach_sequence(sequence);
+            ordered_reset(sequence);
+            requests[lane].prefill.reset();
+            requests[lane].lifecycle = Lifecycle::Empty;
+            requests[lane].pending   = {};
+            return;
+        } catch (...) {
+            // Fall through to the hard reset. A half-detached sequence is never observable: the
+            // entry is only published at the end of detach_sequence.
+        }
+    }
     clear_lane(sequences[lane], requests[lane]);
 }
 
@@ -1391,6 +1490,224 @@ void ProgramImplCore::release_sequence_growth_entitlement(SequenceState& sequenc
     if (sequence.kv->text_peer) { sequence.kv->text_peer->cancel_unmapped_entitlement(); }
     if (sequence.kv->backend) { sequence.kv->backend->cancel_unmapped_entitlement(); }
     if (sequence.kv->backend_peer) { sequence.kv->backend_peer->cancel_unmapped_entitlement(); }
+}
+
+std::uint32_t ProgramImplCore::detached_prefix_count() const noexcept {
+    std::uint32_t count = 0;
+    for (const std::optional<DetachedSequence>& entry : registry) {
+        if (entry) { ++count; }
+    }
+    return count;
+}
+
+bool ProgramImplCore::evict_registry_entry(std::int32_t protect) noexcept {
+    if (protect < 0) { protect = registry_protected_index_; }
+    std::int32_t victim = -1;
+    for (std::size_t i = 0; i < registry.size(); ++i) {
+        if (!registry[i] || static_cast<std::int32_t>(i) == protect) { continue; }
+        if (victim < 0) {
+            victim = static_cast<std::int32_t>(i);
+            continue;
+        }
+        const DetachedSequence& candidate = *registry[i];
+        const DetachedSequence& current   = *registry[static_cast<std::size_t>(victim)];
+        // Evict the least reusable entry: the shortest prefix, and among equals the one that was
+        // detached longest ago. Keeping the longest prefix is what makes a small registry useful.
+        if (candidate.execution_frontier < current.execution_frontier ||
+            (candidate.execution_frontier == current.execution_frontier &&
+             candidate.detached_epoch < current.detached_epoch)) {
+            victim = static_cast<std::int32_t>(i);
+        }
+    }
+    if (victim < 0) { return false; }
+    // Releasing the bundle returns its pages and its entitlement to the pool.
+    registry[static_cast<std::size_t>(victim)].reset();
+    return true;
+}
+
+void ProgramImplCore::detach_sequence(SequenceState& sequence) {
+    if (!sequence.kv) { throw std::logic_error("prefix detach requires a KV allocation bundle"); }
+    if (registry_capacity == 0) {
+        throw std::logic_error("prefix detach requires a non-zero registry capacity");
+    }
+    std::int32_t index = -1;
+    for (std::size_t i = 0; i < registry.size(); ++i) {
+        if (!registry[i]) {
+            index = static_cast<std::int32_t>(i);
+            break;
+        }
+    }
+    if (index < 0) {
+        if (!evict_registry_entry()) {
+            throw std::logic_error("prefix registry has no evictable entry");
+        }
+        for (std::size_t i = 0; i < registry.size(); ++i) {
+            if (!registry[i]) {
+                index = static_cast<std::int32_t>(i);
+                break;
+            }
+        }
+        if (index < 0) { throw std::logic_error("prefix registry eviction freed no entry"); }
+    }
+
+    // A detached sequence is unbound by definition; a terminal one already is.
+    unbind_sequence_kv(sequence);
+
+    const auto entry_index = static_cast<std::uint32_t>(index);
+    const std::int32_t registry_state =
+        LinearStateSlots::registry_state_slot(entry_index, max_concurrency);
+    const std::int32_t registry_checkpoint =
+        LinearStateSlots::registry_checkpoint_state_slot(entry_index, max_concurrency);
+    decoder->linear_attention.copy_slot(
+        LinearStateSlots::current_state_slot(sequence.lane, max_concurrency), registry_state,
+        device.stream);
+    decoder->linear_attention.copy_slot(
+        LinearStateSlots::rewrite_checkpoint_state_slot(sequence.lane, max_concurrency),
+        registry_checkpoint, device.stream);
+    if (peer) {
+        const ScopedDevice scope(peer->device.device);
+        peer->decoder->linear_attention.copy_slot(
+            LinearStateSlots::current_state_slot(sequence.lane, max_concurrency), registry_state,
+            peer->device.stream);
+        peer->decoder->linear_attention.copy_slot(
+            LinearStateSlots::rewrite_checkpoint_state_slot(sequence.lane, max_concurrency),
+            registry_checkpoint, peer->device.stream);
+    }
+    CUDA_CHECK(cudaStreamSynchronize(device.stream));
+    if (peer) {
+        const ScopedDevice scope(peer->device.device);
+        CUDA_CHECK(cudaStreamSynchronize(peer->device.stream));
+    }
+
+    DetachedSequence entry;
+    entry.tail_hidden.resize(static_cast<std::size_t>(sequence.tail_hidden.bytes()));
+    entry.rewrite_checkpoint_hidden.resize(
+        static_cast<std::size_t>(sequence.rewrite_checkpoint_hidden.bytes()));
+    if (!entry.tail_hidden.empty()) {
+        CUDA_CHECK(cudaMemcpy(entry.tail_hidden.data(), sequence.tail_hidden.data,
+                              entry.tail_hidden.size(), cudaMemcpyDeviceToHost));
+    }
+    if (!entry.rewrite_checkpoint_hidden.empty()) {
+        CUDA_CHECK(cudaMemcpy(entry.rewrite_checkpoint_hidden.data(),
+                              sequence.rewrite_checkpoint_hidden.data,
+                              entry.rewrite_checkpoint_hidden.size(), cudaMemcpyDeviceToHost));
+    }
+
+    entry.ledger             = sequence.ledger;
+    entry.prefix_identity    = sequence.prefix_identity;
+    entry.rewrite_checkpoint = sequence.rewrite_checkpoint;
+    entry.execution_frontier      = sequence.execution_frontier;
+    entry.text_kv_valid           = sequence.text_kv_valid;
+    entry.mtp_kv_valid            = sequence.mtp_kv_valid;
+    entry.dflash_context_frontier = sequence.dflash_context_frontier;
+    entry.mtp_drafts              = sequence.mtp_drafts;
+    entry.mtp_draft_count         = sequence.mtp_draft_count;
+    entry.rope_delta              = sequence.rope_delta;
+    entry.tail_hidden_valid       = sequence.tail_hidden_valid;
+    entry.detached_epoch          = ++registry_epoch;
+    // Move-only: the pages change owner here and nowhere else.
+    entry.kv = std::move(*sequence.kv);
+    sequence.kv.reset();
+
+    sequence.ledger.clear();
+    sequence.prefix_identity.clear();
+    sequence.rewrite_checkpoint      = {};
+    sequence.execution_frontier      = 0;
+    sequence.text_kv_valid           = 0;
+    sequence.mtp_kv_valid            = 0;
+    sequence.dflash_context_frontier = 0;
+    sequence.mtp_draft_count         = 0;
+    sequence.rope_delta              = 0;
+    sequence.tail_hidden_valid       = false;
+    sequence.retained                = false;
+
+    registry[static_cast<std::size_t>(index)].emplace(std::move(entry));
+}
+
+void ProgramImplCore::attach_registry_sequence(std::int32_t index, SequenceState& sequence) {
+    const auto entry_index = static_cast<std::size_t>(index);
+    if (index < 0 || entry_index >= registry.size() || !registry[entry_index]) {
+        throw std::logic_error("prefix attach requires a populated registry entry");
+    }
+
+    // Nothing may evict the entry between here and the install: it is still in its slot, and its
+    // state slots are the source of the copy below. Protection also keeps a displacement detach
+    // from taking this very index.
+    registry_protected_index_ = index;
+    try {
+        // Displace whatever this lane holds. A retained sequence is detached (it survives), any
+        // other bundle is simply released; either way the lane's state slots are zeroed before the
+        // entry's states are copied in.
+        if (sequence.kv) {
+            if (sequence.retained) {
+                detach_sequence(sequence);
+            } else {
+                sequence.kv.reset();
+            }
+            ordered_reset(sequence);
+        }
+
+        const std::uint32_t lane = sequence.lane;
+        const std::int32_t registry_state =
+            LinearStateSlots::registry_state_slot(static_cast<std::uint32_t>(index),
+                                                  max_concurrency);
+        const std::int32_t registry_checkpoint =
+            LinearStateSlots::registry_checkpoint_state_slot(static_cast<std::uint32_t>(index),
+                                                             max_concurrency);
+        decoder->linear_attention.copy_slot(
+            registry_state, LinearStateSlots::current_state_slot(lane, max_concurrency),
+            device.stream);
+        decoder->linear_attention.copy_slot(
+            registry_checkpoint,
+            LinearStateSlots::rewrite_checkpoint_state_slot(lane, max_concurrency), device.stream);
+        if (peer) {
+            const ScopedDevice scope(peer->device.device);
+            peer->decoder->linear_attention.copy_slot(
+                registry_state, LinearStateSlots::current_state_slot(lane, max_concurrency),
+                peer->device.stream);
+            peer->decoder->linear_attention.copy_slot(
+                registry_checkpoint,
+                LinearStateSlots::rewrite_checkpoint_state_slot(lane, max_concurrency),
+                peer->device.stream);
+        }
+
+        DetachedSequence entry = std::move(*registry[entry_index]);
+        registry[entry_index].reset();
+        registry_protected_index_ = -1;
+
+        if (entry.tail_hidden.size() != static_cast<std::size_t>(sequence.tail_hidden.bytes()) ||
+            entry.rewrite_checkpoint_hidden.size() !=
+                static_cast<std::size_t>(sequence.rewrite_checkpoint_hidden.bytes())) {
+            throw std::logic_error("prefix attach found a mismatched hidden-state payload");
+        }
+        if (!entry.tail_hidden.empty()) {
+            CUDA_CHECK(cudaMemcpy(sequence.tail_hidden.data, entry.tail_hidden.data(),
+                                  entry.tail_hidden.size(), cudaMemcpyHostToDevice));
+        }
+        if (!entry.rewrite_checkpoint_hidden.empty()) {
+            CUDA_CHECK(cudaMemcpy(sequence.rewrite_checkpoint_hidden.data,
+                                  entry.rewrite_checkpoint_hidden.data(),
+                                  entry.rewrite_checkpoint_hidden.size(),
+                                  cudaMemcpyHostToDevice));
+        }
+
+        sequence.kv                      = std::move(entry.kv);
+        sequence.ledger                  = std::move(entry.ledger);
+        sequence.prefix_identity         = std::move(entry.prefix_identity);
+        sequence.rewrite_checkpoint      = entry.rewrite_checkpoint;
+        sequence.execution_frontier      = entry.execution_frontier;
+        sequence.text_kv_valid           = entry.text_kv_valid;
+        sequence.mtp_kv_valid            = entry.mtp_kv_valid;
+        sequence.dflash_context_frontier = entry.dflash_context_frontier;
+        sequence.mtp_drafts              = entry.mtp_drafts;
+        sequence.mtp_draft_count         = entry.mtp_draft_count;
+        sequence.rope_delta              = entry.rope_delta;
+        sequence.tail_hidden_valid       = entry.tail_hidden_valid;
+        sequence.retained                = false;
+    } catch (...) {
+        registry_protected_index_ = -1;
+        throw;
+    }
 }
 
 qwen3_6::PagedKVCacheView ProgramImplCore::text_kv_view(const SequenceState& sequence) const {

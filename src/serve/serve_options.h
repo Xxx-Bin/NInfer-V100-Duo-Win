@@ -39,6 +39,8 @@ struct ServeOptions {
     std::uint32_t yarn_origin              = 262144;
     KvCapacityPolicy kv_capacity           = KvCapacityPolicy::explicit_capacity(8192);
     std::uint32_t max_concurrency          = 1;
+    // Detached prefix-registry entries: sequences that outlive the lane which produced them.
+    std::uint32_t prefix_registry_slots    = 0;
     std::uint32_t max_pending_requests     = 16;
     std::uint32_t pending_timeout_ms       = 30000;
     std::uint32_t prefill_chunk            = 1024;
