@@ -842,10 +842,25 @@ private:
                  retained_lane < max_concurrency_ &&
                  !instance_.program->can_admit_lane(lane, *request->lane_plans[lane]);
                  ++retained_lane) {
-                if (retained_lane != lane && slots_[retained_lane] == nullptr &&
+                // The admission test that produced this choice counted every retained sequence,
+                // including the one on `lane` itself -- the request is about to take that lane over.
+                // Skipping `lane` here leaves that page debt unpaid, and the reservation then fails
+                // inside start_prefill_lane.
+                if (slots_[retained_lane] == nullptr &&
                     instance_.program->has_retained_lane(retained_lane)) {
                     instance_.program->evict_retained_lane(retained_lane);
                     invalidate_lane_plans(retained_lane);
+                }
+            }
+            // Detached prefix-registry entries are reclaimable, and the admission test that
+            // produced this choice already counted them. Reclaiming only retained lanes leaves
+            // that debt unpaid: the request is admitted here and then fails to reserve KV inside
+            // start_prefill_lane, which is an engine-scope failure and stops the worker.
+            if (!instance_.program->can_admit_lane(lane, *request->lane_plans[lane]) &&
+                instance_.program->reclaim_registry_for(lane, *request->lane_plans[lane])) {
+                // Evicting an entry invalidates every cached plan that named it, here included.
+                for (std::uint32_t other = 0; other < max_concurrency_; ++other) {
+                    if (other != lane) { invalidate_lane_plans(other); }
                 }
             }
             if (!instance_.program->can_admit_lane(lane, *request->lane_plans[lane])) {

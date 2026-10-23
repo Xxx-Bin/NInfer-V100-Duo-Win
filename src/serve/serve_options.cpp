@@ -381,6 +381,15 @@ ServeOptions parse_serve_options(int argc, char** argv) {
     if (options.prefix_registry_slots > kMaximumPrefixRegistrySlots) {
         throw std::invalid_argument("--prefix-registry-slots must be in [0,4]");
     }
+    // These two contradict each other. A retained sequence is the only thing the registry can hold,
+    // and --no-prefix-reuse tells every request not to use one; keeping the registry on would let
+    // detached entries pin KV pages for a client that will never ask for them, which shows up as
+    // an allocation failure on a later, unrelated request rather than as a cache miss.
+    if (!options.allow_prefix_reuse && options.prefix_registry_slots != 0) {
+        throw std::invalid_argument(
+            "--prefix-registry-slots requires prefix reuse; it cannot be combined with "
+            "--no-prefix-reuse");
+    }
     if (options.max_pending_requests == 0) {
         throw std::invalid_argument("--max-pending-requests must be positive");
     }

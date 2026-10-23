@@ -412,6 +412,69 @@ ExerciseResult exercise(const char* artifact, bool graphs) {
     return {std::move(observations), cold_teacher_force_mismatches};
 }
 
+// Detached prefix registry (--prefix-registry-slots). A lane is a scheduling resource but it also
+// owned the sequence's KV bundle, so an unrelated request planned onto that lane destroyed the
+// resident session -- which is what a client-side "name this conversation" request does. With a
+// registry the session is detached instead and comes back on the next turn.
+//
+// The behavioral oracle is the cold run of the same continuation: a frontier count that looks
+// right proves nothing if the restored GDN/KV state is wrong, and a wrong state changes greedy
+// tokens. The registry is capacity 1 on purpose, so turn 2 also forces the displace path: the lane
+// it lands on still holds the side request's retained sequence, the registry is full and the
+// incoming entry is protected, so the displacement has to degrade to a release instead of failing.
+void registry_recovers_displaced_session(const char* artifact) {
+    // Eager and without logits capture: this case is the third Engine in the process, and it only
+    // needs tokens plus one cold comparison. Nothing here is a timing or graph test.
+    //
+    // Wider KV pool on purpose. A detached entry keeps its pages, so at the shared 4096-token
+    // capacity this case's own cold comparator cannot be admitted while the previous turn is still
+    // detached: 3274 retained + 3335 wanted exceeds the pool. That is the registry's real cost,
+    // not a defect, and a dedicated capacity keeps the gate about restore correctness.
+    constexpr std::uint32_t kRegistryCapacity = 8192;
+    ninfer::EngineOptions options = engine_options(artifact, false);
+    options.max_context           = kRegistryCapacity;
+    options.kv_capacity           = ninfer::KvCapacityPolicy::explicit_capacity(kRegistryCapacity);
+    options.prefix_registry_slots = 1;
+    ninfer::Engine engine(options);
+
+    using Path = ninfer::PrefixReusePath;
+    const auto input  = coding_prompt();
+    const auto tokens = engine.prepare(input).debug_token_ids();
+
+    // Turn 1 leaves a retained sequence in lane 0, with a committed response checkpoint.
+    const auto turn1 = run(engine, "registry_turn1", engine.prepare(input), true, Path::FullReset);
+
+    // The side request shares no prefix with the session, so it is planned FullReset on the lane
+    // the session occupies. Without the registry this is the request that wiped the prefix cache.
+    ninfer::PromptInput title;
+    title.options.enable_thinking = false;
+    title.messages.push_back(message(ninfer::ChatRole::User,
+        "Name this document in six words or fewer. Output the title only."));
+    run(engine, "registry_side", engine.prepare(title), true, Path::FullReset);
+
+    // Same continuation shape as the resident append case: the detached entry's frontier is the
+    // session's committed frontier, so this restores from the registry rather than from a lane.
+    ninfer::PromptInput followup;
+    followup.options.enable_thinking    = false;
+    followup.options.preserve_thinking  = true;
+    followup.messages.push_back(message(ninfer::ChatRole::User,
+        "Continue the implementation, and include a test for popping from an empty queue."));
+    const auto next_turn = engine.prepare(std::move(followup)).debug_token_ids();
+    const auto appended  = continuation(tokens, turn1.result, next_turn);
+    const auto turn2 = run(engine, "registry_turn2", engine.prepare_tokens(appended), true,
+                           Path::AppendAtFrontier);
+    require(turn2.result.reused_prompt_tokens == tokens.size() + kOutput - 1,
+            "detached registry entry did not restore the session frontier");
+
+    // The independent check: the restored state has to produce the cold run's tokens.
+    const auto turn2_cold = run(engine, "registry_turn2_cold", engine.prepare_tokens(appended),
+                               false, Path::FullReset);
+    same_output(turn2, turn2_cold);
+    std::cout << "detached prefix registry: displaced session restored "
+              << turn2.result.reused_prompt_tokens << "/" << appended.size()
+              << " tokens and matches the cold run" << std::endl;
+}
+
 } // namespace
 
 int main() {
@@ -443,6 +506,10 @@ int main() {
         require(captured.cold_teacher_force_mismatches == 0 &&
                     eager.cold_teacher_force_mismatches == 0,
                 "the fresh shared-history oracle does not reproduce the cold choice");
+        // Own Engine: the registry changes what a displaced lane keeps, so it must not share a
+        // Program with the cases above (their frontiers assume a released lane).
+        registry_recovers_displaced_session(artifact);
+        std::cout << "V100 Duo detached prefix registry: PASS\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "V100 Duo prefix reuse: " << error.what() << '\n';

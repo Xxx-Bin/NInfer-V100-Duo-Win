@@ -829,6 +829,17 @@ Detach 发生在 `FullReset` 分支，并且只在该 lane 仍持有 retained se
 容量治理：registry 满时按 `execution_frontier` 最大者优先保留，同长时淘汰更早 detach 的条目。
 256k 配置下一个 entry 约 147 MiB/卡（两个状态槽），占 KV 的 3.4%。
 
+**页不足时的回收必须真的发生。** `can_admit_lane` 把「lane 自己的 retained 序列会被 detach」算作
+不释放页，所以容量不够时它返回 false，由 `can_admit_lane_after_retained_eviction` 接手——后者把
+当前 lane 的 retained 和 registry entries 都算作可回收，这是对的。问题在于执行侧：`admit_planned_request`
+的回收循环曾用 `retained_lane != lane` 排除当前 lane，于是准入说「能腾出来」、实际一页没腾，请求被放行后
+在 `start_prefill_lane` 预留 KV 时抛 `std::bad_alloc`。这条异常是引擎级的：worker 停服、`complete_error`
+之后 `fail_all` 退出，但 HTTP 端口仍在监听，客户端看到的是永久 hang 而不是 500。
+
+现在的顺序是：executor 对当前 lane 的 retained 同样执行 `evict_retained_lane`（detach 进 registry），
+再用 `reclaim_registry_for` 把刚 detach 出来的 entry（以及其他 entries）淘汰掉，页才真正回到池子里。
+`reclaim_registry_for` 永不淘汰本 plan 即将 attach 的那个 entry。
+
 ---
 
 ## 11. Speculative decoding

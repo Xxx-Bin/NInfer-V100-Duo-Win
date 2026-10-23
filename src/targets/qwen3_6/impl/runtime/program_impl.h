@@ -550,10 +550,20 @@ bool ProgramImplCore::can_admit_lane(std::uint32_t lane, const RequestPlan& plan
     const DetachedSequence* attach = attached_entry(*plan.impl_);
     if (plan.impl_->attach_registry_index >= 0 && attach == nullptr) { return false; }
     const SequenceState& sequence = sequences[lane];
-    const auto can_replace        = [](const PagedKVPool& pool, std::uint32_t old_pages,
-                                std::uint32_t new_pages) {
-        return old_pages <= pool.entitled_pages() && new_pages <= pool.logical_page_capacity() &&
-               new_pages <= pool.page_group_count() - (pool.entitled_pages() - old_pages);
+    // A retained sequence with a registry is DETACHED, not released, when this lane is reused: its
+    // pages stay entitled to the registry entry. `can_replace` below must therefore not credit them
+    // back. Everywhere else the old bundle really is released and the credit is correct.
+    const bool lane_bundle_stays_entitled =
+        attach == nullptr && registry_capacity > 0 && sequence.retained && sequence.kv;
+    const auto can_replace = [lane_bundle_stays_entitled](const PagedKVPool& pool,
+                                                          std::uint32_t old_pages,
+                                                          std::uint32_t new_pages) {
+        if (old_pages > pool.entitled_pages() || new_pages > pool.logical_page_capacity()) {
+            return false;
+        }
+        const std::uint32_t still_entitled =
+            lane_bundle_stays_entitled ? pool.entitled_pages() : pool.entitled_pages() - old_pages;
+        return new_pages <= pool.page_group_count() - still_entitled;
     };
     const std::uint32_t resident_text = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
     const std::uint32_t old_text =
@@ -1526,7 +1536,18 @@ bool ProgramImplCore::evict_registry_entry(std::int32_t protect) noexcept {
     return true;
 }
 
-void ProgramImplCore::detach_sequence(SequenceState& sequence) {
+bool ProgramImplCore::reclaim_registry_for(std::uint32_t lane,
+                                          const RequestPlan& plan) noexcept {
+    if (lane >= max_concurrency || plan.impl_ == nullptr) { return false; }
+    // Never evict the entry this plan is attaching: it is the plan's own reuse base.
+    const std::int32_t protect = plan.impl_->attach_registry_index;
+    while (!can_admit_lane(lane, plan)) {
+        if (!evict_registry_entry(protect)) { break; }
+    }
+    return can_admit_lane(lane, plan);
+}
+
+void ProgramImplCore::detach_sequence(SequenceState& sequence, bool allow_evict) {
     if (!sequence.kv) { throw std::logic_error("prefix detach requires a KV allocation bundle"); }
     if (registry_capacity == 0) {
         throw std::logic_error("prefix detach requires a non-zero registry capacity");
@@ -1539,7 +1560,7 @@ void ProgramImplCore::detach_sequence(SequenceState& sequence) {
         }
     }
     if (index < 0) {
-        if (!evict_registry_entry()) {
+        if (!allow_evict || !evict_registry_entry()) {
             throw std::logic_error("prefix registry has no evictable entry");
         }
         for (std::size_t i = 0; i < registry.size(); ++i) {
@@ -1645,7 +1666,10 @@ void ProgramImplCore::attach_registry_sequence(std::int32_t index, SequenceState
             bool displaced = false;
             if (displace_retained) {
                 try {
-                    detach_sequence(sequence);
+                    // No eviction: the room this detach would need belongs to sessions that still
+                    // have a client. Dropping the displaced bundle costs one prefix cache; evicting
+                    // an entry costs another session's, and the incoming attach only needs one.
+                    detach_sequence(sequence, /*allow_evict=*/false);
                     displaced = true;
                 } catch (...) {
                     displaced = false;

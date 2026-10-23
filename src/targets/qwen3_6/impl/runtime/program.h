@@ -315,6 +315,12 @@ public:
     void abort_lane(std::uint32_t lane) noexcept;
     [[nodiscard]] bool has_retained_lane(std::uint32_t lane) const noexcept;
     void evict_retained_lane(std::uint32_t lane) noexcept;
+    // Frees detached registry entries until `lane` can admit `plan`, then reports whether it can.
+    // `can_admit_lane_after_retained_eviction` already counts other entries as reclaimable, so an
+    // admission that relies on that count must actually perform this reclaim: otherwise the plan
+    // is admitted and fails to allocate inside `start_prefill_lane`, which fails the whole worker
+    // instead of the request. The entry the plan is about to attach is never evicted.
+    [[nodiscard]] bool reclaim_registry_for(std::uint32_t lane, const RequestPlan& plan) noexcept;
     // Count of detached entries currently held. Zero whenever --prefix-registry-slots is zero.
     [[nodiscard]] std::uint32_t detached_prefix_count() const noexcept;
     [[nodiscard]] std::uint32_t detached_prefix_capacity() const noexcept {
@@ -493,7 +499,12 @@ private:
     // Moves a live retained sequence out of its lane and into a free registry entry, copying both
     // linear-attention states into the entry's dedicated slots. Leaves the lane empty (but does not
     // zero its state slots: the caller decides when that is safe).
-    void detach_sequence(SequenceState& sequence);
+    //
+    // `allow_evict` is false for the displacement inside an attach. There the registry is full of
+    // sessions a client may still return to, and the sequence asking for room is the one that just
+    // lost its lane -- evicting a live entry to make room for it trades one session's prefix cache
+    // for another's, which reads as flapping. The caller drops the displaced bundle instead.
+    void detach_sequence(SequenceState& sequence, bool allow_evict = true);
     // Reverses `detach_sequence` onto `lane`. Displaces whatever that lane currently holds;
     // `displace_retained` says whether that bundle is a reusable sequence worth preserving.
     void attach_registry_sequence(std::int32_t index, SequenceState& sequence,
