@@ -775,7 +775,8 @@ runtime::PrefillStepResult ProgramImplCore::start_prefill_lane(std::uint32_t lan
             }
             // A registry entry carries its own KV bundle and both linear-attention states, so it
             // replaces whatever this lane held. Every check below then runs against real state.
-            attach_registry_sequence(request_plan.attach_registry_index, sequence);
+            attach_registry_sequence(request_plan.attach_registry_index, sequence,
+                                     was_retained);
         }
         if (request_plan.reuse == ReusePath::FullReset) {
             if (was_retained && sequence.kv && registry_capacity > 0) {
@@ -1624,7 +1625,8 @@ void ProgramImplCore::detach_sequence(SequenceState& sequence) {
     registry[static_cast<std::size_t>(index)].emplace(std::move(entry));
 }
 
-void ProgramImplCore::attach_registry_sequence(std::int32_t index, SequenceState& sequence) {
+void ProgramImplCore::attach_registry_sequence(std::int32_t index, SequenceState& sequence,
+                                              bool displace_retained) {
     const auto entry_index = static_cast<std::size_t>(index);
     if (index < 0 || entry_index >= registry.size() || !registry[entry_index]) {
         throw std::logic_error("prefix attach requires a populated registry entry");
@@ -1635,15 +1637,21 @@ void ProgramImplCore::attach_registry_sequence(std::int32_t index, SequenceState
     // from taking this very index.
     registry_protected_index_ = index;
     try {
-        // Displace whatever this lane holds. A retained sequence is detached (it survives), any
-        // other bundle is simply released; either way the lane's state slots are zeroed before the
-        // entry's states are copied in.
+        // Displace whatever this lane holds. A reusable sequence is detached so it survives;
+        // if the registry cannot take it (it is full and this entry is protected) the bundle is
+        // released instead -- displacement must never fail the incoming request. Either way the
+        // lane's state slots are zeroed before the entry's states are copied in.
         if (sequence.kv) {
-            if (sequence.retained) {
-                detach_sequence(sequence);
-            } else {
-                sequence.kv.reset();
+            bool displaced = false;
+            if (displace_retained) {
+                try {
+                    detach_sequence(sequence);
+                    displaced = true;
+                } catch (...) {
+                    displaced = false;
+                }
             }
+            if (!displaced) { sequence.kv.reset(); }
             ordered_reset(sequence);
         }
 

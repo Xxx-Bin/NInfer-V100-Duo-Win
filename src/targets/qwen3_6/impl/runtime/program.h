@@ -494,8 +494,10 @@ private:
     // linear-attention states into the entry's dedicated slots. Leaves the lane empty (but does not
     // zero its state slots: the caller decides when that is safe).
     void detach_sequence(SequenceState& sequence);
-    // Reverses `detach_sequence` onto `lane`. Displaces whatever that lane currently holds.
-    void attach_registry_sequence(std::int32_t index, SequenceState& sequence);
+    // Reverses `detach_sequence` onto `lane`. Displaces whatever that lane currently holds;
+    // `displace_retained` says whether that bundle is a reusable sequence worth preserving.
+    void attach_registry_sequence(std::int32_t index, SequenceState& sequence,
+                                  bool displace_retained);
     // The entry a plan will attach, or nullptr when the plan uses its lane's own retained state.
     [[nodiscard]] const DetachedSequence*
     attached_entry(const RequestPlanImpl& plan) const noexcept;
