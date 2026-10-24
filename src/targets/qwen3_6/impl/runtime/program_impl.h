@@ -793,6 +793,14 @@ runtime::PrefillStepResult ProgramImplCore::start_prefill_lane(std::uint32_t lan
                 // Detach instead of destroy: the pages and both states stay alive in the registry.
                 // `ordered_reset` must come AFTER the copy out, and it is the only thing allowed to
                 // zero this lane's state slots.
+                //
+                // Eviction stays enabled here, unlike the displace path in
+                // `attach_registry_sequence`. A full registry at this point holds sessions that no
+                // lane is currently serving, and `evict_registry_entry` already ranks them, so
+                // trading the least valuable one for this sequence is the same decision the
+                // capacity policy would make. Refusing it is not "protecting another session": with
+                // one slot it strands every later session behind a stale entry -- measured as
+                // `turn2 cached=961 -> 0` (full_reset) for the template-title cohort.
                 detach_sequence(sequence);
                 ordered_reset(sequence);
             } else {
