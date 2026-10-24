@@ -75,7 +75,13 @@
 
 - 目标成立：B（本地的小请求）之后 A 的 turn2 从 `cached=0/full_reset` 回到 `961/restore_turn_checkpoint`。
 - **复跑（2026-10-24，撤回 `allow_evict=false` 改动、重新编译后）**：C `961`、A `961`、B `0`、D `961`，
-  与基线逐字段一致；`_scratch/p0/p0_result.json` 即本次结果，`p0_result-baseline.json` 为改动前快照。
+  与基线逐字段一致；`p0_result-registry1.json` 为本次快照，`p0_result-baseline.json` 为改动前快照，
+  `p0_result.json` 是随后 `slots=2` 那一轮的覆盖结果（同样 C/A/D `961`、B `0`）。
+- **`slots=1` 与 `slots=2` 在 C=1 单会话形状下结果相同**（都是 `961`）。`slots=2` 没有可观测收益：
+  侧请求序列即使留在 registry，重复发送同样的侧请求仍是 `full_reset`/`cached=0`——
+  42 token 和 315 token 两种长度都测了，见 `_scratch/p0/ab_two_slot.py`。
+  原因不在槽位：A 能命中是因为 turn2 严格包含 turn1 的 961 token；侧请求两次 prompt 等长，
+  自身没有落在 prompt 内的可复用边界，保不保都用不上。
 - 默认关闭逐字段与改动前一致，`runtime` 预留同为 1.65 GiB；开启后 1.79 GiB，+146 MiB = 2×73.4 MiB 状态槽/卡。
 - postfix 组不变是设计预期：该形状没有 detach 发生，旁路请求在原地覆盖 checkpoint，属方案 2（`PreserveExisting`）的职责。
 - 原始记录：`_scratch/p0/p0_result.json`、`_scratch/p0/HANDOFF-prefix-registry.md`。
