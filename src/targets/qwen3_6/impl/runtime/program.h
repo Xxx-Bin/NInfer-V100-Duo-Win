@@ -245,6 +245,8 @@ struct RequestControl {
         bool prepare_mtp                 = false;
         ReusePath reuse                  = ReusePath::FullReset;
         MtpBridgeMode mtp_bridge         = MtpBridgeMode::None;
+        // Probe only: this prefill reuses a prefix-registry entry instead of the lane's sequence.
+        bool attached_from_registry = false;
     };
 
     std::optional<Prefill> prefill;
@@ -339,6 +341,9 @@ public:
     // Detached prefix-registry entry count. Fixed at construction: every entry owns two
     // linear-attention slots, so the pool is sized once and never resized.
     const std::uint32_t registry_capacity;
+    // Each registry entry keeps only its rewrite checkpoint instead of both states. Set once from
+    // the plan; the detach/attach copies and the registry's slot arithmetic all read it.
+    const bool registry_drops_current;
     const std::uint32_t prefill_chunk;
     const std::uint32_t draft_window;
     const SpeculativeBackend speculative_backend;

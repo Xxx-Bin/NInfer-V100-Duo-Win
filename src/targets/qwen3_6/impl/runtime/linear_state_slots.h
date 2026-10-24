@@ -21,7 +21,8 @@ namespace ninfer::targets::qwen3_6::detail::NINFER_QWEN36_RUNTIME_NS {
  */
 struct LinearStateSlots {
     [[nodiscard]] static std::int32_t state_slot_count(std::uint32_t max_concurrency,
-                                                       std::uint32_t registry_entries = 0) {
+                                                       std::uint32_t registry_entries = 0,
+                                                       bool drop_current = false) {
         if (max_concurrency == 0 ||
             max_concurrency > static_cast<std::uint32_t>(max_concurrency_limit())) {
             throw std::invalid_argument("Qwen3.6 Linear Attention concurrency is invalid");
@@ -31,8 +32,9 @@ struct LinearStateSlots {
         }
         const std::int32_t lane_slots =
             static_cast<std::int32_t>(2U * max_concurrency);
+        // One slot per entry when the entry keeps only its rewrite checkpoint.
         const std::int32_t registry_slots =
-            static_cast<std::int32_t>(2U * registry_entries);
+            static_cast<std::int32_t>((drop_current ? 1U : 2U) * registry_entries);
         if (lane_slots > std::numeric_limits<std::int32_t>::max() - registry_slots) {
             throw std::invalid_argument("Qwen3.6 Linear Attention slot count overflows");
         }
@@ -65,23 +67,32 @@ struct LinearStateSlots {
      * First slot of registry entry `entry`. A detached entry keeps BOTH of the sequence's states,
      * because either reuse path may select it later: `AppendAtFrontier` needs the continuation at
      * the execution frontier, and the checkpoint restores need the state at the rewrite boundary.
+     *
+     * Under `drop_current` an entry keeps ONLY the rewrite checkpoint, so there is no current slot
+     * to name: the index this function would return belongs to a different entry's checkpoint. It
+     * throws instead of returning an index that silently points at somebody else's state.
      */
     [[nodiscard]] static std::int32_t registry_state_slot(std::uint32_t entry,
-                                                          std::uint32_t max_concurrency) {
-        return static_cast<std::int32_t>(2U * max_concurrency) + checked_entry_offset(entry);
+                                                          std::uint32_t max_concurrency,
+                                                          bool drop_current = false) {
+        if (drop_current) { throw std::logic_error("registry keeps no current slot"); }
+        return static_cast<std::int32_t>(2U * max_concurrency) + checked_entry_offset(entry, 2U);
     }
 
     [[nodiscard]] static std::int32_t
-    registry_checkpoint_state_slot(std::uint32_t entry, std::uint32_t max_concurrency) {
-        return registry_state_slot(entry, max_concurrency) + 1;
+    registry_checkpoint_state_slot(std::uint32_t entry, std::uint32_t max_concurrency,
+                                   bool drop_current = false) {
+        return static_cast<std::int32_t>(2U * max_concurrency) +
+               checked_entry_offset(entry, drop_current ? 1U : 2U) + (drop_current ? 0 : 1);
     }
 
 private:
-    [[nodiscard]] static std::int32_t checked_entry_offset(std::uint32_t entry) {
+    [[nodiscard]] static std::int32_t checked_entry_offset(std::uint32_t entry,
+                                                           std::uint32_t stride) {
         if (entry >= static_cast<std::uint32_t>(registry_entry_limit())) {
             throw std::out_of_range("Qwen3.6 prefix registry entry is out of range");
         }
-        return static_cast<std::int32_t>(2U * entry);
+        return static_cast<std::int32_t>(stride * entry);
     }
 };
 

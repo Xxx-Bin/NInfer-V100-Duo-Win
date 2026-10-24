@@ -112,7 +112,7 @@ std::string serve_usage_text(const char* argv0) {
     return std::string("usage: ") + argv0 +
            " <model.ninfer> [--host H] [--port N] [--api-key KEY] "
            "[--model-id ID] [--max-context N] [--kv-capacity N|auto] [--max-concurrency N] "
-           "[--prefix-registry-slots N] "
+           "[--prefix-registry-slots N] [--prefix-registry-drop-current] "
            "[--rope native|yarn] [--yarn-factor F] [--yarn-origin O] "
            "[--max-pending-requests N] [--pending-timeout-ms N] "
            "[--prefill-chunk N] [--log-stats-interval-ms N] [--device N] [--tp 1|2] "
@@ -146,6 +146,11 @@ std::string serve_usage_text(const char* argv0) {
            "       --kv-capacity auto leaves " +
            std::to_string(kDefaultKvCapacityHeadroomBytes / (1024ULL * 1024ULL)) +
            " MiB of sizing headroom\n"
+           "       --prefix-registry-slots N keeps up to N detached sessions in the prefix registry\n"
+           "       --prefix-registry-drop-current keeps only each entry's turn checkpoint; entries\n"
+           "       then cost one linear-attention state instead of two but cannot serve\n"
+           "       append-at-frontier reuse, which falls back to the checkpoint restore. Requires\n"
+           "       --prefix-registry-slots.\n"
            "       --no-prefix-reuse disables compatible-prefix caching (enabled by default).\n"
            "       Prefix reuse supports --tp 2 with --spec mtp, including exact prompt hits.\n"
            "       Reuse resumes a retained frontier or complete turn/response checkpoint;\n"
@@ -231,6 +236,8 @@ ServeOptions parse_serve_options(int argc, char** argv) {
         } else if (arg == "--prefix-registry-slots") {
             options.prefix_registry_slots = static_cast<std::uint32_t>(parse_nonnegative_int(
                 require_value("--prefix-registry-slots"), "prefix-registry-slots"));
+        } else if (arg == "--prefix-registry-drop-current") {
+            options.prefix_registry_drop_current = true;
         } else if (arg == "--max-pending-requests") {
             options.max_pending_requests = static_cast<std::uint32_t>(parse_nonnegative_int(
                 require_value("--max-pending-requests"), "max-pending-requests"));
@@ -389,6 +396,11 @@ ServeOptions parse_serve_options(int argc, char** argv) {
         throw std::invalid_argument(
             "--prefix-registry-slots requires prefix reuse; it cannot be combined with "
             "--no-prefix-reuse");
+    }
+    // The switch shrinks each registry entry, so it is meaningless without a registry to shrink:
+    // accept it only where it can actually change the layout.
+    if (options.prefix_registry_drop_current && options.prefix_registry_slots == 0) {
+        throw std::invalid_argument("--prefix-registry-drop-current requires --prefix-registry-slots");
     }
     if (options.max_pending_requests == 0) {
         throw std::invalid_argument("--max-pending-requests must be positive");

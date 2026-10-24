@@ -474,6 +474,7 @@ private:
         if (request->begin) {
             result.reused_prompt_tokens = request->begin->reused_prompt_tokens;
             result.prefix_reuse_path    = request->begin->prefix_reuse_path;
+            result.attached_from_registry = request->begin->attached_from_registry;
         }
         if (request->lane) {
             result.timings = instance_.program->generation_timings_lane(*request->lane);

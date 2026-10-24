@@ -41,6 +41,10 @@ struct ServeOptions {
     std::uint32_t max_concurrency          = 1;
     // Detached prefix-registry entries: sequences that outlive the lane which produced them.
     std::uint32_t prefix_registry_slots    = 0;
+    // Keep only the rewrite checkpoint of each registry entry: one linear-attention state per entry
+    // instead of two. Entries can then no longer serve append-at-frontier reuse. Requires
+    // --prefix-registry-slots.
+    bool prefix_registry_drop_current      = false;
     std::uint32_t max_pending_requests     = 16;
     std::uint32_t pending_timeout_ms       = 30000;
     std::uint32_t prefill_chunk            = 1024;

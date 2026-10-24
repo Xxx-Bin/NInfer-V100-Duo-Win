@@ -38,6 +38,11 @@ struct GenerationMetrics {
     std::vector<std::uint64_t> speculative_accepted_per_position;
     std::uint32_t prefix_cache_hit_tokens     = 0;
     ninfer::PrefixReusePath prefix_reuse_path = ninfer::PrefixReusePath::FullReset;
+    // Probe only: reuse base came from a prefix-registry entry.
+    bool attach_registry_entry = false;
+    // Engine-level layout fact, constant for the process: registry entries keep their current
+    // linear-attention slot (the default) or only their checkpoint (--prefix-registry-drop-current).
+    bool registry_keep_current = true;
 };
 
 struct GenerationOutcome {

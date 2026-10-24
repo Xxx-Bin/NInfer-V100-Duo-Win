@@ -249,6 +249,7 @@ ProgramImplCore::ProgramImplCore(const LoadedModelData& model_in,
     : model(model_in), execution(execution_in), device(execution_in.primary()), tp(execution_in.tp),
       capacity(plan.capacity), kv_capacity(plan.kv_capacity),
       max_concurrency(plan.max_concurrency), registry_capacity(plan.prefix_registry_slots),
+      registry_drops_current(plan.prefix_registry_drop_current),
       prefill_chunk(plan.prefill_chunk),
       draft_window(plan.draft_window), speculative_backend(plan.speculative_backend),
       kv_dtype(plan.kv_dtype), kv_quant_group(plan.kv_quant_group),
@@ -1024,6 +1025,7 @@ runtime::PrefillStepResult ProgramImplCore::start_prefill_lane(std::uint32_t lan
             .prepare_mtp                = request_plan.prepare_mtp,
             .reuse                      = request_plan.reuse,
             .mtp_bridge                 = request_plan.mtp_bridge,
+            .attached_from_registry     = request_plan.attach_registry_index >= 0,
         };
         request.prefill.emplace(std::move(prefill));
         auto& staged = *request.prefill;
@@ -1617,21 +1619,31 @@ void ProgramImplCore::detach_sequence(SequenceState& sequence, bool allow_evict)
     unbind_sequence_kv(sequence);
 
     const auto entry_index = static_cast<std::uint32_t>(index);
-    const std::int32_t registry_state =
-        LinearStateSlots::registry_state_slot(entry_index, max_concurrency);
     const std::int32_t registry_checkpoint =
-        LinearStateSlots::registry_checkpoint_state_slot(entry_index, max_concurrency);
-    decoder->linear_attention.copy_slot(
-        LinearStateSlots::current_state_slot(sequence.lane, max_concurrency), registry_state,
-        device.stream);
+        LinearStateSlots::registry_checkpoint_state_slot(entry_index, max_concurrency,
+                                                         registry_drops_current);
+    // With the current slot dropped the entry keeps only the turn checkpoint, so there is no
+    // destination for the continuation and it is dropped here (it can be recomputed from the
+    // checkpoint on attach). The slot arithmetic refuses to name a current slot in that mode.
+    if (!registry_drops_current) {
+        const std::int32_t registry_state = LinearStateSlots::registry_state_slot(
+            entry_index, max_concurrency, registry_drops_current);
+        decoder->linear_attention.copy_slot(
+            LinearStateSlots::current_state_slot(sequence.lane, max_concurrency), registry_state,
+            device.stream);
+    }
     decoder->linear_attention.copy_slot(
         LinearStateSlots::rewrite_checkpoint_state_slot(sequence.lane, max_concurrency),
         registry_checkpoint, device.stream);
     if (peer) {
         const ScopedDevice scope(peer->device.device);
-        peer->decoder->linear_attention.copy_slot(
-            LinearStateSlots::current_state_slot(sequence.lane, max_concurrency), registry_state,
-            peer->device.stream);
+        if (!registry_drops_current) {
+            const std::int32_t registry_state = LinearStateSlots::registry_state_slot(
+                entry_index, max_concurrency, registry_drops_current);
+            peer->decoder->linear_attention.copy_slot(
+                LinearStateSlots::current_state_slot(sequence.lane, max_concurrency),
+                registry_state, peer->device.stream);
+        }
         peer->decoder->linear_attention.copy_slot(
             LinearStateSlots::rewrite_checkpoint_state_slot(sequence.lane, max_concurrency),
             registry_checkpoint, peer->device.stream);
@@ -1721,27 +1733,48 @@ void ProgramImplCore::attach_registry_sequence(std::int32_t index, SequenceState
         }
 
         const std::uint32_t lane = sequence.lane;
-        const std::int32_t registry_state =
-            LinearStateSlots::registry_state_slot(static_cast<std::uint32_t>(index),
-                                                  max_concurrency);
         const std::int32_t registry_checkpoint =
             LinearStateSlots::registry_checkpoint_state_slot(static_cast<std::uint32_t>(index),
-                                                             max_concurrency);
-        decoder->linear_attention.copy_slot(
-            registry_state, LinearStateSlots::current_state_slot(lane, max_concurrency),
-            device.stream);
+                                                             max_concurrency,
+                                                             registry_drops_current);
+        if (!registry_drops_current) {
+            const std::int32_t registry_state = LinearStateSlots::registry_state_slot(
+                static_cast<std::uint32_t>(index), max_concurrency, registry_drops_current);
+            decoder->linear_attention.copy_slot(
+                registry_state, LinearStateSlots::current_state_slot(lane, max_concurrency),
+                device.stream);
+        }
         decoder->linear_attention.copy_slot(
             registry_checkpoint,
             LinearStateSlots::rewrite_checkpoint_state_slot(lane, max_concurrency), device.stream);
+        if (registry_drops_current) {
+            // The entry has no continuation state, and the reuse path installed below only runs
+            // the continuation forward from the checkpoint. Seed the continuation from the
+            // checkpoint here rather than relying on whichever restore path executes next: the
+            // same stream orders this copy after the one above.
+            decoder->linear_attention.copy_slot(
+                LinearStateSlots::rewrite_checkpoint_state_slot(lane, max_concurrency),
+                LinearStateSlots::current_state_slot(lane, max_concurrency), device.stream);
+        }
         if (peer) {
             const ScopedDevice scope(peer->device.device);
-            peer->decoder->linear_attention.copy_slot(
-                registry_state, LinearStateSlots::current_state_slot(lane, max_concurrency),
-                peer->device.stream);
+            if (!registry_drops_current) {
+                const std::int32_t registry_state = LinearStateSlots::registry_state_slot(
+                    static_cast<std::uint32_t>(index), max_concurrency, registry_drops_current);
+                peer->decoder->linear_attention.copy_slot(
+                    registry_state, LinearStateSlots::current_state_slot(lane, max_concurrency),
+                    peer->device.stream);
+            }
             peer->decoder->linear_attention.copy_slot(
                 registry_checkpoint,
                 LinearStateSlots::rewrite_checkpoint_state_slot(lane, max_concurrency),
                 peer->device.stream);
+            if (registry_drops_current) {
+                peer->decoder->linear_attention.copy_slot(
+                    LinearStateSlots::rewrite_checkpoint_state_slot(lane, max_concurrency),
+                    LinearStateSlots::current_state_slot(lane, max_concurrency),
+                    peer->device.stream);
+            }
         }
 
         DetachedSequence entry = std::move(*registry[entry_index]);
@@ -2696,7 +2729,8 @@ runtime::PrefillStepResult ProgramImplCore::advance_prefill(SequenceState& seque
     RequestControl::Prefill& staged = *request.prefill;
     const runtime::BeginSummary summary{.prompt_tokens        = staged.prompt_tokens,
                                         .reused_prompt_tokens = staged.base,
-                                        .prefix_reuse_path    = staged.reuse};
+                                        .prefix_reuse_path    = staged.reuse,
+                                        .attached_from_registry = staged.attached_from_registry};
     std::uint32_t processed_prompt_tokens = 0;
     const auto started                    = Clock::now();
     try {

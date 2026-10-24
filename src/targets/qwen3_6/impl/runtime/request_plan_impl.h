@@ -218,8 +218,13 @@ RequestPlan ProgramImplCore::plan_request_for_lane(std::uint32_t lane,
         if (plan->reuse == ReusePath::FullReset && !registry.empty()) {
             // Append candidates win over checkpoint candidates across the whole registry, and
             // within a class the longest prefix wins, so the choice does not depend on slot order.
+            //
+            // Under `registry_drops_current` no entry keeps its continuation state, so there is no
+            // append candidate at all: pass 0 is skipped whole rather than evaluated and rejected,
+            // which is what keeps `attach && AppendAtFrontier` unreachable by construction.
             std::size_t best    = registry.size();
-            for (std::size_t pass = 0; pass < 2 && best == registry.size(); ++pass) {
+            for (std::size_t pass = registry_drops_current ? 1U : 0U;
+                 pass < 2 && best == registry.size(); ++pass) {
                 for (std::size_t i = 0; i < registry.size(); ++i) {
                     const std::optional<DetachedSequence>& entry = registry[i];
                     if (!entry) { continue; }

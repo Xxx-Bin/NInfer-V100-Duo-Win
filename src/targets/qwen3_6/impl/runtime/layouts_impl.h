@@ -100,7 +100,7 @@ PersistentLayout persistent_layout(const SequencePlanImpl& plan) {
     const std::int32_t tp = plan.tp;
     if (tp != 1 && tp != 2) { throw std::invalid_argument("sequence plan tp must be 1 or 2"); }
     const std::int32_t linear_state_slots = LinearStateSlots::state_slot_count(
-        plan.max_concurrency, plan.prefix_registry_slots);
+        plan.max_concurrency, plan.prefix_registry_slots, plan.prefix_registry_drop_current);
     const auto effective_prefill_chunk =
         static_cast<std::int32_t>(std::min(plan.prefill_chunk, plan.capacity));
     const std::uint32_t logical_pages  = page_count(plan.capacity);
@@ -657,6 +657,11 @@ std::uint32_t validate_target_options(DeviceContext& device, const EngineOptions
     if (options.prefix_registry_slots > kMaximumPrefixRegistrySlots) {
         throw std::invalid_argument("prefix_registry_slots must be in [0,4]");
     }
+    // Dropping the current slot of every registry entry is a property of a NON-empty registry;
+    // with no entries there is nothing to keep small and the flag would silently mean nothing.
+    if (options.prefix_registry_drop_current && options.prefix_registry_slots == 0) {
+        throw std::invalid_argument("prefix_registry_drop_current requires prefix_registry_slots");
+    }
     if (options.vision_max_tokens == 0 ||
         options.vision_max_tokens > kMaximumVisionTokenBudget) {
         throw std::invalid_argument("vision_max_tokens must be in [1,32768]");
@@ -754,6 +759,7 @@ std::unique_ptr<SequencePlanImpl> build_sequence_candidate(const SequencePlannin
         "resolved Paged KV capacity exceeds int32"));
     impl->max_concurrency     = inputs.max_concurrency;
     impl->prefix_registry_slots = inputs.prefix_registry_slots;
+    impl->prefix_registry_drop_current = inputs.prefix_registry_drop_current;
     impl->prefill_chunk       = inputs.prefill_chunk;
     impl->draft_window        = inputs.draft_window;
     impl->speculative_backend = inputs.speculative_backend;
@@ -867,6 +873,7 @@ make_sequence_planner_impl(DeviceContext& device, const EngineOptions& options,
         .vision_max_tokens   = std::min(options.max_context, options.vision_max_tokens),
         .max_concurrency     = options.max_concurrency,
         .prefix_registry_slots = options.prefix_registry_slots,
+        .prefix_registry_drop_current = options.prefix_registry_drop_current,
         .prefill_chunk       = std::min(options.prefill_chunk, options.max_context),
         .draft_window        = options.speculative.draft_tokens,
         .speculative_backend = options.speculative.backend,

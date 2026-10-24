@@ -120,6 +120,11 @@ struct EngineOptions {
     // detached into the registry instead of being released, and re-attached (to any lane) by a
     // later request that matches its prefix. Zero disables the feature.
     std::uint32_t prefix_registry_slots = 0;
+    // Keep only the rewrite checkpoint of each registry entry (one linear-attention state instead
+    // of two). An entry then cannot serve append-at-frontier reuse, so such a request degrades to
+    // the checkpoint restore and recomputes the tokens after that checkpoint. Requires a non-zero
+    // `prefix_registry_slots`.
+    bool prefix_registry_drop_current = false;
     std::uint32_t max_pending_requests = 16;
     std::uint32_t pending_timeout_ms   = 30000;
     std::uint32_t prefill_chunk        = 1024;
@@ -444,6 +449,9 @@ struct GenerationResult {
     FinishReason finish_reason         = FinishReason::None;
     std::uint32_t reused_prompt_tokens = 0;
     PrefixReusePath prefix_reuse_path  = PrefixReusePath::FullReset;
+    // Probe only (no control flow reads this): true when the reuse base came from a prefix-registry
+    // entry rather than this lane's retained sequence.
+    bool attached_from_registry = false;
     GenerationTimings timings;
     SpeculativeStats speculative;
 };

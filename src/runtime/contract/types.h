@@ -89,6 +89,8 @@ struct BeginSummary {
     std::uint32_t prompt_tokens        = 0;
     std::uint32_t reused_prompt_tokens = 0;
     PrefixReusePath prefix_reuse_path  = PrefixReusePath::FullReset;
+    // Probe only (no control flow reads this): the reuse base was a prefix-registry entry.
+    bool attached_from_registry = false;
 };
 
 struct GeneratedRound {
