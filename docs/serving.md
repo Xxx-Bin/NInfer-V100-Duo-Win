@@ -574,7 +574,8 @@ curl http://127.0.0.1:8080/v1/models \
 | `--yarn-factor F` | YaRN scaling factor, in `[1.0, 64.0]`; only read under `--rope yarn`; `origin x factor` must be a whole token count not exceeding `1048576` | `4.0` |
 | `--yarn-origin O` | YaRN origin window; must equal the artifact's registered native context capacity (`262144`) | `262144` |
 | `--max-concurrency N` | maximum admitted requests; valid range `1..8` | `1` |
-| `--prefix-registry-slots N` | detached prefix-cache entries that outlive the lane which produced them; each costs two linear-attention state slots per device; requires prefix reuse, so it cannot be combined with `--no-prefix-reuse`; valid range `0..4` | `0` |
+| `--prefix-registry-slots N` | detached prefix-cache entries that outlive the lane which produced them; each costs two linear-attention state slots per device (one under `--prefix-registry-drop-current`); requires prefix reuse, so it cannot be combined with `--no-prefix-reuse`; valid range `0..4` | `0` |
+| `--prefix-registry-drop-current` | keep only each entry's turn checkpoint: halves the per-entry state cost, and entries can no longer serve append-at-frontier reuse, so a request that would have continued from an entry's frontier re-prefills from its checkpoint boundary instead; requires `--prefix-registry-slots` | off |
 | `--max-pending-requests N` | additional requests allowed to wait for admission | `16` |
 | `--pending-timeout-ms N` | maximum preparation-plus-admission wait | `30000` |
 | `--prefill-chunk N` | text-prefill chunk | `1024` |

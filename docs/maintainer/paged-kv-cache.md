@@ -812,7 +812,8 @@ pages 返回各自 pool；随后各 pool 的 exact frontier 和 fixed continuati
   持有任何 allocation，registry 与 lane 不存在同时拥有同一批页的窗口，因此不需要 page refcount，
   与 §10.3 的结论一致；
 - 两个线性注意力状态槽（continuation 与 rewrite checkpoint），位于 lane 槽区间之后的
-  `[2C, 2C+2R)`，按 entry 编号寻址，与 lane 槽不相交；
+  `[2C, 2C+2R)`，按 entry 编号寻址，与 lane 槽不相交。`--prefix-registry-drop-current` 只保留
+  rewrite checkpoint，区间缩为 `[2C, 2C+R)`，见 §10.5；
 - `tail_hidden` / `rewrite_checkpoint_hidden` 的 host 副本（每个 10 KiB）。这两者是共享 arena 的
   per-lane slice，不能随 `SequenceState` 一起移动，attach 时必须按新 lane 重新拷贝进去；
 - ledger、prefix identity、`execution_frontier`、`text_kv_valid`、`mtp_kv_valid`、
@@ -823,7 +824,8 @@ Detach 发生在 `FullReset` 分支，并且只在该 lane 仍持有 retained se
 既有的 `bind_sequence_kv`，由它按新 lane 取行号并重刷两个 rank 的 block table。
 
 容量治理：registry 满时按 `execution_frontier` 最大者优先保留，同长时淘汰更早 detach 的条目。
-256k 配置下一个 entry 约 147 MiB/卡（两个状态槽），占 KV 的 3.4%。
+256k 配置下一个 entry 约 147 MiB/卡（两个状态槽；`--prefix-registry-drop-current` 时 73.4 MiB），
+占 KV 的 3.4%。
 
 **准入判定与回收是同一份数据。** `ProgramImplCore::plan_lane_admission` 一次回答两件事：该 plan
 能否进入该 lane、以及为了进入必须先放掉哪些 bundle；结果是可执行的 `runtime::AdmissionPlan`
@@ -848,6 +850,31 @@ executor 拿到计划后照单执行（`Program::apply_lane_admission`），不�
 候选顺序即牺牲顺序：prefix 最短者先走，同长时更早 detach 的先走；lane bundle 等价于「此刻
 detach」，所以同长时排在后面。`--prefix-registry-slots 0` 时没有 entry 可淘汰，候选只剩其他 lane
 的 retained bundle，按 lane 序释放——这是该配置一直以来的唯一页来源，行为不变。
+
+### 10.5 只保留 checkpoint 的 entry（`--prefix-registry-drop-current`）
+
+默认 entry 保存两份状态，因为两条复用路径各读一份：append 读 continuation（frontier 那份），
+所有 restore 读 rewrite checkpoint。两份都是**必须当场落盘**的：状态不可回滚，晚的那份可以从早的
+那份重放得到，早的那份一旦过了那个 token 就再也拿不回来。
+
+打开该开关后 entry 只留 checkpoint，槽数与显存随之下降，代价是 **append 候选整体消失**：
+
+- `plan_request_for_lane` 的 registry 两趟扫描从 pass 1 起，append 候选不会被构造出来。
+  这是"不可达 by construction"，不是"选中之后再拒绝"——后者会把 `reuse_base` 定在 frontier，
+  而状态只到 checkpoint 边界，KV 与状态错位，输出静默错误。
+- `LinearStateSlots::registry_state_slot` 在该模式下 `throw`，而不是返回一个恰好属于别的 entry 的
+  编号：漏改的调用点必须在第一次跑到时炸掉。
+- attach 跳过 `registry current → lane current` 的拷贝，并在拷入 checkpoint 后本地补一次
+  `lane current ← lane checkpoint`，使正确性不依赖 restore 路径是否顺手初始化 current。
+
+降级的代价严格等于 **checkpoint 边界到 frontier 的距离**，即上一轮输出的长度加模板尾，不是一个
+常数：实测 Δ=51–56 token 时 TTFT +260–283 ms（1110 tok/s 折算），Δ 随回复长度线性增长。
+收益是每 entry 每卡 73.41 MiB（`runtime_reservation_bytes` 1,920,778,496 → 1,843,806,464 B）。
+两种配置的贪心输出逐 token 相同（sha256 一致），`--spec mtp` 下投机接受率也完全相同
+（414 drafted / 278 accepted）——降级只影响重算量，不影响结果。
+
+判据与完整测量见 `docs/notes/prefix-reuse-decision.md`，开关本身的实测记录见
+`docs/notes/registry-drop-current.md`。
 
 ---
 

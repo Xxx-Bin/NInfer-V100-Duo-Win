@@ -1,5 +1,11 @@
 # prefix registry 交接（feat/prefix-registry）
 
+> **状态：已归档 · 交接记录，结论以决策记录为准**
+> 归档：2026-10-24 · 归属：record · 角色：note
+> 原文适用条件：Windows 11 · 2×V100-SXM2-16GB · sm_70 · CUDA 12.8 · TP2 · `--max-concurrency 1`
+> 现行替代：[prefix-reuse-decision.md](prefix-reuse-decision.md)（分支已合入 `master` `f7a284a`）
+> 保留理由：hang 的成因链、测量卫生与踩过的坑仍是排障入口；「剩余工作」一节已被决策记录 §8 取代
+
 更新时间 2026-10-24。分支 `feat/prefix-registry`，HEAD（本文档所在提交）。
 
 ## 一句话
