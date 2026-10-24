@@ -536,116 +536,179 @@ ProgramImplCore::attached_entry(const RequestPlanImpl& plan) const noexcept {
     return &*registry[index];
 }
 
-bool ProgramImplCore::can_admit_lane(std::uint32_t lane, const RequestPlan& plan) const noexcept {
-    if (lane >= max_concurrency || plan.impl_ == nullptr) { return false; }
+runtime::AdmissionPlan ProgramImplCore::plan_lane_admission(std::uint32_t lane,
+                                                            const RequestPlan& plan) const {
+    runtime::AdmissionPlan admission;
+    if (lane >= max_concurrency || plan.impl_ == nullptr) { return admission; }
     const RequestControl& request = requests[lane];
     if (request.lifecycle == Lifecycle::Prefilling || request.lifecycle == Lifecycle::Active ||
         request.lifecycle == Lifecycle::Pending) {
-        return false;
+        return admission;
     }
-    // An attached entry is resized in place, so its own entitlement is the "old" side of the
-    // replacement: only the growth beyond what it already holds has to come from free pages. The
-    // lane's own bundle (if any) is detached, not released, so it stays entitled and must not be
-    // counted as reclaimable here.
-    const DetachedSequence* attach = attached_entry(*plan.impl_);
-    if (plan.impl_->attach_registry_index >= 0 && attach == nullptr) { return false; }
+    const RequestPlanImpl& request_plan = *plan.impl_;
+    // The plan's reuse base must still exist. It is the one thing reclaim can take away between
+    // planning and admission, and the one thing the plan cannot be rewritten without.
+    const DetachedSequence* attach = attached_entry(request_plan);
+    if (request_plan.attach_registry_index >= 0 && attach == nullptr) { return admission; }
+
     const SequenceState& sequence = sequences[lane];
-    // A retained sequence with a registry is DETACHED, not released, when this lane is reused: its
-    // pages stay entitled to the registry entry. `can_replace` below must therefore not credit them
-    // back. Everywhere else the old bundle really is released and the credit is correct.
-    const bool lane_bundle_stays_entitled =
-        attach == nullptr && registry_capacity > 0 && sequence.retained && sequence.kv;
-    const auto can_replace = [lane_bundle_stays_entitled](const PagedKVPool& pool,
-                                                          std::uint32_t old_pages,
-                                                          std::uint32_t new_pages) {
-        if (old_pages > pool.entitled_pages() || new_pages > pool.logical_page_capacity()) {
+    // One rule for both KV domains: the plan fits a pool when
+    //     required <= page_group_count - (entitled_pages - credit) + reclaimed
+    // where `credit` is what this plan's own transition hands back to the pool, `required` is what
+    // it ends up holding, and `reclaimed` is the page total of the same list this plan hands back
+    // to the executor. Feasibility and execution therefore cannot disagree: there is no second
+    // rule to fall back on.
+    //
+    // A plan that appends to (or restores a checkpoint over) the lane's own bundle replaces that
+    // bundle's title in place, so the whole resident title is credited.
+    const bool plan_appends_to_resident =
+        attach == nullptr && request_plan.reuse != ReusePath::FullReset;
+    // Everything else takes the lane's bundle away. With a registry a retained bundle is detached,
+    // not released (`start_prefill_lane` for a reset, `attach_registry_sequence` for a displaced
+    // bundle): its pages stay entitled to the new entry, so they are not credited -- the bundle is
+    // offered back as a reclaim candidate instead. That is what makes "release this cached prefix"
+    // an explicit decision in the plan rather than an accounting assumption.
+    const bool resident_survives_detached =
+        !plan_appends_to_resident && registry_capacity > 0 && sequence.retained && sequence.kv;
+    const std::uint32_t resident_text = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
+    const std::uint32_t attach_text =
+        attach != nullptr ? attach->kv.text.page_entitlement() : 0;
+
+    struct Dimension {
+        const PagedKVPool* pool = nullptr;
+        std::uint32_t credit    = 0;
+        std::uint32_t required  = 0;
+    };
+    const auto dimension = [&](const PagedKVPool& pool, std::uint32_t resident,
+                               std::uint32_t attach_pages, std::uint32_t plan_pages) {
+        if (attach != nullptr) {
+            // The entry's own title is the replaced side. The lane's displaced bundle is detached
+            // (`attach_registry_sequence`) and keeps its title, so it cannot be credited either.
+            return Dimension{&pool, attach_pages, std::max(attach_pages, plan_pages)};
+        }
+        return Dimension{&pool, resident_survives_detached ? 0U : resident, plan_pages};
+    };
+    const auto fits = [](const Dimension& domain, std::uint64_t reclaimed) noexcept {
+        const std::uint64_t entitled = domain.pool->entitled_pages();
+        if (domain.credit > entitled || domain.required > domain.pool->logical_page_capacity()) {
             return false;
         }
-        const std::uint32_t still_entitled =
-            lane_bundle_stays_entitled ? pool.entitled_pages() : pool.entitled_pages() - old_pages;
-        return new_pages <= pool.page_group_count() - still_entitled;
+        const std::uint64_t committed = entitled - domain.credit;
+        const std::uint64_t total     = domain.pool->page_group_count();
+        return committed <= total && domain.required <= total - committed + reclaimed;
     };
-    const std::uint32_t resident_text = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
-    const std::uint32_t old_text =
-        attach != nullptr ? attach->kv.text.page_entitlement() : resident_text;
-    const std::uint32_t new_text =
-        attach != nullptr ? std::max(old_text, plan.impl_->text_kv_page_entitlement)
-                          : plan.impl_->text_kv_page_entitlement;
-    if (!can_replace(decoder->text_kv.pool(), old_text, new_text)) { return false; }
+
+    const Dimension text = dimension(decoder->text_kv.pool(), resident_text, attach_text,
+                                     request_plan.text_kv_page_entitlement);
     const qwen3_6::PagedKVCache* backend = backend_kv_cache();
-    if (backend == nullptr) { return plan.impl_->backend_kv_page_entitlement == 0; }
-    const std::uint32_t resident_backend =
-        sequence.kv && sequence.kv->backend ? sequence.kv->backend->page_entitlement() : 0;
-    const std::uint32_t attach_backend =
-        attach != nullptr && attach->kv.backend ? attach->kv.backend->page_entitlement() : 0;
-    const std::uint32_t old_backend = attach != nullptr ? attach_backend : resident_backend;
-    const std::uint32_t new_backend =
-        attach != nullptr ? std::max(old_backend, plan.impl_->backend_kv_page_entitlement)
-                          : plan.impl_->backend_kv_page_entitlement;
-    return can_replace(backend->pool(), old_backend, new_backend);
+    if (backend == nullptr && request_plan.backend_kv_page_entitlement != 0) { return admission; }
+    Dimension backend_kv{};
+    if (backend != nullptr) {
+        const std::uint32_t resident_backend =
+            sequence.kv && sequence.kv->backend ? sequence.kv->backend->page_entitlement() : 0;
+        const std::uint32_t attach_backend =
+            attach != nullptr && attach->kv.backend ? attach->kv.backend->page_entitlement() : 0;
+        backend_kv = dimension(backend->pool(), resident_backend, attach_backend,
+                               request_plan.backend_kv_page_entitlement);
+    }
+
+    std::uint64_t reclaimed_text    = 0;
+    std::uint64_t reclaimed_backend = 0;
+    const auto admissible = [&] {
+        return fits(text, reclaimed_text) &&
+               (backend == nullptr || fits(backend_kv, reclaimed_backend));
+    };
+    if (admissible()) {
+        admission.feasible = true;
+        return admission;
+    }
+
+    // Every page-holding bundle this plan may spend, least reusable first. A retained lane bundle
+    // and a detached entry are both a cached prefix: whichever holds the least wins the right to
+    // be dropped first. Lane bundles are ranked as if they were detached now (latest epoch), which
+    // is where `detach_sequence` would have put them.
+    const auto lane_candidate = [&](std::uint32_t other) {
+        const SequenceState& bundle = sequences[other];
+        if (!bundle.retained || !bundle.kv) { return std::optional<ReclaimCandidate>{}; }
+        return std::optional<ReclaimCandidate>{ReclaimCandidate{
+            .target        = {runtime::AdmissionReclaimKind::RetainedSequence, other},
+            .text_pages    = bundle.kv->text.page_entitlement(),
+            .backend_pages = bundle.kv->backend ? bundle.kv->backend->page_entitlement() : 0U,
+            .frontier      = bundle.execution_frontier,
+            .epoch         = std::numeric_limits<std::uint64_t>::max(),
+        }};
+    };
+
+    std::vector<ReclaimCandidate> candidates;
+    if (registry_capacity == 0) {
+        // Without a registry an evicted bundle is released outright, which is the only page source
+        // this configuration has ever had; ascending lane order is the existing policy.
+        for (std::uint32_t other = 0; other < max_concurrency; ++other) {
+            if (other == lane) { continue; }
+            if (const auto candidate = lane_candidate(other)) { candidates.push_back(*candidate); }
+        }
+    } else {
+        // This lane's own bundle is spent first among equals: the request is taking the lane
+        // anyway, and `start_prefill_lane` would otherwise detach a prefix it is about to lose.
+        if (!plan_appends_to_resident) {
+            if (const auto candidate = lane_candidate(lane)) { candidates.push_back(*candidate); }
+        }
+        for (std::uint32_t other = 0; other < max_concurrency; ++other) {
+            if (other == lane) { continue; }
+            if (const auto candidate = lane_candidate(other)) { candidates.push_back(*candidate); }
+        }
+        for (std::size_t index = 0; index < registry.size(); ++index) {
+            const std::optional<DetachedSequence>& entry = registry[index];
+            if (!entry || &*entry == attach) { continue; }
+            candidates.push_back(ReclaimCandidate{
+                .target = {runtime::AdmissionReclaimKind::PrefixEntry,
+                           static_cast<std::uint32_t>(index)},
+                .text_pages    = entry->kv.text.page_entitlement(),
+                .backend_pages = entry->kv.backend ? entry->kv.backend->page_entitlement() : 0U,
+                .frontier      = entry->execution_frontier,
+                .epoch         = entry->detached_epoch,
+            });
+        }
+        std::stable_sort(candidates.begin(), candidates.end(),
+                         [](const ReclaimCandidate& lhs, const ReclaimCandidate& rhs) {
+                             if (lhs.frontier != rhs.frontier) { return lhs.frontier < rhs.frontier; }
+                             return lhs.epoch < rhs.epoch;
+                         });
+    }
+
+    // Accumulate in execution order and stop at the first list that fits: the plan is minimal, so
+    // it never spends a prefix it did not have to.
+    for (const ReclaimCandidate& candidate : candidates) {
+        reclaimed_text += candidate.text_pages;
+        reclaimed_backend += candidate.backend_pages;
+        admission.reclaim.push_back(candidate.target);
+        if (admissible()) {
+            admission.feasible = true;
+            return admission;
+        }
+    }
+    // Nothing fits: report no plan at all. A partial list would give the executor work whose only
+    // possible outcome is spending prefixes without admitting the request.
+    admission.reclaim.clear();
+    return admission;
 }
 
-bool ProgramImplCore::can_admit_lane_after_retained_eviction(
-    std::uint32_t lane, const RequestPlan& plan) const noexcept {
-    if (lane >= max_concurrency || plan.impl_ == nullptr) { return false; }
-    const RequestControl& request = requests[lane];
-    if (request.lifecycle == Lifecycle::Prefilling || request.lifecycle == Lifecycle::Active ||
-        request.lifecycle == Lifecycle::Pending) {
-        return false;
-    }
-
-    const DetachedSequence* attach = attached_entry(*plan.impl_);
-    if (plan.impl_->attach_registry_index >= 0 && attach == nullptr) { return false; }
-
-    std::uint32_t reclaimable_text    = 0;
-    std::uint32_t reclaimable_backend = 0;
-    for (std::uint32_t other = 0; other < max_concurrency; ++other) {
-        if (other == lane || !sequences[other].retained || !sequences[other].kv) { continue; }
-        reclaimable_text += sequences[other].kv->text.page_entitlement();
-        if (sequences[other].kv->backend) {
-            reclaimable_backend += sequences[other].kv->backend->page_entitlement();
+void ProgramImplCore::apply_lane_admission(const runtime::AdmissionPlan& plan) noexcept {
+    for (const runtime::AdmissionReclaim& target : plan.reclaim) {
+        switch (target.kind) {
+        case runtime::AdmissionReclaimKind::RetainedSequence:
+            if (target.slot >= max_concurrency) { break; }
+            // Only an idle lane can hold a retained sequence; a lane that is serving a request
+            // cannot appear here and is never torn down by a stale plan.
+            if (sequences[target.slot].retained) {
+                clear_lane(sequences[target.slot], requests[target.slot]);
+            }
+            break;
+        case runtime::AdmissionReclaimKind::PrefixEntry:
+            if (target.slot < registry.size()) { registry[target.slot].reset(); }
+            break;
         }
     }
-    // Detached entries are evictable too, except the one this plan is about to attach.
-    for (const std::optional<DetachedSequence>& entry : registry) {
-        if (!entry || &*entry == attach) { continue; }
-        reclaimable_text += entry->kv.text.page_entitlement();
-        if (entry->kv.backend) { reclaimable_backend += entry->kv.backend->page_entitlement(); }
-    }
-
-    const auto can_replace = [](const PagedKVPool& pool, std::uint32_t old_pages,
-                                std::uint32_t reclaimable_pages, std::uint32_t new_pages) {
-        if (old_pages > pool.entitled_pages() ||
-            reclaimable_pages > pool.entitled_pages() - old_pages ||
-            new_pages > pool.logical_page_capacity()) {
-            return false;
-        }
-        const std::uint32_t committed = pool.entitled_pages() - old_pages - reclaimable_pages;
-        return new_pages <= pool.page_group_count() - committed;
-    };
-
-    const SequenceState& sequence      = sequences[lane];
-    const std::uint32_t resident_text  = sequence.kv ? sequence.kv->text.page_entitlement() : 0;
-    const std::uint32_t old_text =
-        attach != nullptr ? attach->kv.text.page_entitlement() : resident_text;
-    const std::uint32_t new_text =
-        attach != nullptr ? std::max(old_text, plan.impl_->text_kv_page_entitlement)
-                          : plan.impl_->text_kv_page_entitlement;
-    if (!can_replace(decoder->text_kv.pool(), old_text, reclaimable_text, new_text)) {
-        return false;
-    }
-
-    const qwen3_6::PagedKVCache* backend = backend_kv_cache();
-    if (backend == nullptr) { return plan.impl_->backend_kv_page_entitlement == 0; }
-    const std::uint32_t resident_backend =
-        sequence.kv && sequence.kv->backend ? sequence.kv->backend->page_entitlement() : 0;
-    const std::uint32_t attach_backend =
-        attach != nullptr && attach->kv.backend ? attach->kv.backend->page_entitlement() : 0;
-    const std::uint32_t old_backend = attach != nullptr ? attach_backend : resident_backend;
-    const std::uint32_t new_backend =
-        attach != nullptr ? std::max(old_backend, plan.impl_->backend_kv_page_entitlement)
-                          : plan.impl_->backend_kv_page_entitlement;
-    return can_replace(backend->pool(), old_backend, reclaimable_backend, new_backend);
 }
 
 runtime::AdmissionResources ProgramImplCore::admission_capacity() const noexcept {
@@ -1261,31 +1324,6 @@ void ProgramImplCore::abort_lane(std::uint32_t lane) noexcept {
     clear_lane(sequences[lane], requests[lane]);
 }
 
-bool ProgramImplCore::has_retained_lane(std::uint32_t lane) const noexcept {
-    return lane < max_concurrency && sequences[lane].retained;
-}
-
-void ProgramImplCore::evict_retained_lane(std::uint32_t lane) noexcept {
-    if (!has_retained_lane(lane)) { return; }
-    if (registry_capacity > 0 && sequences[lane].kv) {
-        // With a registry the evicted sequence is preserved, not destroyed: admission needed the
-        // lane, not the bytes.
-        try {
-            SequenceState& sequence = sequences[lane];
-            detach_sequence(sequence);
-            ordered_reset(sequence);
-            requests[lane].prefill.reset();
-            requests[lane].lifecycle = Lifecycle::Empty;
-            requests[lane].pending   = {};
-            return;
-        } catch (...) {
-            // Fall through to the hard reset. A half-detached sequence is never observable: the
-            // entry is only published at the end of detach_sequence.
-        }
-    }
-    clear_lane(sequences[lane], requests[lane]);
-}
-
 GenerationTimings ProgramImplCore::generation_timings_lane(std::uint32_t lane) const noexcept {
     return lane < max_concurrency ? requests[lane].timings : GenerationTimings{};
 }
@@ -1519,13 +1557,13 @@ std::uint32_t ProgramImplCore::detached_prefix_count() const noexcept {
     return count;
 }
 
-bool ProgramImplCore::evict_registry_entry(std::int32_t protect) noexcept {
-    if (protect < 0) { protect = registry_protected_index_; }
+std::int32_t ProgramImplCore::least_reusable_entry(std::int32_t protect) const noexcept {
     std::int32_t victim = -1;
     for (std::size_t i = 0; i < registry.size(); ++i) {
-        if (!registry[i] || static_cast<std::int32_t>(i) == protect) { continue; }
+        const auto index = static_cast<std::int32_t>(i);
+        if (!registry[i] || index == protect) { continue; }
         if (victim < 0) {
-            victim = static_cast<std::int32_t>(i);
+            victim = index;
             continue;
         }
         const DetachedSequence& candidate = *registry[i];
@@ -1535,24 +1573,19 @@ bool ProgramImplCore::evict_registry_entry(std::int32_t protect) noexcept {
         if (candidate.execution_frontier < current.execution_frontier ||
             (candidate.execution_frontier == current.execution_frontier &&
              candidate.detached_epoch < current.detached_epoch)) {
-            victim = static_cast<std::int32_t>(i);
+            victim = index;
         }
     }
+    return victim;
+}
+
+bool ProgramImplCore::evict_registry_entry(std::int32_t protect) noexcept {
+    if (protect < 0) { protect = registry_protected_index_; }
+    const std::int32_t victim = least_reusable_entry(protect);
     if (victim < 0) { return false; }
     // Releasing the bundle returns its pages and its entitlement to the pool.
     registry[static_cast<std::size_t>(victim)].reset();
     return true;
-}
-
-bool ProgramImplCore::reclaim_registry_for(std::uint32_t lane,
-                                          const RequestPlan& plan) noexcept {
-    if (lane >= max_concurrency || plan.impl_ == nullptr) { return false; }
-    // Never evict the entry this plan is attaching: it is the plan's own reuse base.
-    const std::int32_t protect = plan.impl_->attach_registry_index;
-    while (!can_admit_lane(lane, plan)) {
-        if (!evict_registry_entry(protect)) { break; }
-    }
-    return can_admit_lane(lane, plan);
 }
 
 void ProgramImplCore::detach_sequence(SequenceState& sequence, bool allow_evict) {

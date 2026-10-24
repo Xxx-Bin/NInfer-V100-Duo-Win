@@ -15,7 +15,8 @@
 | `0eca192b` | 主体：detach/attach、registry 槽位 `[2C, 2C+2R)`、准入记账、容量治理 |
 | `58dedde4` | 修 `start_prefill` 过早清 `retained`；displacement 改 best-effort |
 | `f87e7915` | 修准入与回收不一致（hang 的真因）、attach 抢占不再牺牲别的会话、`--no-prefix-reuse` 互斥 |
-| 本文档提交 | 文档：容量规则按 C=1 / C≥2 两种形状分开写，补 C=1 三段实测；记录被撤回的 `allow_evict=false` 改动 |
+| `d66b3e1f` / `ba9537de` | 文档：容量规则按形状分开写、槽位边界实测、撤回被否证的结论、hang 写成完整问题陈述 |
+| 本提交 | 结构修复：`AdmissionPlan` 成为唯一页账，executor 照单执行，删除回收循环与 `throw` 兜底 |
 
 ## 必须知道的四条结论
 
@@ -87,7 +88,7 @@
 判定成老 bug 会得出错误结论：分支前那个形状能正常返回，`evict_retained_lane` 走 `clear_lane`，页
 确实回来了。
 
-### 修复（`f87e7915`）
+### 第一段修复（`f87e7915`，已合入）
 
 1. `can_admit_lane` 增加 `lane_bundle_stays_entitled`：detach 的序列其页仍被占用，不再计入可回收。
 2. executor 的回收循环不再排除当前 lane，并在 evict retained 之后调用
@@ -95,12 +96,28 @@
    plan 即将 attach 的那个。
 3. 回收判定与执行对同一条账，不再出现「说腾了、没腾」。
 
-### 残余风险（未修，不在本分支范围）
+这一段是**行为修复**：让执行侧多腾一点，把旧账兑现掉。账本身还是两套。
 
-- `admit_planned_request` 第 866 行仍是 `throw std::logic_error("retained eviction did not make
-  admission feasible")`。它和原来的 `bad_alloc` 走**同一条** `fail_all` 通道，落到同样的 hang。
-  现在只是触发窗口窄了，不是不会发生。要根治需要把准入失败变成 request-scope 错误（503），
-  而「引擎失败即停服」是产品行为，不在本分支改。
+### 第二段修复（本提交，结构修复）
+
+第一段之后仍是「判定侧按旧账 credit，执行侧靠多腾兑现，兑不出来就 throw」。第二段把账收敛成一份：
+
+- 新增 `runtime::AdmissionPlan{feasible, reclaim[]}` 契约，`reclaim` 有序且已最小化。
+- Program 侧删掉 `can_admit_lane` / `can_admit_lane_after_retained_eviction` /
+  `reclaim_registry_for` / `has_retained_lane` / `evict_retained_lane`，换成
+  `plan_lane_admission`（唯一页账：`required <= page_group_count - (entitled - credit) + reclaimed`）
+  与 `apply_lane_admission`（照单执行，`noexcept`）。
+- executor 的 `LaneChoice` 直接携带计划，整段回收循环和第 866 行 `throw` 删除。准入通过 ⇔ 同一列表
+  被执行，判定与执行不可能再分叉。
+
+顺带纠正一个前提：`can_admit_lane_after_retained_eviction` 里「其他 lane 的 retained 可回收」只在
+`registry_slots == 0` 成立；有 registry 时 `evict_retained_lane` 是 detach、页一页不腾，老代码是靠
+「detach 完再把这个新 entry 淘汰掉」的往返拿到页——事故就出在这个往返上。
+
+### 残余风险（不在本分支范围）
+
+- 「引擎级错误即停服」的产品行为没动。准入这条通道已经不会产生引擎级失败，但别的路径仍然会。
+  要改需要给 Engine 加对外状态，跨层改动。
 - 准入被拒（`QueueTimeout`）的边界没有实测。用 `--pending-timeout-ms 100` 即可构造，不需要把
   KV 池填到边缘。
 

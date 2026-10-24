@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <vector>
 
 namespace ninfer::runtime {
 
@@ -44,6 +45,32 @@ struct AdmissionResources {
     std::uint32_t active_lanes     = 0;
     std::uint32_t main_kv_pages    = 0;
     std::uint32_t backend_kv_pages = 0;
+};
+
+// A cache bundle a blocked admission gives up so that its plan fits. The target that owns the
+// bundle defines what each kind costs; the Engine only applies the list and invalidates the plans
+// that named it.
+enum class AdmissionReclaimKind : std::uint8_t {
+    // The retained sequence parked on this lane slot. Releasing it destroys the cached prefix.
+    RetainedSequence,
+    // A displaced prefix held outside every lane by the target's prefix registry. Evicting it
+    // destroys the cached prefix.
+    PrefixEntry,
+};
+
+struct AdmissionReclaim {
+    AdmissionReclaimKind kind = AdmissionReclaimKind::RetainedSequence;
+    // Lane slot or prefix-registry entry index, in the space of `kind`.
+    std::uint32_t slot = 0;
+};
+
+// The target's answer to "can this request plan take this lane, and what must be given up first".
+// `reclaim` is ordered by execution and already minimal: applying it in order is exactly the state
+// the feasibility test was computed against, so `feasible` never disagrees with the reservation
+// that follows. An infeasible plan carries no reclaim list.
+struct AdmissionPlan {
+    bool feasible = false;
+    std::vector<AdmissionReclaim> reclaim;
 };
 
 struct RequestPlanSummary {

@@ -294,10 +294,14 @@ public:
     [[nodiscard]] RequestPlan plan_request_for_lane(std::uint32_t lane,
                                                     const PreparedPromptData& prompt,
                                                     const RequestBasePlan& base);
-    [[nodiscard]] bool can_admit_lane(std::uint32_t lane, const RequestPlan& plan) const noexcept;
-    [[nodiscard]] bool
-    can_admit_lane_after_retained_eviction(std::uint32_t lane,
-                                           const RequestPlan& plan) const noexcept;
+    // The one admission decision: whether `plan` can take `lane`, and which cached bundles must be
+    // released first for it to fit. Page accounting exists here and nowhere else -- callers test
+    // this plan and then execute it, never re-derive feasibility from a second rule.
+    [[nodiscard]] runtime::AdmissionPlan plan_lane_admission(std::uint32_t lane,
+                                                             const RequestPlan& plan) const;
+    // Executes `plan.reclaim` in order. Never re-tests and never allocates: the list was computed
+    // against the state this call runs in.
+    void apply_lane_admission(const runtime::AdmissionPlan& plan) noexcept;
     [[nodiscard]] runtime::AdmissionResources admission_capacity() const noexcept;
     [[nodiscard]] runtime::PrefillStepResult start_prefill_lane(std::uint32_t lane,
                                                                 PreparedPromptData&& prompt,
@@ -313,14 +317,6 @@ public:
                                std::span<const std::uint8_t> terminal,
                                std::span<const std::uint8_t> cancelled);
     void abort_lane(std::uint32_t lane) noexcept;
-    [[nodiscard]] bool has_retained_lane(std::uint32_t lane) const noexcept;
-    void evict_retained_lane(std::uint32_t lane) noexcept;
-    // Frees detached registry entries until `lane` can admit `plan`, then reports whether it can.
-    // `can_admit_lane_after_retained_eviction` already counts other entries as reclaimable, so an
-    // admission that relies on that count must actually perform this reclaim: otherwise the plan
-    // is admitted and fails to allocate inside `start_prefill_lane`, which fails the whole worker
-    // instead of the request. The entry the plan is about to attach is never evicted.
-    [[nodiscard]] bool reclaim_registry_for(std::uint32_t lane, const RequestPlan& plan) noexcept;
     // Count of detached entries currently held. Zero whenever --prefix-registry-slots is zero.
     [[nodiscard]] std::uint32_t detached_prefix_count() const noexcept;
     [[nodiscard]] std::uint32_t detached_prefix_capacity() const noexcept {
@@ -515,6 +511,19 @@ private:
     // Frees one entry (pages returned, slots become reusable). Returns false if the registry is
     // empty. `protect` is never evicted.
     bool evict_registry_entry(std::int32_t protect = -1) noexcept;
+    // The least reusable entry other than `protect`, or -1 when none is left. This is the registry
+    // capacity policy in one place: the shortest prefix goes first, and among equals the entry
+    // detached longest ago.
+    [[nodiscard]] std::int32_t least_reusable_entry(std::int32_t protect) const noexcept;
+    // A page-holding cache bundle `plan_lane_admission` may spend, with the ranking that decides
+    // which one goes first.
+    struct ReclaimCandidate {
+        runtime::AdmissionReclaim target;
+        std::uint32_t text_pages    = 0;
+        std::uint32_t backend_pages = 0;
+        std::uint32_t frontier      = 0;
+        std::uint64_t epoch         = 0;
+    };
     void ordered_reset(SequenceState& sequence);
     void prepare_graphs();
     // Copies rank 0's counter lane onto rank 1. Called once, after prefill's bonus token is

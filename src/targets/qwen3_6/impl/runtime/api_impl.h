@@ -153,15 +153,15 @@ RequestPlan<Variant> Program<Variant>::plan_request_for_lane(std::uint32_t lane,
 }
 
 template <>
-bool Program<Variant>::can_admit_lane(std::uint32_t lane,
-                                      const RequestPlan<Variant>& plan) const noexcept {
-    return impl_->can_admit_lane(lane, plan);
+runtime::AdmissionPlan
+Program<Variant>::plan_lane_admission(std::uint32_t lane,
+                                      const RequestPlan<Variant>& plan) const {
+    return impl_->plan_lane_admission(lane, plan);
 }
 
 template <>
-bool Program<Variant>::can_admit_lane_after_retained_eviction(
-    std::uint32_t lane, const RequestPlan<Variant>& plan) const noexcept {
-    return impl_->can_admit_lane_after_retained_eviction(lane, plan);
+void Program<Variant>::apply_lane_admission(const runtime::AdmissionPlan& plan) noexcept {
+    impl_->apply_lane_admission(plan);
 }
 
 template <>
@@ -206,22 +206,6 @@ void Program<Variant>::resolve_prefill_lane(std::uint32_t lane, bool terminal) {
 template <>
 void Program<Variant>::abort_lane(std::uint32_t lane) noexcept {
     impl_->abort_lane(lane);
-}
-
-template <>
-bool Program<Variant>::has_retained_lane(std::uint32_t lane) const noexcept {
-    return impl_->has_retained_lane(lane);
-}
-
-template <>
-void Program<Variant>::evict_retained_lane(std::uint32_t lane) noexcept {
-    impl_->evict_retained_lane(lane);
-}
-
-template <>
-bool Program<Variant>::reclaim_registry_for(std::uint32_t lane,
-                                            const RequestPlan<Variant>& plan) noexcept {
-    return impl_->reclaim_registry_for(lane, plan);
 }
 
 template <>

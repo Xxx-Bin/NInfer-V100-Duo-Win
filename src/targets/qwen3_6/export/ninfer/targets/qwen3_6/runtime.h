@@ -150,11 +150,9 @@ public:
     [[nodiscard]] RequestPlan<Variant> plan_request_for_lane(std::uint32_t lane,
                                                              const PreparedPrompt& prompt,
                                                              const RequestBasePlan<Variant>& base);
-    [[nodiscard]] bool can_admit_lane(std::uint32_t lane,
-                                      const RequestPlan<Variant>& plan) const noexcept;
-    [[nodiscard]] bool
-    can_admit_lane_after_retained_eviction(std::uint32_t lane,
-                                           const RequestPlan<Variant>& plan) const noexcept;
+    [[nodiscard]] runtime::AdmissionPlan
+    plan_lane_admission(std::uint32_t lane, const RequestPlan<Variant>& plan) const;
+    void apply_lane_admission(const runtime::AdmissionPlan& plan) noexcept;
     [[nodiscard]] runtime::AdmissionResources admission_capacity() const noexcept;
     [[nodiscard]] runtime::PrefillStepResult start_prefill_lane(std::uint32_t lane,
                                                                 PreparedPrompt&& prompt,
@@ -170,10 +168,6 @@ public:
                                std::span<const std::uint8_t> terminal,
                                std::span<const std::uint8_t> cancelled);
     void abort_lane(std::uint32_t lane) noexcept;
-    [[nodiscard]] bool has_retained_lane(std::uint32_t lane) const noexcept;
-    void evict_retained_lane(std::uint32_t lane) noexcept;
-    [[nodiscard]] bool reclaim_registry_for(std::uint32_t lane,
-                                            const RequestPlan<Variant>& plan) noexcept;
     [[nodiscard]] GenerationTimings generation_timings_lane(std::uint32_t lane) const noexcept;
     [[nodiscard]] SpeculativeStats speculative_stats_lane(std::uint32_t lane) const noexcept;
 

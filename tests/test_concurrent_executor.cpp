@@ -205,17 +205,45 @@ public:
         return base;
     }
 
-    [[nodiscard]] bool can_admit_lane(std::uint32_t lane, const ScriptedPlan&) const noexcept {
-        return lane < max_concurrency_ && lanes_[lane].lifecycle == Lifecycle::Empty;
+    [[nodiscard]] rt::AdmissionPlan plan_lane_admission(std::uint32_t lane,
+                                                        const ScriptedPlan&) const {
+        rt::AdmissionPlan plan;
+        plan.feasible = lane < max_concurrency_ && lanes_[lane].lifecycle == Lifecycle::Empty;
+        // A lane that still holds a cached prefix can only take a request by reclaiming it. The
+        // target is a real dependency, not decoration: start_prefill_lane refuses while it is
+        // held, so an executor that admits without executing the plan fails the request instead.
+        if (plan.feasible && lanes_[lane].prefix_held) {
+            plan.reclaim.push_back(rt::AdmissionReclaim{rt::AdmissionReclaimKind::RetainedSequence,
+                                                        lane});
+        }
+        return plan;
     }
 
-    [[nodiscard]] bool can_admit_lane_after_retained_eviction(std::uint32_t lane,
-                                                              const ScriptedPlan& plan) const noexcept {
-        return can_admit_lane(lane, plan);
+    void apply_lane_admission(const rt::AdmissionPlan& plan) noexcept {
+        for (const rt::AdmissionReclaim& target : plan.reclaim) {
+            if (target.kind != rt::AdmissionReclaimKind::RetainedSequence ||
+                target.slot >= max_concurrency_) {
+                continue;
+            }
+            if (lanes_[target.slot].prefix_held) {
+                lanes_[target.slot].prefix_held = false;
+                ++reclaimed_prefixes_;
+            }
+        }
     }
+
+    // Pretends `lane` retains a cached prefix from an earlier session.
+    void hold_prefix(std::uint32_t lane) noexcept { lanes_[lane].prefix_held = true; }
+
+    // How many cached prefixes admission actually gave up.
+    [[nodiscard]] std::uint32_t reclaimed_prefixes() const noexcept { return reclaimed_prefixes_; }
 
     rt::PrefillStepResult start_prefill_lane(std::uint32_t lane, q36::PreparedPrompt&& prompt,
                                              ScriptedPlan&& plan, rt::TransientRegion) {
+        if (lanes_[lane].prefix_held) {
+            // The engine-scope failure a short reservation produces in the real Program.
+            throw std::runtime_error("scripted lane still holds an unreclaimed prefix");
+        }
         if (queued_.empty()) { throw std::logic_error("scripted program has no remaining script"); }
         Lane& state     = lanes_[lane];
         state.script    = std::move(queued_.front());
@@ -298,8 +326,6 @@ public:
         if (lane < max_concurrency_) { clear(lane); }
     }
 
-    [[nodiscard]] bool has_retained_lane(std::uint32_t) const noexcept { return false; }
-    void evict_retained_lane(std::uint32_t) noexcept {}
     [[nodiscard]] ninfer::GenerationTimings generation_timings_lane(std::uint32_t) const noexcept {
         return {};
     }
@@ -337,6 +363,7 @@ private:
         std::size_t emitted = 0;
         TokenId token       = 0;
         Lifecycle lifecycle = Lifecycle::Empty;
+        bool prefix_held    = false;
     };
 
     TokenId license(std::uint32_t lane) {
@@ -358,6 +385,7 @@ private:
     std::deque<GenerationScript> queued_;
     std::vector<TokenId> batch_;
     std::size_t maximum_batch_rows_ = 0;
+    std::uint32_t reclaimed_prefixes_ = 0;
 };
 
 struct ScriptedPackage {
@@ -682,6 +710,33 @@ void test_engine_scope_failure_still_fails_all(const q36::Frontend& frontend,
            "a request after a device failure was not refused as unavailable");
 }
 
+// The admission plan is the decision. A lane that can only take the request after giving up a
+// cached prefix must be admitted by executing that plan -- not by testing feasibility again and
+// hoping the reservation works out. Before the plan existed, the executor's reclaim loop could
+// miss the very bundle the target had counted, and the request then failed inside prefill with an
+// Engine-scope error that stopped the worker.
+void test_admission_applies_its_plan(const q36::Frontend& frontend,
+                                     const ninfer::DeviceContext& device) {
+    ScriptedInstance instance{.loaded  = std::make_shared<ScriptedLoaded>(ScriptedLoaded{frontend}),
+                              .program = std::make_unique<ScriptedProgram>(1),
+                              .request_memory         = {},
+                              .kv_capacity_resolution = {}};
+    instance.program->push_script(GenerationScript{.tokens = {0}});
+    instance.program->push_script(GenerationScript{.tokens = {0}});
+    instance.program->hold_prefix(0);
+    ScriptedProgram& program = *instance.program;
+    Executor executor(instance, executor_options(), device);
+
+    const Outcome reclaimed = run_request(executor, frontend, 1);
+    expect(reclaimed.ok, "a request that needed a reclaim was not admitted");
+    expect(program.reclaimed_prefixes() == 1,
+           "the executor admitted the request without executing its admission plan");
+    expect(program.all_lanes_idle(), "the reclaiming request left its lane active");
+
+    const Outcome next = run_request(executor, frontend, 1);
+    expect(next.ok, "the Engine stopped serving after an admission reclaim");
+}
+
 } // namespace
 
 int main() {
@@ -698,6 +753,7 @@ int main() {
     test_multi_row_isolation(frontend, device);
     test_request_scope_failure_is_isolated(frontend, device, true);
     test_request_scope_failure_is_isolated(frontend, device, false);
+    test_admission_applies_its_plan(frontend, device);
     test_engine_scope_failure_still_fails_all(frontend, device);
     return failures == 0 ? 0 : 1;
 }

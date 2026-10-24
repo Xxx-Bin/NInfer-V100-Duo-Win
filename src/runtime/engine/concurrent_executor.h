@@ -385,8 +385,10 @@ private:
     };
 
     struct LaneChoice {
-        std::uint32_t lane  = 0;
-        bool evict_retained = false;
+        std::uint32_t lane = 0;
+        // Exactly the decision `find_admission_lane` tested, carried through so admission executes
+        // it instead of looking for room a second time.
+        runtime::AdmissionPlan admission;
     };
 
     void append_output(const std::shared_ptr<Request>& request,
@@ -776,32 +778,26 @@ private:
     find_admission_lane(const std::shared_ptr<Request>& request) {
         std::optional<LaneChoice> selected;
         std::uint32_t selected_reuse = 0;
+        bool selected_reclaims       = false;
         for (std::uint32_t lane = 0; lane < max_concurrency_; ++lane) {
             if (slots_[lane] != nullptr) { continue; }
             ensure_lane_plan(request, lane);
             const Plan& plan          = *request->lane_plans[lane];
             const std::uint32_t reuse = plan.summary().reusable_prompt_tokens;
-            if (instance_.program->can_admit_lane(lane, plan) &&
-                (!selected || reuse > selected_reuse)) {
-                selected       = LaneChoice{.lane = lane};
-                selected_reuse = reuse;
+            // The target returns the whole decision, including what it would have to give up. A
+            // lane that admits without reclaiming always wins, because a reclaim costs a cached
+            // prefix; only then does the largest reusable prefix decide, and the lowest lane index
+            // breaks ties.
+            runtime::AdmissionPlan admission =
+                instance_.program->plan_lane_admission(lane, plan);
+            if (!admission.feasible) { continue; }
+            const bool reclaims = !admission.reclaim.empty();
+            if (selected && (reclaims != selected_reclaims ? reclaims : reuse <= selected_reuse)) {
+                continue;
             }
-        }
-        if (selected) { return selected; }
-
-        for (std::uint32_t lane = 0; lane < max_concurrency_; ++lane) {
-            if (slots_[lane] != nullptr) { continue; }
-            ensure_lane_plan(request, lane);
-            const Plan& plan          = *request->lane_plans[lane];
-            const std::uint32_t reuse = plan.summary().reusable_prompt_tokens;
-            if (instance_.program->can_admit_lane_after_retained_eviction(lane, plan) &&
-                (!selected || reuse > selected_reuse)) {
-                selected = LaneChoice{
-                    .lane           = lane,
-                    .evict_retained = true,
-                };
-                selected_reuse = reuse;
-            }
+            selected_reclaims = reclaims;
+            selected_reuse    = reuse;
+            selected.emplace(LaneChoice{.lane = lane, .admission = std::move(admission)});
         }
         return selected;
     }
@@ -837,34 +833,17 @@ private:
         if (!request->lane_plans[lane]) {
             throw std::logic_error("selected admission lane has no request plan");
         }
-        if (choice.evict_retained) {
-            for (std::uint32_t retained_lane = 0;
-                 retained_lane < max_concurrency_ &&
-                 !instance_.program->can_admit_lane(lane, *request->lane_plans[lane]);
-                 ++retained_lane) {
-                // The admission test that produced this choice counted every retained sequence,
-                // including the one on `lane` itself -- the request is about to take that lane over.
-                // Skipping `lane` here leaves that page debt unpaid, and the reservation then fails
-                // inside start_prefill_lane.
-                if (slots_[retained_lane] == nullptr &&
-                    instance_.program->has_retained_lane(retained_lane)) {
-                    instance_.program->evict_retained_lane(retained_lane);
-                    invalidate_lane_plans(retained_lane);
-                }
-            }
-            // Detached prefix-registry entries are reclaimable, and the admission test that
-            // produced this choice already counted them. Reclaiming only retained lanes leaves
-            // that debt unpaid: the request is admitted here and then fails to reserve KV inside
-            // start_prefill_lane, which is an engine-scope failure and stops the worker.
-            if (!instance_.program->can_admit_lane(lane, *request->lane_plans[lane]) &&
-                instance_.program->reclaim_registry_for(lane, *request->lane_plans[lane])) {
-                // Evicting an entry invalidates every cached plan that named it, here included.
-                for (std::uint32_t other = 0; other < max_concurrency_; ++other) {
-                    if (other != lane) { invalidate_lane_plans(other); }
-                }
-            }
-            if (!instance_.program->can_admit_lane(lane, *request->lane_plans[lane])) {
-                throw std::logic_error("retained eviction did not make admission feasible");
+        if (!choice.admission.reclaim.empty()) {
+            // Executing the plan IS the reclaim. There is no second feasibility test: the same
+            // list that decided admission decides what to give up, so a lane that reported
+            // feasible cannot leave a page debt that only a later reservation failure would
+            // discover.
+            instance_.program->apply_lane_admission(choice.admission);
+            // Cached lane plans name the reuse base they were computed against -- a retained
+            // sequence or a registry entry -- and that base may be gone now. The selected lane's
+            // own plan is consumed below, so only the others need re-planning.
+            for (std::uint32_t other = 0; other < max_concurrency_; ++other) {
+                if (other != lane) { invalidate_lane_plans(other); }
             }
         }
 
@@ -984,7 +963,7 @@ private:
                 continue;
             }
             if (head_lane) {
-                return admit_planned_request(head, *head_lane, BackfillClass::None, 0);
+                return admit_planned_request(head, std::move(*head_lane), BackfillClass::None, 0);
             }
 
             const ActiveAdmissionSet active = active_admission_set();
@@ -1064,7 +1043,7 @@ private:
                     backfill = BackfillClass::Temporal;
                 }
                 if (backfill != BackfillClass::None) {
-                    return admit_planned_request(candidate, *candidate_lane, backfill,
+                    return admit_planned_request(candidate, std::move(*candidate_lane), backfill,
                                                  protection_->epoch_id);
                 }
             }

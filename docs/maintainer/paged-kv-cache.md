@@ -822,23 +822,32 @@ Detach 发生在 `FullReset` 分支，并且只在该 lane 仍持有 retained se
 必须在状态槽拷出之后调用，否则会把刚拷出的内容再抹一次。Attach 在 prefill 之前完成，随后照常执行
 既有的 `bind_sequence_kv`，由它按新 lane 取行号并重刷两个 rank 的 block table。
 
-准入记账有一处必须单独处理：attach 的 bundle 是「原地扩容」而不是「释放后重分配」，所以
-`can_admit_lane` 用 entry 自己的 entitlement 作为被替换方，只要求增量部分落在 free pages 内；
-被 displace 的 lane bundle 是 detach 而不是 release，**不能**计入可回收页。
-
 容量治理：registry 满时按 `execution_frontier` 最大者优先保留，同长时淘汰更早 detach 的条目。
 256k 配置下一个 entry 约 147 MiB/卡（两个状态槽），占 KV 的 3.4%。
 
-**页不足时的回收必须真的发生。** `can_admit_lane` 把「lane 自己的 retained 序列会被 detach」算作
-不释放页，所以容量不够时它返回 false，由 `can_admit_lane_after_retained_eviction` 接手——后者把
-当前 lane 的 retained 和 registry entries 都算作可回收，这是对的。问题在于执行侧：`admit_planned_request`
-的回收循环曾用 `retained_lane != lane` 排除当前 lane，于是准入说「能腾出来」、实际一页没腾，请求被放行后
-在 `start_prefill_lane` 预留 KV 时抛 `std::bad_alloc`。这条异常是引擎级的：worker 停服、`complete_error`
-之后 `fail_all` 退出，但 HTTP 端口仍在监听，客户端看到的是永久 hang 而不是 500。
+**准入判定与回收是同一份数据。** `ProgramImplCore::plan_lane_admission` 一次回答两件事：该 plan
+能否进入该 lane、以及为了进入必须先放掉哪些 bundle；结果是可执行的 `runtime::AdmissionPlan`
+（有序、`reclaim` 已最小化）。判据在每个 pool 上都只有一处：
 
-现在的顺序是：executor 对当前 lane 的 retained 同样执行 `evict_retained_lane`（detach 进 registry），
-再用 `reclaim_registry_for` 把刚 detach 出来的 entry（以及其他 entries）淘汰掉，页才真正回到池子里。
-`reclaim_registry_for` 永不淘汰本 plan 即将 attach 的那个 entry。
+```text
+required <= page_group_count - (entitled_pages - credit) + reclaimed
+```
+
+`credit` 是本 plan 自身转换交还的页：append / checkpoint restore 原地换 title，整个 resident title
+都计入；attach 只把 entry 自己的 title 当作被替换方（表现为 `max(attach, plan)` 的增量落在 free
+pages 内）。attach 时被 displace 的 lane bundle、以及 reset 时的 retained bundle，都是 detach 而不是
+release——页仍属于新 entry，所以 **不**计入 `credit`，而是作为同一份计划里的 `reclaim` 候选出现。
+`reclaimed` 就是该候选前缀的页数合计，因此「判定说能腾出来」与「执行腾了」不可能再分叉。
+
+executor 拿到计划后照单执行（`Program::apply_lane_admission`），不再复判，也没有「腾不出来就
+`throw`」的兜底：准入通过后 `start_prefill_lane` 的预留必然成立，历史上那条「准入放行 → 预留
+`std::bad_alloc` → worker 停服、HTTP 端口仍在监听导致客户端永久 hang」的通道随之消失。计划里
+出现 `PrefixEntry` 时，executor 会作废其他 lane 的缓存 plan（它们可能引用了刚被淘汰的 entry）；
+本 plan 即将 attach 的 entry 永不出现在候选里。
+
+候选顺序即牺牲顺序：prefix 最短者先走，同长时更早 detach 的先走；lane bundle 等价于「此刻
+detach」，所以同长时排在后面。`--prefix-registry-slots 0` 时没有 entry 可淘汰，候选只剩其他 lane
+的 retained bundle，按 lane 序释放——这是该配置一直以来的唯一页来源，行为不变。
 
 ---
 
