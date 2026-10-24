@@ -148,6 +148,10 @@ public:
         std::array<void*, 2> receive{};
         std::array<unsigned*, 2> flags{};
         std::array<unsigned*, 2> sequence{};
+        // Two-epoch packet inbox: the peer writes here, this rank consumes and retires each pack.
+        // `packet_epochs` holds one alternating epoch counter per packet block.
+        std::array<void*, 2> packets{};
+        std::array<unsigned*, 2> packet_epochs{};
     };
 
     [[nodiscard]] const DirectChannel* direct() const noexcept {
