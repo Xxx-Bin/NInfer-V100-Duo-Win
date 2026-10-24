@@ -21,8 +21,9 @@
 
 1. **`N` 容纳的是「你想同时保住的不同会话数」，不是「N 个请求」。** 侧请求（标题、摘要）
    属于当前会话的流量，不额外占槽，但它在落地时会把当前会话挤进 registry。
-   - **C=1、单会话 + 侧请求**：`N=1` 够。A.turn1 → 侧请求落地 detach A → A.turn2 attach 回来；
-     attach 挤掉侧请求时 registry 已满（A 在里面且受保护），侧请求照旧被丢弃——它本来就是可牺牲的。
+   - **C=1、单会话 + 侧请求**：`N=1` 够——**前提是只要求会话命中**。A.turn1 → 侧请求落地 detach A
+     → A.turn2 attach 回来；attach 挤掉侧请求时 registry 已满（A 在里面且受保护），侧请求被丢弃，
+     它本来就是可牺牲的。实测：`slots=1/2` 会话命中；`slots=3/4` 连侧请求也能复用（见「验证现状」）。
    - **`N=1` 只保得住一个会话。** 第二个无关会话进来必然淘汰前一个（`evict_registry_entry` 按
      `execution_frontier` 排序）。这不是缺陷，是 1 槽的定义。
    - **C≥2 或多会话轮转、要并存 k 个**：`N ≥ k+1`。多出那槽是给 attach 落地时被挤下的那个会话
@@ -77,14 +78,23 @@
 - **复跑（2026-10-24，撤回 `allow_evict=false` 改动、重新编译后）**：C `961`、A `961`、B `0`、D `961`，
   与基线逐字段一致；`p0_result-registry1.json` 为本次快照，`p0_result-baseline.json` 为改动前快照，
   `p0_result.json` 是随后 `slots=2` 那一轮的覆盖结果（同样 C/A/D `961`、B `0`）。
-- **`slots=1` 与 `slots=2` 在 C=1 单会话形状下结果相同**（都是 `961`）。`slots=2` 没有可观测收益：
-  侧请求序列即使留在 registry，重复发送同样的侧请求仍是 `full_reset`/`cached=0`——
-  42 token 和 315 token 两种长度都测了，见 `_scratch/p0/ab_two_slot.py`。
-  原因不在槽位：A 能命中是因为 turn2 严格包含 turn1 的 961 token；侧请求两次 prompt 等长，
-  自身没有落在 prompt 内的可复用边界，保不保都用不上。
+- **槽位边界实测（C=1，会话 961 token，侧请求 315 token）**，`_scratch/p0/ab_two_slot.py`：
+
+  | slots | 会话 turn2 | 重复的侧请求 |
+  |---:|---:|---:|
+  | 1 | 961 命中 | 0（丢） |
+  | 2 | 957 命中 | 0（丢） |
+  | 3 | 957 命中 | **311 命中** |
+  | 4 | 957 命中 | **311 命中** |
+
+  A→侧→A→侧 这条链上同时要活 **3** 个序列：A 的 turn1、侧请求、以及侧请求回来时要被换下
+  的那个序列。2 槽时淘汰策略按 frontier 把侧请求的 entry 踢掉（它最短），所以第 4 跳退回
+  `full_reset`。**只要 A 命中，1 槽就够；要让侧请求也能复用，要 3 槽。**
+  两种侧请求长度（42 / 315 token）都测过：42 token 在不同槽数下都是 0，是因为它自己长度内没有
+  可复用边界；315 token 才能体现槽位差异。
 - 默认关闭逐字段与改动前一致，`runtime` 预留同为 1.65 GiB；开启后 1.79 GiB，+146 MiB = 2×73.4 MiB 状态槽/卡。
 - postfix 组不变是设计预期：该形状没有 detach 发生，旁路请求在原地覆盖 checkpoint，属方案 2（`PreserveExisting`）的职责。
-- 原始记录：`_scratch/p0/p0_result.json`、`_scratch/p0/HANDOFF-prefix-registry.md`。
+- 原始记录：`_scratch/p0/p0_result-registry1.json`（slots=1）、`p0_result.json`（slots=2）。
 
 速率明细（slots0 / slots1）：prefill-4k 1121.1/1120.6，8k 1105.6/1105.1，32k 1029.2/1031.1；
 decode-512 149.3/149.5，decode-8k 141.7/141.8。
