@@ -1,6 +1,12 @@
 # Qwen3.6-35B-A3B serving performance
 
-[Performance index](../performance.md) · [Methodology](methodology.md)
+> **状态：已归档 · 不适用于当前构建**
+> 归档：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090 32 GiB · CUDA 13.1 · `sm_120a`
+> 现行替代：[Performance](../../../performance.md) 的 V100 Duo 段
+> 保留理由：上游同模型的完整 run records，上游同步时用于对照
+
+[Performance index](../../../performance.md) · [Methodology](methodology.md)
 
 On this page: [configuration](#configuration-and-runs), [context profile](#no-speculation-context-profile),
 [single-request decode](#single-request-speculative-decode), [corpus makespan](#corpus-makespan),
@@ -296,4 +302,4 @@ Report subdirectory: `mtp3_saturation/`.
 Each group contains `summary.json`, `summary.csv`, `summary.md`, `points/`, and `server/`.
 C=1 `corpus/` directories retain complete responses and per-fixture phase summaries. The campaign
 `manifest.json` records the revision, artifact identity, and commands; `anomalies.json` records
-termination and repetition screening. See [runner usage](../../tools/bench/README.md#concurrent-serving-benchmark).
+termination and repetition screening. See [runner usage](../../../../tools/bench/README.md#concurrent-serving-benchmark).

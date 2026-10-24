@@ -1,6 +1,12 @@
 # Qwen3.6-27B serving performance
 
-[Performance index](../performance.md) · [Measurement and publication rules](methodology.md)
+> **状态：已归档 · 不适用于当前构建**
+> 归档：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090 32 GiB · CUDA 13.1 · `sm_120a`
+> 现行替代：[Performance](../../../performance.md) 的 V100 Duo 段
+> 保留理由：上游同模型的完整 run records，上游同步时用于对照
+
+[Performance index](../../../performance.md) · [Measurement and publication rules](methodology.md)
 
 On this page: [run records](#scope-and-run-records), [context profile](#no-speculation-context-profile),
 [single-request decode](#single-request-speculative-decode), [decode saturation](#decode-saturation),
@@ -33,8 +39,8 @@ path, and local report directory.
 
 Both registered weight profiles have MTP0 and MTP3 phase results and C=1, 2, 4, 8 saturation
 results. N3 phase statistics come from the C=1 point of a corpus-makespan run; full makespan results
-are not published here. EvalScope accuracy is recorded in the [groupwise-int model card](../../model-cards/Qwen3.6-27B-NInfer/README.md#evaluation)
-and [NVFP4 model card](../../model-cards/Qwen3.6-27B-nvfp4-NInfer/README.md#evaluation).
+are not published here. EvalScope accuracy is recorded in the [groupwise-int model card](../../../../model-cards/Qwen3.6-27B-NInfer/README.md#evaluation)
+and [NVFP4 model card](../../../../model-cards/Qwen3.6-27B-nvfp4-NInfer/README.md#evaluation).
 
 ## No-speculation context profile
 
@@ -226,5 +232,5 @@ Historical reports: `profiles/bench/concurrent_decode_27b_nvfp4_mtp3_20260811/`.
   --output profiles/bench/concurrent_decode_27b_nvfp4_mtp3_20260811
 ```
 
-[Runner usage](../../tools/bench/README.md#serving-corpus-benchmark) describes the report files.
+[Runner usage](../../../../tools/bench/README.md#serving-corpus-benchmark) describes the report files.
 Older corpus runs may retain only point reports and server logs.

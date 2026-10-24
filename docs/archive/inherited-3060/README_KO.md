@@ -1,4 +1,10 @@
-﻿# NInfer - Dual RTX 3060 (24GB VRAM) TP=2 고성능 추론 엔진
+# NInfer - Dual RTX 3060 (24GB VRAM) TP=2 고성능 추론 엔진
+
+> **状态：已归档 · 不适用于当前构建**
+> 归档：2026-10-24 · 归属：inherited-3060 · 角色：guide
+> 原文适用条件：2 × RTX 3060 12 GB（Ampere `sm_86`）· 112K 上下文 · TP2
+> 现行替代：[README.md](../../README.md)
+> 保留理由：上游双 3060 场景的容量取舍记录，与本 fork 的 V100 移植无共享结论
 
 이 프로젝트는 **NVIDIA GeForce RTX 3060 12GB x 2장 (총 24GB VRAM, Ampere sm_86)** 환경에서 **Qwen3.8-27B (18GB 가중치)** 및 대형 모델을 **Tensor Parallelism (TP=2)** 과 **MTP 추측 디코딩(Speculative Decoding)** 을 통해 고속으로 구동할 수 있도록 최적화된 C++/CUDA 기반 추론 엔진입니다.
 

@@ -103,6 +103,12 @@ model-index:
 
 # Qwen3.8-27B NVFP4 for NInfer
 
+> **状态：现行 · 适用条件与本 fork 的构建不同**
+> 记录：2026-10-24 · 归属：inherited-5090 · 角色：reference
+> 原文适用条件：单卡 NVIDIA GeForce RTX 5090（`sm_120a`）· CUDA 13.1 · 无多卡执行
+> 本 fork 加载方式：[docs/windows.md](../../docs/windows.md)（2 × V100-SXM2 16 GB · `sm_70` · TP2）
+> 说明：卡片描述官方 artifact 的数值与限制本身有效；V100 上的实测见 [docs/performance.md](../../docs/performance.md) 的 V100 Duo 段
+
 This model card is the version-controlled source for
 [neroued/Qwen3.8-27B-nvfp4-NInfer](https://huggingface.co/neroued/Qwen3.8-27B-nvfp4-NInfer).
 

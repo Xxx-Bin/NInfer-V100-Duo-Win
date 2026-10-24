@@ -2,6 +2,14 @@
 
 These rules apply to the whole repository.
 
+> **本目录相对上游 NInfer 的偏离（2026-10-24 记录）**
+> 本文的硬件与编译契约来自上游（`sm_120a` · RTX 5090 · 五个注册身份）。本 fork 实际是
+> Windows 11 + 2 × V100-SXM2 16 GB（`sm_70`）TP2：`CMakeLists.txt` 只接受
+> `CMAKE_CUDA_ARCHITECTURES=70|86|89`（缺省 70），`src/targets` 只有 `qwen3_6_27b` 与
+> `qwen3_6_35b_a3b` 两个 Package（`qwen3.8-*` 是 27B Package 的第二 identity）。
+> 涉及平台、架构、身份数量、单卡/多卡的表述，以 [docs/windows.md](docs/windows.md) 和源码为准。
+> 文档适用性判定与归档规则见 [docs/doc-policy.md](docs/doc-policy.md)。
+
 ## Objective and scope
 
 Complete the user's explicit deliverable within the applicable product and external contracts.
@@ -55,7 +63,7 @@ Keep these ownership boundaries visible when selecting a design:
   acquisition and protocol translation. Target packages do not acquire media or own transport.
 
 Detailed family/package responsibilities and source ownership are defined in
-[Engine architecture](docs/maintainer/engine-architecture.md). Read the relevant boundary before
+[Engine architecture](docs/maintainer/concurrent-inference-architecture.md). Read the relevant boundary before
 changing it. Prefer explicit implementations for registered targets. Do not introduce generic model
 graphs, family base classes, plugin discovery, string-driven execution, hidden device allocation,
 runtime weight repacking, or placeholders for hypothetical targets without a product requirement.
@@ -123,9 +131,9 @@ Read the authority relevant to the current decision; this is not a mandatory rea
 
 | Decision | Entry point |
 |---|---|
-| Product capabilities and exact commands | `README.md`, executable `--help`; `docs/cli.md`, `docs/serving.md`, `docs/perplexity.md` |
-| Execution, family/package ownership, scheduling, transactions, graphs | `docs/maintainer/engine-architecture.md` |
-| Context resources, checkpoints, replicas; physical KV | `docs/maintainer/resource-scheduling-and-context-cache.md`; `docs/maintainer/paged-kv-cache.md` |
+| Product capabilities and exact commands | `README.md`, executable `--help`; `docs/cli.md`, `docs/serving.md` |
+| Execution, family/package ownership, scheduling, transactions, graphs | `docs/maintainer/concurrent-inference-architecture.md` |
+| Context resources, checkpoints, replicas; physical KV | `docs/maintainer/paged-kv-cache.md` |
 | Artifact, layout, codec, or exact target mathematics | model/artifact references linked from `docs/README.md` |
 | Op contracts, implementation ownership, numerical/performance qualification | `docs/maintainer/op-development.md` |
 | Test/benchmark commands and published performance | `tests/README.md`, `bench/README.md`, `docs/performance.md` |

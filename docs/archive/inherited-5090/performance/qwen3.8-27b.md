@@ -1,6 +1,12 @@
 # Qwen3.8-27B serving performance
 
-[Performance index](../performance.md) · [Measurement and publication rules](methodology.md)
+> **状态：已归档 · 不适用于当前构建**
+> 归档：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090 32 GiB · CUDA 13.1 · `sm_120a`
+> 现行替代：[Performance](../../../performance.md) 的 V100 Duo 段
+> 保留理由：上游同模型的完整 run records；本 fork 的 V100 数据已并入 performance.md
+
+[Performance index](../../../performance.md) · [Measurement and publication rules](methodology.md)
 
 On this page: [run records](#scope-and-run-records), [context profile](#no-speculation-context-profile),
 [single-request decode](#single-request-speculative-decode), [corpus makespan](#corpus-makespan),
@@ -408,5 +414,5 @@ Historical reports: `profiles/bench/concurrent_decode_qwen3_8_27b_nvfp4_mtp3_202
   --output profiles/bench/concurrent_decode_qwen3_8_27b_nvfp4_mtp3_20260817
 ```
 
-[Runner usage](../../tools/bench/README.md#serving-corpus-benchmark) describes the report files.
+[Runner usage](../../../../tools/bench/README.md#serving-corpus-benchmark) describes the report files.
 Older corpus runs may retain only point reports and server logs.

@@ -1,5 +1,12 @@
 # Softmax Attention 组织与迁移规范
 
+> **状态：计划态 · 不是当前实现映射**
+> 记录：2026-10-24 · 角色：contract
+> 目标态：迁移完成后的唯一实现；当前源码仍是 `gqa_attention` / `vision_attention` /
+> `bidirectional_gqa_attention` / `swa` 四套并存
+> 现行实现：[op-development.md](op-development.md) 与 `src/ops/`
+> 说明：本文的 `src/ops/softmax_attention/` 目录在当前源码中尚不存在
+
 本文定义 NInfer Softmax Attention 的目标语义、公共契约、源码组织和现有实现迁移方式。
 它是 [`op-development.md`](op-development.md) 在 Attention 领域的细化规范。本文描述的是迁移
 完成后的唯一目标态；在迁移完成前，源码中仍可见的 `gqa_attention`、`vision_attention`、

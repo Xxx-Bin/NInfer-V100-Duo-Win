@@ -1,5 +1,11 @@
 # 1,048,576-token soak (TP2 + YaRN x4, NVFP4, 2x RTX 5090 @ 400 W)
 
+> **状态：现行路径 · 原测量前提不适用于当前构建**
+> 记录：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090 32 GiB / Linux 主机，CUDA 13.1
+> 现行替代：[docs/performance.md](../../../docs/performance.md) 的 V100 Duo 段
+> 保留理由：跨引擎与长上下文对照的原始观测，上游同步时用于比较
+
 | | pass A | pass B |
 |---|---|---|
 | artifact prefix | qwen3_8_27b_nvfp4-1m-soak-pass-a-20260828T144651Z | qwen3_8_27b_nvfp4-1m-soak-pass-b-20260828T153852Z |

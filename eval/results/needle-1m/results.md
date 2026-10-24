@@ -1,5 +1,11 @@
 # Needle-in-a-haystack results, 653k and 1,046k tokens
 
+> **状态：现行路径 · 原测量前提不适用于当前构建**
+> 记录：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090 32 GiB / Linux 主机，CUDA 13.1
+> 现行替代：[docs/performance.md](../../../docs/performance.md) 的 V100 Duo 段
+> 保留理由：跨引擎与长上下文对照的原始观测，上游同步时用于比较
+
 Scores are EvalScope `judge_strategy: rule` (strict exact match after normalisation); 1 = the inserted needle was reproduced verbatim.
 `bundle A` / `bundle B` are the two disjoint English Gutenberg book sets, carried by the adapter's `english` / `chinese` subset slots.
 

@@ -1,5 +1,13 @@
 # Dual-GPU (TP2) execution and YaRN 1M context
 
+> **状态：现行参考 · 但其测量与容量结论不适用于当前构建**
+> 记录：2026-10-24 · 归属：inherited-5090 · 角色：contract
+> 原文适用条件：2 × RTX 5090 32 GiB · **无 NVLink** · `sm_120a` · CUDA 13.1 · 1M 上下文
+> 本 fork 的对应实现：[concurrent-inference-architecture.md](concurrent-inference-architecture.md)；
+> TP2 在 V100 上的实测见 [docs/performance.md](../performance.md) 的 V100 Duo 段
+> 保留理由：传输形状、YaRN 常量与 qualification gate 的推导仍是当前 TP2 实现的来源；
+> 1,048,576-token 容量、无 NVLink 假设、缺省 1M 配置不适用（本机 16 GB/卡且有 NVLink）
+
 This document records the design decisions, numerical contracts, and qualification evidence behind
 two additions to the 27B execution package: tensor-parallel execution across two RTX 5090s
 (`--tp 2 --devices A,B`) and YaRN positional scaling (`--rope yarn`) for contexts up to 1,048,576

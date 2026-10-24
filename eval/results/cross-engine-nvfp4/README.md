@@ -1,5 +1,11 @@
 # Cross-engine NVFP4 long-context throughput artifacts (500 W per GPU)
 
+> **状态：现行路径 · 原测量前提不适用于当前构建**
+> 记录：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090 32 GiB / Linux 主机，CUDA 13.1
+> 现行替代：[docs/performance.md](../../../docs/performance.md) 的 V100 Duo 段
+> 保留理由：跨引擎与长上下文对照的原始观测，上游同步时用于比较
+
 The measured artifacts behind the cross-engine section of
 [`docs/performance.md`](../../../docs/performance.md): NInfer `--tp 2` with YaRN x4 against vLLM
 0.25.1 `--tensor-parallel-size 2`, on the same pair of RTX 5090s, at three context tiers

@@ -1,10 +1,16 @@
 # Serving performance methodology
 
-[Performance index](../performance.md) · [Runner usage](../../tools/bench/README.md#serving-corpus-benchmark)
+> **状态：已归档 · 原文的测量前提不适用于当前构建**
+> 归档：2026-10-24 · 归属：inherited-5090 · 角色：contract
+> 原文适用条件：单卡 RTX 5090 32 GiB · CUDA 13.1 · 无 NVLink
+> 现行替代：[Performance](../../../performance.md) 的 V100 Duo 段
+> 保留理由：测量与发布规则本身与硬件无关，V100 段沿用同一套规则；仅"公共剖面"不适用
+
+[Performance index](../../../performance.md) · [Runner usage](../../../../tools/bench/README.md#serving-corpus-benchmark)
 
 This is the measurement and publication reference for the serving results in this directory.
 Model pages own measured values and run-specific conditions. Engine and Op benchmarks have their
-own contracts in [bench/README.md](../../bench/README.md); their rates do not establish HTTP serving
+own contracts in [bench/README.md](../../../../bench/README.md); their rates do not establish HTTP serving
 performance.
 
 ## Common serving profile
@@ -50,8 +56,8 @@ budget. Twelve other fixtures cover Code, Story, Translation, and Structured out
 fixtures per category, thinking disabled, and a 4,096-token output budget. Each fixture has five
 seeds, giving 75 requests per corpus. Actual completion lengths are measurements, not budgets.
 
-Fixture content is in [examples/cli/manifest.json](../../examples/cli/manifest.json); fixture
-selection and the five seeds are in [run_serve_corpus.py](../../tools/bench/run_serve_corpus.py).
+Fixture content is in [examples/cli/manifest.json](../../../../examples/cli/manifest.json); fixture
+selection and the five seeds are in [run_serve_corpus.py](../../../../tools/bench/run_serve_corpus.py).
 Preserve their identity when comparing historical runs. Serial runs submit one request at a time
 to one persistent server. A corpus-makespan C=1 point can also supply these phase statistics;
 model pages identify that shared source.
@@ -96,7 +102,7 @@ intervals. Each published point is one wave, not a repeated-sample mean.
 | Spec tokens/round | `1 + accepted_tokens / speculative_rounds` |
 
 Server TTFT is an internal phase sum. It does not include ingress queueing or HTTP transport and
-is not the external streaming TTFT measured by the [Serve TTFT client](../../tools/bench/ttft/README.md).
+is not the external streaming TTFT measured by the [Serve TTFT client](../../../../tools/bench/ttft/README.md).
 The three decode rates have different time denominators and must not share an unlabeled column.
 Committed decode tokens exclude the first completion token produced by prefill.
 
@@ -150,8 +156,8 @@ remain local under `profiles/bench/`; reuse existing JSON/CSV/Markdown summaries
 
 Model pages own detailed serving results. README and model-card excerpts link to them and update
 with the relevant measurements. Capability scores belong in model-card Evaluation sections, with
-workflow guidance in [eval/README.md](../../eval/README.md); runner usage and report-file descriptions
-belong in [tools/bench/README.md](../../tools/bench/README.md).
+workflow guidance in [eval/README.md](../../../../eval/README.md); runner usage and report-file descriptions
+belong in [tools/bench/README.md](../../../../tools/bench/README.md).
 
 When replacing measurements, update their run records, applicable findings, coverage index, and
 excerpts together. Retain older data only for an explicitly requested historical comparison or

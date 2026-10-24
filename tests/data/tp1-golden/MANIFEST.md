@@ -1,5 +1,11 @@
 # tp1 golden-token identity gate
 
+> **状态：现行数据 · 说明中的比对结论不适用于当前构建**
+> 记录：2026-10-24 · 归属：inherited-5090 · 角色：evidence
+> 原文适用条件：单卡 RTX 5090（`sm_120a`）· CUDA 13.1 · 对手方为上游 `feaf4dd`
+> 现行替代：无替代（本 fork 未重测 tp1 基线；`--tp 1` 在 2 × 16 GB 上装不下 27B 权重）
+> 保留理由：同目录数据文件仍被回归脚本读取，说明必须留在原位；比对结论仅对 5090 成立
+
 `--tp 1` must stay bit-identical to upstream `ninfer` at base commit `feaf4dd`. Until this
 directory existed, `scripts/tp1-regression.sh` only checked that a single-GPU run still produced a
 plausible counting sequence and the right identity rows — it had no upstream baseline and could not

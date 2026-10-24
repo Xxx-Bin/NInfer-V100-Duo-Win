@@ -1,10 +1,17 @@
 # 模型配置、权重绑定与执行的目标架构
 
+> **状态：计划态 · 不是当前实现映射**
+> 记录：2026-10-24 · 角色：contract
+> 目标态：已收敛的模型 / artifact / converter / 执行边界合同，不表示当前代码已实现
+> 现行实现：`src/artifact/`、`src/targets/qwen3_6_27b/impl/load/` 与本目录的 model / artifact 参考
+> 说明：原文第 7 行引用的 `engine-architecture.md` 不存在，引擎边界改为
+> [concurrent-inference-architecture.md](concurrent-inference-architecture.md)
+
 本文是 NInfer 已收敛的模型、artifact、converter 与执行边界的目标设计合同。它描述目标系统如何
 工作，不表示当前代码、容器或所有示例组合已经实现，也不展开迁移步骤或发布任务。
 具体序列化字段、framing revision、目录和 C++ 类型名不在本文中提前固定。
 
-[Engine 架构](engine-architecture.md)继续定义请求控制面、调度、资源与输出提交关系；本文规定
+[Engine 架构](concurrent-inference-architecture.md)继续定义请求控制面、调度、资源与输出提交关系；本文规定
 这些控制关系之下，模型事实、权重字节和执行实现如何组织。现有模型、Op 和存储参考中的数学与
 编码合同是本文示例的依据，其 checkpoint 专属绑定方式不是目标设计的限制。
 
@@ -742,7 +749,7 @@ append/attention consumer 和数值标准解释，不能用权重的 Q4/W8 名�
 这两个数量来自事务实现，不是模型层数配置或权重格式。
 
 共享 KV pool 不为每个 lane 平均预分固定份额。请求 admission、完整 continuation、Device/Host
-replica 和缓存保留继续遵循[资源调度与上下文缓存合同](resource-scheduling-and-context-cache.md)。
+replica 和缓存保留继续遵循[资源调度与上下文缓存合同](concurrent-inference-architecture.md)。
 配置决定状态维度，Program 决定物理 representation、容量与地址，Engine 决定逻辑保留策略。
 
 ### 10.3 从实际绑定计算资源需求
