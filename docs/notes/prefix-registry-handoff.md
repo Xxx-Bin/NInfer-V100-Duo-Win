@@ -8,7 +8,7 @@
 重新 attach。默认 `0` 逐位保持原行为。功能已完成、三条缺陷已修、速率零回归；剩余工作是测试固化
 和 C=2 并发验证。
 
-## 三个 commit
+## 提交
 
 | commit | 内容 |
 |---|---|
@@ -37,7 +37,7 @@
 4. **`--no-prefix-reuse` 与 `--prefix-registry-slots` 互斥**，启动即拒绝。前者说不用缓存，
    后者还扣着页不放，是矛盾配置。
 
-## 已修的三条缺陷（+ 一条被实测否证后撤回的改动）
+## 缺陷与改动清单
 
 - **attach 抢占会牺牲别人**：attach 时 displace 触发的 detach 发现 registry 满就去 evict，
   等于为了接回一个会话销毁另一个。改成 `detach_sequence(..., allow_evict=false)`：满就丢被挤出的
@@ -47,12 +47,70 @@
   C 的 entry，A 的侧请求落地时 1 槽已满、不允许淘汰，于是 A 的序列被销毁，**A.turn2 `cached`
   从 961 掉到 0（`full_reset`）**。`evict_registry_entry` 本来就按 `execution_frontier` 排序，
   淘汰不是"乱牺牲"，是容量治理本身。已在 `program_impl.h` 恢复 `allow_evict=true` 并留注释。
-- **准入说能腾、执行不腾**（hang 真因）：`can_admit_lane` 的注释写着「lane 自己的 retained 是
-  detach 不是 release，不能计入可回收」，代码照扣；executor 的回收循环又用
-  `retained_lane != lane` 把当前 lane 排除。结果准入放行、`start_prefill_lane` 预留 KV 时抛
-  `bad_alloc` → `worker_loop` catch-all → 引擎停服、HTTP 端口仍监听 → 客户端永久 hang。
-  现在 executor 对当前 lane 也执行 `evict_retained_lane`，再用 `reclaim_registry_for` 真正释放页。
+- **准入说能腾、执行不腾导致引擎半死**：见下一节，这条是本分支唯一的生产级故障。
 - **矛盾配置**：见结论 4。
+
+## 问题与解决：KV 耗尽时引擎半死（hang）
+
+### 现象
+
+不是死锁。某个请求在 KV 预留阶段失败后，**该请求连同所有在飞和排队的请求一起失败，worker 线程
+退出，但 HTTP 端口仍在 accept**。客户端连得上、发得出去、既收不到响应也不报错，只能等到超时，
+看起来就是永久卡住。
+
+区分三种表现：返回 500 是健康的，连不上也是健康的，只有「连上但永远没回应」是这个问题。
+
+### 成因链
+
+1. `can_admit_lane_after_retained_eviction` 把当前 lane 的 retained 页计入可回收——这是分支前的
+   账法，当时成立。
+2. 执行侧的回收循环 `if (retained_lane != lane && ...)` **排除当前 lane**——这行也是分支前的。
+3. 本分支把 `start_prefill_lane` FullReset 分支的 `sequence.kv.reset()` 改成 `detach_sequence()`：
+   页不再还给池子，而是跟着 entry 留在了 registry。
+4. 准入按第 1 步的账放行 → `reserve_sequence_kv` 找不到页 → `std::bad_alloc`。
+5. `admit_planned_request` 的 catch 先 `complete_error`，然后 **rethrow**（注释写明是故意的）→
+   `worker_loop` 的 `catch (...)` → `fail_all` → worker 退出；HTTP 监听不受影响。
+
+### 为什么算本分支引入
+
+不是新逻辑写错，是**老代码的前提被换掉了**：
+
+| | 准入记账 | 执行动作 | 账 |
+|---|---|---|---|
+| 分支前 | credit 当前 lane 的 `old_pages` | `reset()` 真还页 | 平 |
+| 本分支 | credit `old_pages` | detach，页不还 | 差 `old_pages` |
+
+`0eca192b` 给 `can_admit_lane` 补了新账法（`lane_bundle_stays_entitled`：detach 的页不再 credit），
+但漏了 `can_admit_lane_after_retained_eviction` 这一条路径。执行侧那行 `retained_lane != lane` 因此
+从「对的」变成「错的」。
+
+判定成老 bug 会得出错误结论：分支前那个形状能正常返回，`evict_retained_lane` 走 `clear_lane`，页
+确实回来了。
+
+### 修复（`f87e7915`）
+
+1. `can_admit_lane` 增加 `lane_bundle_stays_entitled`：detach 的序列其页仍被占用，不再计入可回收。
+2. executor 的回收循环不再排除当前 lane，并在 evict retained 之后调用
+   `reclaim_registry_for`——它按 `execution_frontier` 真的淘汰 entry、把页还给池子，且永不淘汰本
+   plan 即将 attach 的那个。
+3. 回收判定与执行对同一条账，不再出现「说腾了、没腾」。
+
+### 残余风险（未修，不在本分支范围）
+
+- `admit_planned_request` 第 866 行仍是 `throw std::logic_error("retained eviction did not make
+  admission feasible")`。它和原来的 `bad_alloc` 走**同一条** `fail_all` 通道，落到同样的 hang。
+  现在只是触发窗口窄了，不是不会发生。要根治需要把准入失败变成 request-scope 错误（503），
+  而「引擎失败即停服」是产品行为，不在本分支改。
+- 准入被拒（`QueueTimeout`）的边界没有实测。用 `--pending-timeout-ms 100` 即可构造，不需要把
+  KV 池填到边缘。
+
+### 证据缺口
+
+修复的复现配方目前只存在于 `_scratch/bench/kv_pressure.py`（未跟踪，不进 git）。默认
+`--prefix-registry-slots 0` 时所有现有测试都走老路径，改坏了不会变红。建议落点：
+`tests/targets/qwen3_6_27b/test_engine_v100-duo_kv_pressure.cpp`，与
+`test_engine_v100-duo_prefix_real.cpp` 同样用 `NINFER_V100_DUO_ARTIFACT` 门控、`SKIP_RETURN_CODE 77`，
+断言「准入放行 ⇒ `start_prefill` 不因页不足失败；失败也必须是 request-scope」。
 
 ## 验证现状
 
@@ -101,15 +159,15 @@ decode-512 149.3/149.5，decode-8k 141.7/141.8。
 
 ## 没做完的
 
-1. **KV 压力场景只有脚本，没有用例。** `_scratch/bench/kv_pressure.py`，重启机器就丢。
-   这是目前唯一能防止 hang 回归的证据，应该搬进 `tests/`。
+1. **KV 压力场景只有脚本，没有用例**（见「证据缺口」）。这是防 hang 回归的唯一证据。
 2. **C=2 没有端到端并发验证。** 只跑过串行 cohort 看恢复率，没做真正的并发多会话。
 3. **bench 口径失效。** 之前的对比用 `--no-prefix-reuse` + `slots=1` 隔离缓存，现在被互斥规则
    禁了。要重测得改成「reuse 开 + 每次不同 nonce 保证不命中」。
-4. **「引擎失败即停服」的设计没动。** `worker_loop` 的 catch-all 仍会让整个引擎退出，我只堵住了
+4. **「引擎失败即停服」的设计没动。** `worker_loop` 的 catch-all 仍会让整个引擎退出，只堵住了
    KV 那条触发路径。要让别类引擎级错误也变成可上报的 503，需要给 Engine 加对外状态，跨层改动。
-5. **准入被拒（QueuedTimeout）那条边界没实测**，因为要把池子精确填到差一两页，容易再次把 GPU
-   驱动搞挂（已经发生过一次，需要重启机器）。
+5. **准入被拒（`QueueTimeout`）那条边界没实测。** 不需要把池子填到差一两页：把
+   `--pending-timeout-ms` 设成 100 就能让它自然发生。（早先"必须压满 KV"的判断是错的，
+   那种做法确实会挂驱动，但没必要。）
 
 ## 环境与命令
 
