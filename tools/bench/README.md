@@ -3,6 +3,11 @@
 Offline helper for the `ninfer_bench` throughput tool. Correctness/parity tooling lives separately
 under [`tools/parity`](../parity).
 
+The upstream `tools/bench/ttft/` streaming TTFT client is **not ported to this fork**, and the serve
+benchmarks here request `stream: false`. Every TTFT number produced locally is the server-side phase
+sum `server_ttft_ms` (`prepare + vision + prefill`), which excludes ingress queueing and HTTP
+transport. Do not compare it with upstream streaming TTFT figures.
+
 ## Corpus baker
 
 `ninfer_bench` benchmarks prefill at an exact length by slicing the first `P` token ids of a

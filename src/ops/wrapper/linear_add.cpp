@@ -8,6 +8,7 @@
 #include "ops/linear/ggml_k/ggml_k.h"
 #include "ops/linear/gguf/gguf.h"
 #include "ops/linear/nvfp4/nvfp4_config.h"
+#include "ops/linear/nvfp4/nvfp4_cutlass_sm70.h"
 #include "ops/linear/nvfp4/nvfp4_format.h"
 #include "ops/linear_add/bf16/bf16_linear_add_plan.h"
 #include "ops/linear_add/fp8/fp8_linear_add_plan.h"
@@ -391,6 +392,20 @@ void issue_fused_rank(const Tensor& x, const Weight& w, Tensor& residual, Tensor
 // entry point linear_row_parallel() itself uses.
 void issue_plain_rank(const Tensor& x, const Weight& w, Tensor& residual, LinearPolicy policy,
                       WorkspaceArena* workspace, cudaStream_t stream) {
+    // Prefill width, NVFP4 A16, Volta: the plain rank's dispatch_linear resolves to the wide-T
+    // mma kernel (~28 TFLOPS at T=2560, N=5120, K=8704) while rank 0's fused row-parallel path
+    // lands on nvfp4_cutlass_sm70 (~120 TFLOPS-equivalent, 4x faster at the identical shape).
+    // Route the plain rank through the same cutlass kernel writing its partial directly --
+    // overwrite output == plain semantics, so the allreduce contract is unchanged. Decode
+    // (T==1) is untouched: it keeps the prepacked QPN2 route inside dispatch_linear.
+    static constexpr std::int32_t kCutlassMinTokens = 33; // matches linear_then_add's own bound
+    const bool cutlass_shape = w.n == 5120 &&
+                               (w.k == 6144 || w.k == 17408 || w.k == 3072 || w.k == 8704);
+    if (w.qtype == QType::NVFP4 && policy == LinearPolicy::A16Only &&
+        x.ne[1] >= kCutlassMinTokens && cutlass_shape && workspace != nullptr) {
+        detail::nvfp4_cutlass_sm70_launch(x, w, residual, *workspace, stream);
+        return;
+    }
     validate_linear_semantics(x, w, residual, policy);
     dispatch_linear(x, w, residual, policy, workspace, stream);
 }

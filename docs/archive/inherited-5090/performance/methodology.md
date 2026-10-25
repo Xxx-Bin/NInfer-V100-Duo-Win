@@ -102,7 +102,8 @@ intervals. Each published point is one wave, not a repeated-sample mean.
 | Spec tokens/round | `1 + accepted_tokens / speculative_rounds` |
 
 Server TTFT is an internal phase sum. It does not include ingress queueing or HTTP transport and
-is not the external streaming TTFT measured by the [Serve TTFT client](../../../../tools/bench/ttft/README.md).
+is not the external streaming TTFT measured by the Serve TTFT client (`tools/bench/ttft/` upstream;
+not ported to this fork, which has no streaming serve measurement).
 The three decode rates have different time denominators and must not share an unlabeled column.
 Committed decode tokens exclude the first completion token produced by prefill.
 
