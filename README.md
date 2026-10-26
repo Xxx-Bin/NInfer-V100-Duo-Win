@@ -43,6 +43,18 @@ it passes, so the release list only shows accepted builds.
 The Windows series sits on top of upstream `plus1998/NInfer-V100-Duo` at
 `c9674493`, which the annotated tag `fork-base/upstream-c9674493` records.
 
+## What this fork adds
+
+Changes carried on top of that base. Anything not listed here behaves as
+upstream does.
+
+| Area | Change | Details |
+|---|---|---|
+| Windows | Native Windows 11 build with CI-gated releases. The system monitor reads CPU load, CPU model name and memory through Win32, and the serving panel reports exact per-request rates and session peaks | [Windows guide](docs/windows.md), [serving reference](docs/serving.md) |
+| Prefix cache | `--prefix-registry-slots N` detaches a session from the lane that served it, so a side request (title, summary) no longer destroys that lane's retained prefix at `--max-concurrency 1`. Entries re-attach on any lane; default `0` keeps upstream behaviour | [CLI/serving reference](docs/serving.md), [decision record](docs/notes/prefix-reuse-decision.md) |
+| TP2 collective | Two-epoch packet mailbox collective on the decode path | [campaign record](docs/notes/v100-port-campaign.md) |
+| Prefill | Prefill-down projection routed through CUTLASS on the wider rank | [campaign record](docs/notes/v100-port-campaign.md) |
+
 The launcher defaults to TP2 on GPUs 0/1, INT8 KV, CUDA Graph, MTP3 with the
 optimized proposal head, one active request, and `127.0.0.1:8080`. Run any
 other artifact by replacing `model=...` with **one** downloaded artifact
@@ -50,6 +62,34 @@ path; put profile flags *after* it. Stop the previous server before
 switching models.
 
 ## Performance Comparison
+
+### Benchmark Corpus (60k Prefill + 512 Decode)
+
+The current build against its own baseline, on the synthetic
+`bench/fixtures/bench_corpus.ids` corpus: `qwen3_8_27b_nvfp4.ninfer`, TP2 on
+two V100s, INT8 KV, MTP4 with the optimized proposal head, 2,560-token prefill
+chunks, two reps after one warmup. This measures engine throughput on a fixed
+workload; it is **not** comparable with the natural-completion MTP table below.
+
+| | Baseline | Current | Δ |
+|---|---:|---:|---:|
+| Prefill | 945.799 tok/s | **1,187.077 tok/s** | **+25.5%** |
+| Decode | 129.7266 tok/s | **135.7862 tok/s** | **+4.7%** |
+
+Oracle output is bit-identical across both sides. Reproduce:
+
+```bash
+ninfer_bench --weights /path/to/qwen3_8_27b_nvfp4.ninfer \
+  --corpus bench/fixtures/bench_corpus.ids \
+  -pg 60000,512 --prefill-chunk 2560 \
+  --kv-dtype int8 --mtp-draft-tokens 4 --lm-head-draft \
+  --tp 2 --devices 0,1 -r 2 --warmup 1 --capture-generation
+```
+
+Baseline is `34412f4f`, the pre-campaign build — 53 commits past the upstream
+base, so the Windows port is present on both sides and the deltas measure only
+the two changes listed above. Methods and the full candidate ledger:
+[campaign record](docs/notes/v100-port-campaign.md).
 
 ### MTP3, MTP4, MTP5
 

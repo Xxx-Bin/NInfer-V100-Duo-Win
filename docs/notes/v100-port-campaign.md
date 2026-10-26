@@ -31,6 +31,35 @@ tag `result/final-confirm` → `f9e5ce82`；其后 docs 提交 `e7a53442` 与
 **只采纳了两项改动**：两 epoch packet 邮箱 collective（decode +4.523%）、
 prefill-down-cutlass（prefill +25.274%）。其余候选全部否决或出队。
 
+### 测量口径与复现
+
+上表数字来自 `ninfer_bench` 的合成语料基准，**不是**自然结束请求的速率，
+与 README 的 MTP3/4/5 表不可比（那张表是 74-token prompt、峰值 5s 区间与全程均值）。
+引用上表时必须带完整口径：
+
+```bash
+ninfer_bench --weights /path/to/qwen3_8_27b_nvfp4.ninfer \
+  --corpus bench/fixtures/bench_corpus.ids \
+  -pg 60000,512 --prefill-chunk 2560 \
+  --kv-dtype int8 --mtp-draft-tokens 4 --lm-head-draft \
+  --tp 2 --devices 0,1 -r 2 --warmup 1 --capture-generation
+```
+
+| 项 | 值 |
+|---|---|
+| artifact | `qwen3_8_27b_nvfp4.ninfer`（23,719,715,844 B） |
+| workload | `bench/fixtures/bench_corpus.ids`，60,000 token prefill + 512 decode |
+| prefill chunk | 2560 |
+| KV | INT8 |
+| MTP | `--mtp-draft-tokens 4 --lm-head-draft`（MTP4 + 优化草稿头） |
+| 环境 | Windows 11 · 2 × Tesla V100-SXM2 16GB · TP2 devices 0,1 · CUDA runtime 12.8 / driver 12.9 |
+| 统计 | `-r 2 --warmup 1`，2 rep 均值；MDD 见第四节 |
+| oracle | 双方 sha1 `06287348665d3648`，A 类逐位一致 |
+
+`ninfer_bench` 会把这条命令行原样写进报告 JSON 的 `command` 字段，所以任何一份历史报告
+都能自证口径。原始报告（`baseline.json`、`final-confirm.json`）**已不在版本控制内**，
+上面这条命令是唯一可重建口径的载体。
+
 ---
 
 ## 二、判决定案（17 项，全部有结论，勿再复议）
