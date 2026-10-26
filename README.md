@@ -43,23 +43,23 @@ it passes, so the release list only shows accepted builds.
 The Windows series sits on top of upstream `plus1998/NInfer-V100-Duo` at
 `c9674493`, which the annotated tag `fork-base/upstream-c9674493` records.
 
-## What this fork adds
-
-Changes carried on top of that base. Anything not listed here behaves as
-upstream does.
-
-| Area | Change | Details |
-|---|---|---|
-| Windows | Native Windows 11 build with CI-gated releases. The system monitor reads CPU load, CPU model name and memory through Win32, and the serving panel reports exact per-request rates and session peaks | [Windows guide](docs/windows.md), [serving reference](docs/serving.md) |
-| Prefix cache | `--prefix-registry-slots N` detaches a session from the lane that served it, so a side request (title, summary) no longer destroys that lane's retained prefix at `--max-concurrency 1`. Entries re-attach on any lane; default `0` keeps upstream behaviour | [CLI/serving reference](docs/serving.md), [decision record](docs/notes/prefix-reuse-decision.md) |
-| TP2 collective | Two-epoch packet mailbox collective on the decode path | [campaign record](docs/notes/v100-port-campaign.md) |
-| Prefill | Prefill-down projection routed through CUTLASS on the wider rank | [campaign record](docs/notes/v100-port-campaign.md) |
-
 The launcher defaults to TP2 on GPUs 0/1, INT8 KV, CUDA Graph, MTP3 with the
 optimized proposal head, one active request, and `127.0.0.1:8080`. Run any
 other artifact by replacing `model=...` with **one** downloaded artifact
 path; put profile flags *after* it. Stop the previous server before
 switching models.
+
+## What this fork adds
+
+Changes carried on top of that base, described by what they do for you.
+Anything not listed here behaves as upstream does.
+
+| What you get | What changed |
+|---|---|
+| **Runs natively on Windows 11** — no WSL, no Linux VM — and the panel in your browser shows live CPU, memory and per-request speed | [Native Windows build](docs/windows.md) with CI-gated releases; Win32 system monitor; exact per-request and session-peak accounting in the embedded panel |
+| **A side request stops wiping the conversation cache.** With one request in flight, asking the server for a title or summary used to reset the prefix cache to zero, so the next turn re-read the whole conversation. `--prefix-registry-slots N` lets the session step aside and re-attach instead; the default `0` keeps upstream behaviour | [Detached prefix registry](docs/notes/prefix-reuse-decision.md), documented in the [serving reference](docs/serving.md) |
+| **Decode 4.7% faster** | Two-epoch packet mailbox collective — [campaign record](docs/notes/v100-port-campaign.md) |
+| **Long prompts prefill 25.5% faster** | Prefill-down projection routed through CUTLASS on the wider rank — [campaign record](docs/notes/v100-port-campaign.md) |
 
 ## Performance Comparison
 
