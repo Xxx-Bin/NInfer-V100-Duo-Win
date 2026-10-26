@@ -1,0 +1,91 @@
+diff --git a/src/ops/linear_attention/gated_delta_net/gated_delta_net.cpp b/src/ops/linear_attention/gated_delta_net/gated_delta_net.cpp
+index 85e53f2c..1c6f0856 100644
+--- a/src/ops/linear_attention/gated_delta_net/gated_delta_net.cpp
++++ b/src/ops/linear_attention/gated_delta_net/gated_delta_net.cpp
+@@ -11,6 +11,9 @@
+ #include <cmath>
+ #include <cstddef>
+ #include <cstdint>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
+ #include <stdexcept>
+ #include <string>
+ 
+@@ -68,6 +71,68 @@ void require_scale(float scale) {
+     }
+ }
+ 
++// TEMP DIAGNOSTIC (C3 real-data checkpoint, 2026-10-26). Env-gated capture of the GDN operands of
++// a real prefill chunk, so the synthetic W/T_inv exponent sweep (_scratch/gdn_w_stats.cu) can be
++// rechecked against real model data. Diagnostic only, not part of the product: revert after use.
++void dump_gdn_operands(const Tensor& k, const Tensor& v, const Tensor& g, const Tensor& beta,
++                       bool normalize_qk, cudaStream_t stream) {
++    const char* dir = std::getenv("NINFER_GDN_DUMP");
++    if (dir == nullptr) { return; }
++    static int calls      = 0;
++    const char* max_env   = std::getenv("NINFER_GDN_DUMP_MAX");
++    const int max_calls   = (max_env != nullptr) ? std::atoi(max_env) : 64;
++    if (calls >= max_calls) { return; }
++    if (!k.is_contiguous() || !v.is_contiguous() || !g.is_contiguous() || !beta.is_contiguous()) {
++        std::fprintf(stderr, "[gdn-dump] non-contiguous operand, call skipped\n");
++        return;
++    }
++    char path[1024];
++    std::snprintf(path, sizeof(path), "%s/gdn_%03d.bin", dir, calls);
++    std::FILE* f = std::fopen(path, "wb");
++    if (f == nullptr) {
++        std::fprintf(stderr, "[gdn-dump] cannot open %s\n", path);
++        return;
++    }
++    // Header: magic, T, H_qk, H_v, D, normalize_qk, k dtype code, 0
++    const std::int32_t header[8] = {0x47444E31, k.ne[2], k.ne[1], v.ne[1], k.ne[0],
++                                    normalize_qk ? 1 : 0, 0, 0};
++    std::fwrite(header, sizeof(header), 1, f);
++    const struct {
++        const char* name;
++        const Tensor* t;
++    } parts[] = {{"k", &k}, {"v", &v}, {"g", &g}, {"beta", &beta}};
++    for (const auto& part : parts) {
++        const std::size_t bytes = part.t->bytes();
++        void* host              = std::malloc(bytes);
++        if (host == nullptr) {
++            std::fprintf(stderr, "[gdn-dump] oom for %s (%zu B)\n", part.name, bytes);
++            std::fclose(f);
++            return;
++        }
++        const cudaError_t err = cudaMemcpyAsync(host, part.t->data, bytes, cudaMemcpyDeviceToHost,
++                                                stream);
++        if (err != cudaSuccess) {
++            std::fprintf(stderr, "[gdn-dump] copy %s failed: %s\n", part.name,
++                         cudaGetErrorString(err));
++            std::free(host);
++            std::fclose(f);
++            return;
++        }
++        if (cudaStreamSynchronize(stream) != cudaSuccess) {
++            std::fprintf(stderr, "[gdn-dump] sync failed\n");
++            std::free(host);
++            std::fclose(f);
++            return;
++        }
++        std::fwrite(host, bytes, 1, f);
++        std::free(host);
++    }
++    std::fclose(f);
++    std::fprintf(stderr, "[gdn-dump] %s  T=%d H_qk=%d H_v=%d D=%d normalize_qk=%d\n", path, k.ne[2],
++                 k.ne[1], v.ne[1], k.ne[0], normalize_qk ? 1 : 0);
++    ++calls;
++}
++
+ Geometry validate_recurrent(const Tensor& q, const Tensor& k, const Tensor& v, const Tensor& g,
+                             const Tensor& beta, float scale, const Tensor& ssm_state,
+                             const Tensor& out) {
+@@ -251,6 +316,7 @@ void gated_delta_net(const Tensor& q, const Tensor& k, const Tensor& v, const Te
+ 
+     auto scratch_scope   = ws.scope();
+     const std::int32_t T = q.ne[2];
++    if (T >= 512) { dump_gdn_operands(k, v, g, beta, normalize_qk, stream); }
+ #ifdef NINFER_VOLTA_BUILD
+     // launch_chunked (gated_delta_net/chunked/*) is the parallel/matmul GDN formulation and
+     // needs Ampere+ mma.sync -- trap-stubbed on sm_70. Forcing T_full=0 routes the entire width

@@ -1,0 +1,36 @@
+[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=60520, kv_cache=int8-group64)
+[ninfer_bench] test 1/1 pp60000bench exit=0  (21:46:12)
+[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=60520, kv_cache=int8-group64)
+[ninfer_bench] test 1/1 pp60000bench exit=0  (21:46:12)
+wrote C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_scratch/port-log/gdn-chunked-volta.json
+=== POST ===
+0, 64, 10 MiB, 87.65 W
+1, 66, 10 MiB, 77.59 W
+
+==============================================================================
+CANDIDATE  gdn-chunked-volta             ref=prefill-down-cutlass
+==============================================================================
+  rep0  prefill  898.025 tok/s ( 66.813s)   decode 135.8292 tok/s ( 3.7694s)
+        sha1 06287348665d3648 n=513  acc/drf/rd 406/421/106  al=4.8301887 pp=[105, 102, 100, 99]
+  rep1  prefill  897.150 tok/s ( 66.878s)   decode 135.8677 tok/s ( 3.7684s)
+        sha1 06287348665d3648 n=513  acc/drf/rd 406/421/106  al=4.8301887 pp=[105, 102, 100, 99]
+
+  reference (prefill-down-cutlass):  prefill 1184.617   decode 135.8083
+  threshold:        prefill 1196.463   decode 136.4874   (+1.0% / +0.5%)
+
+--- ORACLE ---
+  class: A  (bit-identical, 纯等价改动)
+
+--- PERFORMANCE ---
+  prefill  [898.025, 897.15]  mean=897.587  delta=-24.230%  gate=FAIL
+  decode   [135.8292, 135.8677]  mean=135.8485  delta=+0.030%  gate=FAIL
+
+--- RESOLUTION (实测噪声地板) ---
+  prefill  delta=-24.230%  MDD(95%, 2 reps)=0.481%  -> 可分辨
+  decode   delta=+0.030%  MDD(95%, 2 reps)=0.433%  -> 低于可分辨下限
+
+--- VERDICT ---
+  PENDING  (oracle 逐位一致, 但门槛未双过)
+    判据 v3: 目标 decode +0.030% (需 >= +0.5%) / 非目标 prefill -24.230% (需 >= -0.481%)
+    decode 的差值 0.030% 低于 MDD 0.433% -> 本次测量不构成"有效/无效"的证据
+    prefill FAIL / decode FAIL -> 需裁决: 目标指标过 + 非目标不回退, 还是严格合取

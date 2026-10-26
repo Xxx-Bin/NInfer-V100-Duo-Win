@@ -1,0 +1,77 @@
+== real prefill chunk (64 GDN invocations) ==
+  T=2560 H_qk=8 H_v=24 normalize_qk=1
+  layer 000  |Ti|max=[1.000, 1.000] |S|max=[2.155, 40.694] T_inv span=189.7 W span=199.0 state span=38.9
+  layer 001  |Ti|max=[1.000, 1.000] |S|max=[0.036, 61.245] T_inv span=645.9 W span=663.3 state span=43.4
+  layer 002  |Ti|max=[1.000, 1.000] |S|max=[0.002, 0.944] T_inv span=371.4 W span=390.3 state span=37.7
+  layer 003  |Ti|max=[1.000, 1.000] |S|max=[0.004, 0.667] T_inv span=332.4 W span=349.2 state span=39.8
+  layer 004  |Ti|max=[1.000, 1.000] |S|max=[0.008, 0.558] T_inv span=229.9 W span=235.0 state span=38.0
+  layer 005  |Ti|max=[1.000, 1.000] |S|max=[0.006, 0.741] T_inv span=328.1 W span=340.8 state span=38.6
+  layer 006  |Ti|max=[1.000, 1.000] |S|max=[0.003, 0.390] T_inv span=330.1 W span=340.1 state span=36.0
+  layer 007  |Ti|max=[1.000, 1.000] |S|max=[0.004, 0.419] T_inv span=326.5 W span=338.1 state span=33.5
+  layer 008  |Ti|max=[1.000, 1.000] |S|max=[0.003, 0.449] T_inv span=289.9 W span=299.5 state span=35.9
+  layer 009  |Ti|max=[1.000, 1.000] |S|max=[0.003, 0.353] T_inv span=483.0 W span=495.5 state span=43.0
+  layer 010  |Ti|max=[1.000, 1.000] |S|max=[0.004, 0.561] T_inv span=95.9 W span=102.5 state span=35.0
+  layer 011  |Ti|max=[1.000, 1.000] |S|max=[0.003, 1.015] T_inv span=682.4 W span=696.1 state span=37.3
+  layer 012  |Ti|max=[1.000, 1.000] |S|max=[0.006, 0.371] T_inv span=511.7 W span=521.5 state span=36.1
+  layer 013  |Ti|max=[1.000, 1.000] |S|max=[0.008, 0.560] T_inv span=535.9 W span=550.2 state span=36.4
+  layer 014  |Ti|max=[1.000, 1.000] |S|max=[0.007, 1.069] T_inv span=76.1 W span=85.0 state span=44.1
+  layer 015  |Ti|max=[1.000, 1.000] |S|max=[0.006, 0.813] T_inv span=756.5 W span=768.2 state span=34.8
+  layer 016  |Ti|max=[1.000, 1.000] |S|max=[0.013, 1.735] T_inv span=135.1 W span=145.7 state span=36.0
+  layer 017  |Ti|max=[1.000, 1.000] |S|max=[0.007, 0.513] T_inv span=317.9 W span=330.5 state span=41.9
+  layer 018  |Ti|max=[1.000, 1.000] |S|max=[0.007, 0.863] T_inv span=113.5 W span=122.8 state span=37.6
+  layer 019  |Ti|max=[1.000, 1.000] |S|max=[0.008, 0.604] T_inv span=inf W span=inf state span=38.8
+  layer 020  |Ti|max=[1.000, 1.000] |S|max=[0.014, 0.978] T_inv span=124.2 W span=133.5 state span=36.0
+  layer 021  |Ti|max=[1.000, 1.000] |S|max=[0.004, 1.043] T_inv span=151.0 W span=154.3 state span=38.2
+  layer 022  |Ti|max=[1.000, 1.000] |S|max=[0.008, 0.751] T_inv span=664.0 W span=682.1 state span=46.8
+  layer 023  |Ti|max=[1.000, 1.000] |S|max=[0.014, 1.033] T_inv span=33.3 W span=39.1 state span=37.4
+  layer 024  |Ti|max=[1.000, 1.000] |S|max=[0.013, 0.593] T_inv span=47.1 W span=56.8 state span=35.9
+  layer 025  |Ti|max=[1.000, 1.000] |S|max=[0.006, 0.840] T_inv span=117.7 W span=138.6 state span=45.0
+  layer 026  |Ti|max=[1.000, 1.000] |S|max=[0.013, 0.995] T_inv span=48.2 W span=52.7 state span=35.5
+  layer 027  |Ti|max=[1.000, 1.000] |S|max=[0.016, 0.663] T_inv span=172.3 W span=181.4 state span=36.8
+  layer 028  |Ti|max=[1.000, 1.000] |S|max=[0.023, 0.918] T_inv span=253.0 W span=262.8 state span=34.6
+  layer 029  |Ti|max=[1.000, 1.000] |S|max=[0.009, 1.681] T_inv span=99.2 W span=106.9 state span=35.7
+  layer 030  |Ti|max=[1.000, 1.000] |S|max=[0.021, 2.814] T_inv span=81.3 W span=84.0 state span=38.3
+  layer 031  |Ti|max=[1.000, 1.000] |S|max=[0.026, 1.042] T_inv span=301.1 W span=309.9 state span=42.1
+  layer 032  |Ti|max=[1.000, 1.000] |S|max=[0.010, 1.395] T_inv span=622.2 W span=633.0 state span=36.9
+  layer 033  |Ti|max=[1.000, 1.000] |S|max=[0.013, 1.433] T_inv span=361.4 W span=370.6 state span=35.4
+  layer 034  |Ti|max=[1.000, 1.000] |S|max=[0.012, 0.914] T_inv span=253.1 W span=254.7 state span=37.9
+  layer 035  |Ti|max=[1.000, 1.000] |S|max=[0.022, 1.108] T_inv span=129.9 W span=137.8 state span=34.8
+  layer 036  |Ti|max=[1.000, 1.000] |S|max=[0.018, 1.091] T_inv span=456.9 W span=463.9 state span=34.6
+  layer 037  |Ti|max=[1.000, 1.000] |S|max=[0.018, 1.138] T_inv span=727.7 W span=746.4 state span=35.1
+  layer 038  |Ti|max=[1.000, 1.000] |S|max=[0.020, 1.192] T_inv span=45.1 W span=56.2 state span=36.8
+  layer 039  |Ti|max=[1.000, 1.000] |S|max=[0.010, 0.889] T_inv span=944.1 W span=954.6 state span=34.6
+  layer 040  |Ti|max=[1.000, 1.000] |S|max=[0.041, 1.073] T_inv span=50.4 W span=54.5 state span=37.3
+  layer 041  |Ti|max=[1.000, 1.000] |S|max=[0.017, 0.676] T_inv span=233.5 W span=243.3 state span=35.1
+  layer 042  |Ti|max=[1.000, 1.000] |S|max=[0.013, 0.661] T_inv span=50.7 W span=61.1 state span=34.8
+  layer 043  |Ti|max=[1.000, 1.000] |S|max=[0.020, 0.565] T_inv span=395.3 W span=410.6 state span=37.0
+  layer 044  |Ti|max=[1.000, 1.000] |S|max=[0.048, 0.780] T_inv span=166.0 W span=177.7 state span=33.9
+  layer 045  |Ti|max=[1.000, 1.000] |S|max=[0.014, 0.645] T_inv span=56.8 W span=64.0 state span=37.5
+  layer 046  |Ti|max=[1.000, 1.000] |S|max=[0.017, 1.428] T_inv span=inf W span=inf state span=34.8
+  layer 047  |Ti|max=[1.000, 1.000] |S|max=[0.021, 0.523] T_inv span=28.3 W span=33.0 state span=34.6
+  layer 048  |Ti|max=[1.000, 1.000] |S|max=[0.043, 1.027] T_inv span=32.4 W span=39.3 state span=34.5
+  layer 049  |Ti|max=[1.000, 1.000] |S|max=[0.018, 0.463] T_inv span=105.8 W span=111.3 state span=34.1
+  layer 050  |Ti|max=[1.000, 1.000] |S|max=[0.046, 0.806] T_inv span=32.8 W span=41.3 state span=34.1
+  layer 051  |Ti|max=[1.000, 1.000] |S|max=[0.050, 0.701] T_inv span=211.8 W span=221.6 state span=32.2
+  layer 052  |Ti|max=[1.000, 1.000] |S|max=[0.068, 1.005] T_inv span=397.3 W span=407.1 state span=32.3
+  layer 053  |Ti|max=[1.000, 1.000] |S|max=[0.029, 0.689] T_inv span=49.1 W span=57.0 state span=34.4
+  layer 054  |Ti|max=[1.000, 1.000] |S|max=[0.038, 1.790] T_inv span=61.8 W span=71.2 state span=34.9
+  layer 055  |Ti|max=[1.000, 1.000] |S|max=[0.061, 2.248] T_inv span=83.4 W span=88.2 state span=34.5
+  layer 056  |Ti|max=[1.000, 1.000] |S|max=[0.097, 2.180] T_inv span=392.4 W span=400.8 state span=33.3
+  layer 057  |Ti|max=[1.000, 1.000] |S|max=[0.027, 0.875] T_inv span=493.8 W span=506.0 state span=34.3
+  layer 058  |Ti|max=[1.000, 1.000] |S|max=[0.038, 0.850] T_inv span=232.4 W span=239.6 state span=36.6
+  layer 059  |Ti|max=[1.000, 1.000] |S|max=[0.029, 0.830] T_inv span=59.8 W span=65.1 state span=37.5
+  layer 060  |Ti|max=[1.000, 1.000] |S|max=[0.017, 1.243] T_inv span=679.6 W span=694.2 state span=43.6
+  layer 061  |Ti|max=[1.000, 1.000] |S|max=[0.032, 6.393] T_inv span=inf W span=inf state span=37.6
+  layer 062  |Ti|max=[1.000, 1.000] |S|max=[0.012, 1.565] T_inv span=66.6 W span=72.8 state span=38.2
+  layer 063  |Ti|max=[1.000, 1.000] |S|max=[0.011, 0.823] T_inv span=604.4 W span=610.5 state span=34.1
+-- all layers merged --
+  chunk |Ti|max: [1.000, 1.000]   state |S|max: [0.002, 61.245]
+  Af      n=123863040 max=9.865e-01 minNZ=4.941e-324 span=infbits scale=2^14 scaled[8.09e-320, 1.62e+04] subnormal=16.3866%
+  expG    n=3932160 max=1.000e+00 minNZ=1.482e-323 span=infbits scale=2^14 scaled[2.43e-319, 1.64e+04] subnormal=19.6123%
+  T_inv   n=127795200 max=1.000e+00 minNZ=4.941e-324 span=infbits scale=2^14 scaled[8.09e-320, 1.64e+04] subnormal=19.7744%
+  W       n=503316480 max=9.157e-01 minNZ=4.941e-324 span=infbits scale=2^14 scaled[8.09e-320, 1.50e+04] subnormal=30.7072%
+  U       n=503316480 max=4.333e+01 minNZ=2.730e-15 span=53.8bits scale=2^9 scaled[1.40e-12, 2.22e+04] subnormal=5.0477%
+  v_new   n=503316480 max=3.986e+01 minNZ=2.822e-13 span=47.0bits scale=2^9 scaled[1.44e-10, 2.04e+04] subnormal=5.6645%
+  state   n=1006632960 max=6.125e+01 minNZ=5.962e-15 span=53.2bits scale=2^8 scaled[1.53e-12, 1.57e+04] subnormal=12.7302%
+  worst spans: T_inv inf bits (layer 19) / W inf bits (layer 19) / state 46.8 bits (layer 22); fp16 normal domain = 29 bits
+GDN_W_STATS_REAL_DONE

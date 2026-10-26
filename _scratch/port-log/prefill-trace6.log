@@ -1,0 +1,21 @@
+[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=10249, kv_cache=int8-group64)
+[ninfer_bench] test 1/1 pp10240+tg1: warmup=0 reps=1
+
+=== NINFER_PHASE_TRACE (host wall, device-synchronised brackets) ===
+phase                   total_s    count        mean_ms       max_ms
+chunk                     8.361        5       1672.212     2128.397
+layer.full                2.060       80         25.748       45.140
+layer.gdn                 6.234      240         25.974       43.567
+mixer.attn                0.991       80         12.383       18.569
+mixer.gdn                 3.024      240         12.601       16.861
+post_mixer.full           1.068       80         13.352       26.718
+post_mixer.gdn            3.207      240         13.361       27.924
+mtp.chunk                 0.059        5         11.833       14.915
+proj.swiglu               1.865      320          5.828        8.504
+proj.down                 2.383      320          7.448       20.607
+down.gemm                 4.159      640          6.498       20.238
+down.gemm.rank0           1.249      640          1.951        3.741
+down.gemm.rank1           2.899      640          4.530       17.242
+collective                0.178      640          0.278        0.372
+========================================================================
+wrote C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_scratch/port-log/prefill-trace6.json

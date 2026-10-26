@@ -1,0 +1,3 @@
+[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=60520, kv_cache=int8-group64)
+[ninfer_bench] test 1/1 pp60000+tg512: warmup=1 reps=2
+wrote C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_scratch/port-log/tilen256.json

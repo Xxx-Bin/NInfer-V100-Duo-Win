@@ -1,0 +1,1832 @@
+-- The C compiler identification is MSVC 19.38.33134.0
+-- The CXX compiler identification is MSVC 19.38.33134.0
+-- The CUDA compiler identification is NVIDIA 12.8.61 with host compiler MSVC 19.38.33134.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting CUDA compiler ABI info
+-- Detecting CUDA compiler ABI info - done
+-- Check for working CUDA compiler: C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cuda-12.8/bin/nvcc.exe - skipped
+-- Detecting CUDA compile features
+-- Detecting CUDA compile features - done
+-- CMake Version: 3.31.6
+-- CUTLASS 4.4.2
+-- Found CUDAToolkit: C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cuda-12.8/include (found version "12.8.61")
+-- CUDART: C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cuda-12.8/lib/x64/cudart.lib
+-- CUDA Driver: C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cuda-12.8/lib/x64/cuda.lib
+-- NVRTC: Not Found
+-- Default Install Location: install
+-- Found Python3: C:/Users/lwb6/AppData/Local/Programs/Python/Python313/python.exe (found suitable version "3.13.15", minimum required is "3.5") found components: Interpreter
+-- CUDA Compilation Architectures: 70;72;75;80;86;87;89;90;90a;100;100a;120;120a;121;121a;101;101a
+-- Enable caching of reference results in conv unit tests
+-- Enable rigorous conv problem sizes in conv unit tests
+-- Grid Dependency Control (GDC) is enabled for SM100 kernels (required for programmatic dependent launches).
+-- Using the following NVCC flags: 
+  --expt-relaxed-constexpr
+  -ftemplate-backtrace-limit=0
+  -Xcompiler=/W3
+  -Xcompiler=/wd4819
+  -Xcompiler=/wd5105
+  -Xcompiler=/fp:strict
+  -DCUTLASS_TEST_LEVEL=0
+  -DCUTLASS_TEST_ENABLE_CACHED_RESULTS=1
+  -DCUTLASS_CONV_UNIT_TEST_RIGOROUS_SIZE_ENABLED=1
+  -DCUTLASS_DEBUG_TRACE_LEVEL=0
+-- Configuring cublas ...
+-- cuBLAS Disabled.
+-- Configuring cuBLAS ... done.
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - not found
+-- Found Threads: TRUE
+-- Found Python3: C:/Users/lwb6/AppData/Local/Programs/Python/Python313/python.exe (found version "3.13.15") found components: Interpreter
+-- Configuring done (33.1s)
+-- Generating done (2.2s)
+-- Build files have been written to: C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/build
+CONFIGURE_OK
+NINJA_JOBS=2
+ninja: Entering directory `build'
+[1/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\dtype.cpp for CXX dependencies
+[2/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\gdn_replay_records.cpp for CXX dependencies
+[3/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\host_worker_pool.cpp for CXX dependencies
+[4/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\cyclic_kv_cache.cpp for CXX dependencies
+[5/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\paged_kv_cache.cpp for CXX dependencies
+[6/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\layout.cpp for CXX dependencies
+[7/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\linear_attention_state.cpp for CXX dependencies
+[8/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\tensor.cpp for CXX dependencies
+[9/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\core\decode_graph.cpp for CXX dependencies
+[10/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\runtime\engine\admission_policy.cpp for CXX dependencies
+[11/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\runtime\engine\kv_capacity.cpp for CXX dependencies
+[12/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\runtime\engine\public_types.cpp for CXX dependencies
+[13/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\runtime\engine\request_memory.cpp for CXX dependencies
+[14/450] Generating CXX dyndep file src\CMakeFiles\ninfer_core.dir\CXX.dd
+[15/450] Building CUDA object src\CMakeFiles\ninfer_core.dir\core\arena.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+arena.cu
+tmpxft_00001034_00000000-10_arena.cudafe1.cpp
+[16/450] Building CUDA object src\CMakeFiles\ninfer_core.dir\core\device.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+device.cu
+tmpxft_00001e08_00000000-10_device.cudafe1.cpp
+[17/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\dtype.cpp.obj
+[18/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\gdn_replay_records.cpp.obj
+[19/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\cyclic_kv_cache.cpp.obj
+[20/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\host_worker_pool.cpp.obj
+[21/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\paged_kv_cache.cpp.obj
+[22/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\linear_attention_state.cpp.obj
+[23/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\layout.cpp.obj
+[24/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\tensor.cpp.obj
+[25/450] Building CXX object src\CMakeFiles\ninfer_core.dir\core\decode_graph.cpp.obj
+[26/450] Building CXX object src\CMakeFiles\ninfer_core.dir\runtime\engine\admission_policy.cpp.obj
+[27/450] Building CXX object src\CMakeFiles\ninfer_core.dir\runtime\engine\kv_capacity.cpp.obj
+[28/450] Building CXX object src\CMakeFiles\ninfer_core.dir\runtime\engine\public_types.cpp.obj
+[29/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_attention\gated_delta_net\gated_delta_net.cpp for CXX dependencies
+[30/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_attention\gated_delta_net\replay.cpp for CXX dependencies
+[31/450] Building CXX object src\CMakeFiles\ninfer_core.dir\runtime\engine\request_memory.cpp.obj
+[32/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\bf16\bf16_attn_input_plan.cpp for CXX dependencies
+[33/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\fp8\fp8_attn_input_plan.cpp for CXX dependencies
+[34/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\nvfp4\nvfp4_attn_input_plan.cpp for CXX dependencies
+[35/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\q4_q5\q4_q5_attn_input_plan.cpp for CXX dependencies
+[36/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\w8\w8_attn_input_plan.cpp for CXX dependencies
+[37/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_input_proj\fp8\fp8_gdn_conv_plan.cpp for CXX dependencies
+[38/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_input_proj\fp8\fp8_gdn_input_plan.cpp for CXX dependencies
+[39/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_input_proj\nvfp4\nvfp4_gdn_input_plan.cpp for CXX dependencies
+[40/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_input_proj\nvfp4\nvfp4_gdn_snapshot_plan.cpp for CXX dependencies
+[41/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_input_proj\w8\w8_gdn_input_plan.cpp for CXX dependencies
+[42/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_input_proj\q4_q5\q4_q5_gdn_input_plan.cpp for CXX dependencies
+[43/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\gdn_gating_proj\bf16\bf16_gdn_gating_proj_plan.cpp for CXX dependencies
+[44/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\bf16\bf16_dispatch.cpp for CXX dependencies
+[45/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\fp8\fp8_format.cpp for CXX dependencies
+[46/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\fp8\fp8_dispatch.cpp for CXX dependencies
+[47/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\nvfp4\nvfp4_format.cpp for CXX dependencies
+[48/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\nvfp4\nvfp4_dispatch.cpp for CXX dependencies
+[49/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\q4\q4_dispatch.cpp for CXX dependencies
+[50/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\q5\q5_dispatch.cpp for CXX dependencies
+[51/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_add\bf16\bf16_linear_add_plan.cpp for CXX dependencies
+[52/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_add\nvfp4\nvfp4_linear_add_plan.cpp for CXX dependencies
+[53/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_add\fp8\fp8_linear_add_plan.cpp for CXX dependencies
+[54/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_add\q5\q5_linear_add_plan.cpp for CXX dependencies
+[55/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_add\w8\w8_linear_add_plan.cpp for CXX dependencies
+[56/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\q4\q4_linear_swiglu_plan.cpp for CXX dependencies
+[57/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\nvfp4\nvfp4_linear_swiglu_plan.cpp for CXX dependencies
+[58/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\fp8\fp8_linear_swiglu_plan.cpp for CXX dependencies
+[59/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\w8\w8_linear_swiglu_plan.cpp for CXX dependencies
+[60/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\q6\q6_dispatch.cpp for CXX dependencies
+[61/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\w8\w8_dispatch.cpp for CXX dependencies
+[62/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_pair\w8\w8_pair_plan.cpp for CXX dependencies
+[63/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\decode\sparse_moe_decode_plan.cpp for CXX dependencies
+[64/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_plan.cpp for CXX dependencies
+[65/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\small_t\sparse_moe_small_t_plan.cpp for CXX dependencies
+[66/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\linear.cpp for CXX dependencies
+[67/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\add_bias.cpp for CXX dependencies
+[68/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\argmax.cpp for CXX dependencies
+[69/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\cast.cpp for CXX dependencies
+[70/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\causal_conv1d_silu.cpp for CXX dependencies
+[71/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\embedding.cpp for CXX dependencies
+[72/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\gdn_gating.cpp for CXX dependencies
+[73/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\gdn_gating_proj.cpp for CXX dependencies
+[74/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\gelu.cpp for CXX dependencies
+[75/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\gdn_input_proj.cpp for CXX dependencies
+[76/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\bidirectional_gqa_attention.cpp for CXX dependencies
+[77/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\swa.cpp for CXX dependencies
+[78/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\gqa_attention.cpp for CXX dependencies
+[79/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\kv_cache_append_prefix.cpp for CXX dependencies
+[80/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\l2norm.cpp for CXX dependencies
+[81/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\attn_input_proj.cpp for CXX dependencies
+[82/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\layer_norm.cpp for CXX dependencies
+[83/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\linear_add.cpp for CXX dependencies
+[84/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\linear_pair.cpp for CXX dependencies
+[85/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\linear_swiglu.cpp for CXX dependencies
+[86/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\mtp_pack.cpp for CXX dependencies
+[87/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\mtp_round.cpp for CXX dependencies
+[88/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\speculative_round.cpp for CXX dependencies
+[89/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\position.cpp for CXX dependencies
+[90/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\prepare_ragged_prefix.cpp for CXX dependencies
+[91/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\prepare_masked_block.cpp for CXX dependencies
+[92/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\residual_add.cpp for CXX dependencies
+[93/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\rmsnorm.cpp for CXX dependencies
+[94/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\rope.cpp for CXX dependencies
+[95/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\sampling.cpp for CXX dependencies
+[96/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\scalar.cpp for CXX dependencies
+[97/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\scatter.cpp for CXX dependencies
+[98/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\sigmoid_mul.cpp for CXX dependencies
+[99/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\silu_mul.cpp for CXX dependencies
+[100/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\vision_attention.cpp for CXX dependencies
+[101/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\sparse_moe.cpp for CXX dependencies
+[102/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\vision_pos_embed.cpp for CXX dependencies
+[103/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\candidate_selector.cpp for CXX dependencies
+[104/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_topk\linear_topk.cpp for CXX dependencies
+[105/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\dynamic_grouped_conv.cpp for CXX dependencies
+[106/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\dynamic_grouped_conv\bf16\bf16_dynamic_grouped_conv_prepare_plan.cpp for CXX dependencies
+[107/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\rmsnorm_rope\rmsnorm_rope.cpp for CXX dependencies
+[108/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\dynamic_grouped_conv\w8\w8_dynamic_grouped_conv_add_plan.cpp for CXX dependencies
+[109/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\context_kv_materialize\context_kv_materialize.cpp for CXX dependencies
+[110/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\nvfp4_sm86_stubs.cpp for CXX dependencies
+[111/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\fp8_sm86_stubs.cpp for CXX dependencies
+[112/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\artifact\reader.cpp for CXX dependencies
+[113/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\artifact\storage_layouts.cpp for CXX dependencies
+[114/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\artifact\binder.cpp for CXX dependencies
+[115/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\artifact\materializer.cpp for CXX dependencies
+[116/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\artifact\typed_binding.cpp for CXX dependencies
+[117/450] Linking CXX static library CMakeFiles\ninfer_core.dir\cmake_device_link.obj
+arena.cu.obj
+device.cu.obj
+dtype.cpp.obj
+host_worker_pool.cpp.obj
+gdn_replay_records.cpp.obj
+cyclic_kv_cache.cpp.obj
+paged_kv_cache.cpp.obj
+linear_attention_state.cpp.obj
+layout.cpp.obj
+tensor.cpp.obj
+decode_graph.cpp.obj
+admission_policy.cpp.obj
+kv_capacity.cpp.obj
+public_types.cpp.obj
+request_memory.cpp.obj
+cudart_static.lib
+cudadevrt.lib
+cudart_static.lib
+kernel32.lib
+user32.lib
+gdi32.lib
+winspool.lib
+shell32.lib
+ole32.lib
+oleaut32.lib
+uuid.lib
+comdlg32.lib
+advapi32.lib
+cl: 命令行 warning D9002 :忽略未知选项“/NODEFAULTLIB:LIBCMT”
+[118/450] Generating CXX dyndep file src\CMakeFiles\ninfer_ops.dir\CXX.dd
+[119/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\text\unicode.cpp for CXX dependencies
+[120/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\media\decode\decode_stub_win.cpp for CXX dependencies
+[121/450] Linking CXX static library src\ninfer_core.lib
+[122/450] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\product\media_acquire\acquire_stub_win.cpp for CXX dependencies
+[123/450] Generating CXX dyndep file src\CMakeFiles\ninfer_artifact.dir\CXX.dd
+[124/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\ggml_k\ggml_k.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+ggml_k.cu
+tmpxft_0000178c_00000000-10_ggml_k.cudafe1.cpp
+[125/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\common\allreduce.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+allreduce.cu
+tmpxft_00000e0c_00000000-10_allreduce.cudafe1.cpp
+[126/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\add_bias.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+add_bias.cu
+tmpxft_00002d30_00000000-10_add_bias.cudafe1.cpp
+[127/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\argmax.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+argmax.cu
+tmpxft_00002bbc_00000000-10_argmax.cudafe1.cpp
+[128/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\cast.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+cast.cu
+tmpxft_00001220_00000000-10_cast.cudafe1.cpp
+[129/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\causal_conv1d.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+causal_conv1d.cu
+tmpxft_00002dd8_00000000-10_causal_conv1d.cudafe1.cpp
+[130/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\embed_gather.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+embed_gather.cu
+tmpxft_0000253c_00000000-10_embed_gather.cudafe1.cpp
+[131/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\gdn_gating.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gdn_gating.cu
+tmpxft_000007c4_00000000-10_gdn_gating.cudafe1.cpp
+[132/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\gelu.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gelu.cu
+tmpxft_00002370_00000000-10_gelu.cudafe1.cpp
+[133/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\bidirectional_gqa_attention.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bidirectional_gqa_attention.cu
+tmpxft_00001778_00000000-10_bidirectional_gqa_attention.cudafe1.cpp
+[134/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\gguf\gguf.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gguf.cu
+tmpxft_00000d94_00000000-10_gguf.cudafe1.cpp
+[135/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\swa.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+swa.cu
+tmpxft_000008b8_00000000-10_swa.cudafe1.cpp
+[136/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\gqa_attention_prefill.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gqa_attention_prefill.cu
+tmpxft_000006b4_00000000-10_gqa_attention_prefill.cudafe1.cpp
+[137/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\kv_cache_append_prefix.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+kv_cache_append_prefix.cu
+tmpxft_00002d5c_00000000-10_kv_cache_append_prefix.cudafe1.cpp
+[138/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\l2norm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+l2norm.cu
+tmpxft_000035fc_00000000-10_l2norm.cudafe1.cpp
+[139/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\layer_norm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+layer_norm.cu
+tmpxft_00003864_00000000-10_layer_norm.cudafe1.cpp
+[140/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\mtp_pack.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+mtp_pack.cu
+tmpxft_00002c50_00000000-10_mtp_pack.cudafe1.cpp
+[141/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\mtp_round.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+mtp_round.cu
+tmpxft_0000054c_00000000-10_mtp_round.cudafe1.cpp
+[142/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\speculative_round.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+speculative_round.cu
+tmpxft_00000d38_00000000-10_speculative_round.cudafe1.cpp
+[143/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\position.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+position.cu
+tmpxft_00001e28_00000000-10_position.cudafe1.cpp
+[144/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\prepare_ragged_prefix.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+prepare_ragged_prefix.cu
+tmpxft_000025bc_00000000-10_prepare_ragged_prefix.cudafe1.cpp
+[145/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\prepare_masked_block.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+prepare_masked_block.cu
+tmpxft_00002130_00000000-10_prepare_masked_block.cudafe1.cpp
+[146/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\residual_add.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+residual_add.cu
+tmpxft_00002888_00000000-10_residual_add.cudafe1.cpp
+[147/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\rmsnorm.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+rmsnorm.cu
+tmpxft_00002438_00000000-10_rmsnorm.cudafe1.cpp
+[148/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\rope.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+rope.cu
+tmpxft_00002fec_00000000-10_rope.cudafe1.cpp
+[149/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\sampling.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+sampling.cu
+tmpxft_000028c4_00000000-10_sampling.cudafe1.cpp
+[150/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\scalar.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+scalar.cu
+tmpxft_00003438_00000000-10_scalar.cudafe1.cpp
+[151/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\scatter.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+scatter.cu
+tmpxft_00002c50_00000000-10_scatter.cudafe1.cpp
+[152/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\sigmoid_gate_mul.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+sigmoid_gate_mul.cu
+tmpxft_000024c4_00000000-10_sigmoid_gate_mul.cudafe1.cpp
+[153/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\silu_and_mul.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\launcher\silu_and_mul.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/launcher/silu_and_mul.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/kernel/silu_and_mul.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\launcher\silu_and_mul.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/launcher/silu_and_mul.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/kernel/silu_and_mul.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+silu_and_mul.cu
+tmpxft_000020ac_00000000-10_silu_and_mul.cudafe1.cpp
+[154/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\vision_attention.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+vision_attention.cu
+tmpxft_00001dd0_00000000-10_vision_attention.cudafe1.cpp
+[155/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\vision_pos_embed.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+vision_pos_embed.cu
+tmpxft_00001df8_00000000-10_vision_pos_embed.cudafe1.cpp
+[156/450] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\gated_delta_net.cpp.obj
+[157/450] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\replay.cpp.obj
+[158/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\recurrent.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+recurrent.cu
+tmpxft_00001460_00000000-10_recurrent.cudafe1.cpp
+[159/450] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\chunked\launch.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+launch.cu
+tmpxft_00002fc8_00000000-10_launch.cudafe1.cpp
+NINJA_JOBS=2
+ninja: Entering directory `build'
+[1/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\chunked\prepare_wy_wu.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+prepare_wy_wu.cu
+tmpxft_00002aa0_00000000-10_prepare_wy_wu.cudafe1.cpp
+[2/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\chunked\state_passing.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+state_passing.cu
+tmpxft_00001c90_00000000-10_state_passing.cudafe1.cpp
+[3/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_attention\gated_delta_net\chunked\output.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+output.cu
+tmpxft_0000201c_00000000-10_output.cudafe1.cpp
+[4/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\bf16\bf16_attn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_attn_input_decode.cu
+tmpxft_000021b0_00000000-10_bf16_attn_input_decode.cudafe1.cpp
+[5/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\bf16\bf16_attn_input_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_attn_input_gemm_mma.cu
+tmpxft_00000720_00000000-10_bf16_attn_input_gemm_mma.cudafe1.cpp
+[6/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\bf16\bf16_attn_input_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_attn_input_small_t.cu
+tmpxft_0000198c_00000000-10_bf16_attn_input_small_t.cudafe1.cpp
+[7/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\bf16\bf16_attn_input_plan.cpp.obj
+[8/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\fp8\fp8_attn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_attn_input_decode.cu
+tmpxft_00001b20_00000000-10_fp8_attn_input_decode.cudafe1.cpp
+[9/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\fp8\fp8_attn_input_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_attn_input_small_t.cu
+tmpxft_00001464_00000000-10_fp8_attn_input_small_t.cudafe1.cpp
+[10/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\fp8\fp8_attn_input_plan.cpp.obj
+[11/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\nvfp4\nvfp4_attn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_attn_input_decode.cu
+tmpxft_00003458_00000000-10_nvfp4_attn_input_decode.cudafe1.cpp
+[12/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\nvfp4\nvfp4_attn_input_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_attn_input_small_t.cu
+tmpxft_0000334c_00000000-10_nvfp4_attn_input_small_t.cudafe1.cpp
+[13/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\nvfp4\nvfp4_attn_input_plan.cpp.obj
+[14/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\q4_q5\q4_q5_attn_input_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/rowsplit_grouped_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/rowsplit_grouped_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_attn_input_gemm_mma.cu
+tmpxft_00000460_00000000-10_q4_q5_attn_input_gemm_mma.cudafe1.cpp
+[15/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\q4_q5\q4_q5_attn_input_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_attn_input_small_t.cu
+tmpxft_00001340_00000000-10_q4_q5_attn_input_small_t.cudafe1.cpp
+[16/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\q4_q5\q4_q5_attn_input_plan.cpp.obj
+[17/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\w8\w8_attn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_attn_input_decode.cu
+tmpxft_00001ac4_00000000-10_w8_attn_input_decode.cudafe1.cpp
+[18/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\w8\w8_attn_input_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_attn_input_gemm_mma.cu
+tmpxft_00002d00_00000000-10_w8_attn_input_gemm_mma.cudafe1.cpp
+[19/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\w8\w8_attn_input_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_attn_input_gemm_simt.cu
+tmpxft_00002ac4_00000000-10_w8_attn_input_gemm_simt.cudafe1.cpp
+[20/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\w8\w8_attn_input_gemm_splitk.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_attn_input_gemm_splitk.cu
+tmpxft_000020e0_00000000-10_w8_attn_input_gemm_splitk.cudafe1.cpp
+[21/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\w8\w8_attn_input_plan.cpp.obj
+[22/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_gdn_input_decode.cu
+tmpxft_000025a0_00000000-10_fp8_gdn_input_decode.cudafe1.cpp
+[23/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_input_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_gdn_input_small_t.cu
+tmpxft_00001010_00000000-10_fp8_gdn_input_small_t.cudafe1.cpp
+[24/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_input_plan.cpp.obj
+[25/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_conv_fused.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_gdn_conv_fused.cu
+tmpxft_0000215c_00000000-10_fp8_gdn_conv_fused.cudafe1.cpp
+[26/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_conv_plan.cpp.obj
+[27/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gdn_input_decode.cu
+tmpxft_00001628_00000000-10_nvfp4_gdn_input_decode.cudafe1.cpp
+[28/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_input_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gdn_input_small_t.cu
+tmpxft_00003814_00000000-10_nvfp4_gdn_input_small_t.cudafe1.cpp
+[29/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_input_plan.cpp.obj
+[30/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_snapshot_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gdn_snapshot_decode.cu
+tmpxft_00000e8c_00000000-10_nvfp4_gdn_snapshot_decode.cudafe1.cpp
+[31/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_snapshot_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gdn_snapshot_small_t.cu
+tmpxft_00002dbc_00000000-10_nvfp4_gdn_snapshot_small_t.cudafe1.cpp
+[32/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_snapshot_post.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gdn_snapshot_post.cu
+tmpxft_0000377c_00000000-10_nvfp4_gdn_snapshot_post.cudafe1.cpp
+[33/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_snapshot_plan.cpp.obj
+[34/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\q4_q5\q4_q5_gdn_input_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/rowsplit_grouped_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/rowsplit_grouped_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_gdn_input_gemm_mma.cu
+tmpxft_00003a68_00000000-10_q4_q5_gdn_input_gemm_mma.cudafe1.cpp
+[35/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\q4_q5\q4_q5_gdn_input_independent.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_gdn_input_independent.cu
+tmpxft_00003198_00000000-10_q4_q5_gdn_input_independent.cudafe1.cpp
+[36/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\q4_q5\q4_q5_gdn_input_conv_snapshot.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_gdn_input_conv_snapshot.cu
+tmpxft_0000236c_00000000-10_q4_q5_gdn_input_conv_snapshot.cudafe1.cpp
+[37/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\q4_q5\q4_q5_gdn_input_plan.cpp.obj
+[38/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\gdn_projected_conv.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gdn_projected_conv.cu
+tmpxft_00000ee8_00000000-10_gdn_projected_conv.cudafe1.cpp
+[39/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\w8\w8_gdn_input_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_gdn_input_decode.cu
+tmpxft_000006a4_00000000-10_w8_gdn_input_decode.cudafe1.cpp
+[40/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\w8\w8_gdn_input_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_gdn_input_gemm_mma.cu
+tmpxft_00001a6c_00000000-10_w8_gdn_input_gemm_mma.cudafe1.cpp
+[41/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\w8\w8_gdn_input_gemm_splitk.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_gdn_input_gemm_splitk.cu
+tmpxft_00003154_00000000-10_w8_gdn_input_gemm_splitk.cudafe1.cpp
+[42/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\w8\w8_gdn_input_plan.cpp.obj
+[43/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_gating_proj\bf16\bf16_gdn_gating_proj_kernels.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/gdn_gating_proj/bf16/bf16_gdn_gating_proj_gemm_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/gdn_gating_proj/bf16/bf16_gdn_gating_proj_gemm_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_gdn_gating_proj_kernels.cu
+tmpxft_00002f4c_00000000-10_bf16_gdn_gating_proj_kernels.cudafe1.cpp
+[44/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\gdn_gating_proj\bf16\bf16_gdn_gating_proj_plan.cpp.obj
+[45/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\bf16\bf16_gemv.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_gemv.cu
+tmpxft_00002fd4_00000000-10_bf16_gemv.cudafe1.cpp
+[46/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\bf16\bf16_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_gemm_mma.cu
+tmpxft_00002878_00000000-10_bf16_gemm_mma.cudafe1.cpp
+[47/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\gqa_attention_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/kernel/gqa_attention_decode_bf16.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/kernel/gqa_attention_decode_bf16.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/kernel/gqa_attention_decode_i8_key_split_volta.cuh(56): warning #177-D: variable "PageIds" was declared but never referenced
+      constexpr int PageIds       = 64;
+                    ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/kernel/gqa_attention_decode_i8_key_split_volta.cuh(87): warning #177-D: variable "dim_warp" was declared but never referenced
+      const int dim_warp    = warp;
+                ^
+
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gqa_attention_decode.cu
+tmpxft_000010a4_00000000-10_gqa_attention_decode.cudafe1.cpp
+[48/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\bf16\bf16_dispatch.cpp.obj
+[49/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_format.cpp.obj
+[50/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_gemv.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_gemv.cu
+tmpxft_00002d98_00000000-10_fp8_gemv.cudafe1.cpp
+[51/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\bf16\bf16_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_small_t.cu
+tmpxft_000015c0_00000000-10_bf16_small_t.cudafe1.cpp
+[52/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_small_t.cu
+tmpxft_00003734_00000000-10_fp8_small_t.cudafe1.cpp
+[53/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_dispatch.cpp.obj
+[54/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_format.cpp.obj
+[55/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_gemv.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gemv.cu
+tmpxft_00001f84_00000000-10_nvfp4_gemv.cudafe1.cpp
+[56/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_a16_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_a16_mma.cu
+tmpxft_00003858_00000000-10_fp8_a16_mma.cudafe1.cpp
+[57/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_dispatch.cpp.obj
+[58/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_small_t_mma.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\q4\q4_small_t_mma.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/q4/q4_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\q4\q4_small_t_mma.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/q4/q4_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_small_t_mma.cu
+tmpxft_00000c14_00000000-10_q4_small_t_mma.cudafe1.cpp
+[59/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_rowsplit_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_rowsplit_gemm_mma.cu
+tmpxft_0000308c_00000000-10_q4_rowsplit_gemm_mma.cudafe1.cpp
+[60/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_rowsplit_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_rowsplit_gemm_simt.cu
+tmpxft_000018b4_00000000-10_q4_rowsplit_gemm_simt.cudafe1.cpp
+[61/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_rowsplit_gemv.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_rowsplit_gemv.cu
+tmpxft_000035a4_00000000-10_q4_rowsplit_gemv.cudafe1.cpp
+[62/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_dispatch.cpp.obj
+[63/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\q5\q5_dispatch.cpp.obj
+[64/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q5\q5_rowsplit_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_rowsplit_gemm_mma.cu
+tmpxft_00000630_00000000-10_q5_rowsplit_gemm_mma.cudafe1.cpp
+[65/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q5\q5_rowsplit_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_rowsplit_gemm_simt.cu
+tmpxft_00001b54_00000000-10_q5_rowsplit_gemm_simt.cudafe1.cpp
+[66/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q5\q5_rowsplit_gemv.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_rowsplit_gemv.cu
+tmpxft_00002ef8_00000000-10_q5_rowsplit_gemv.cudafe1.cpp
+[67/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\bf16\bf16_linear_add_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_linear_add_decode.cu
+tmpxft_00001a24_00000000-10_bf16_linear_add_decode.cudafe1.cpp
+[68/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\bf16\bf16_linear_add_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_linear_add_gemm_mma.cu
+tmpxft_000035c8_00000000-10_bf16_linear_add_gemm_mma.cudafe1.cpp
+[69/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\bf16\bf16_linear_add_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_linear_add_small_t.cu
+tmpxft_00001264_00000000-10_bf16_linear_add_small_t.cudafe1.cpp
+[70/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\bf16\bf16_linear_add_plan.cpp.obj
+[71/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_small_t.cu
+tmpxft_00002874_00000000-10_nvfp4_small_t.cudafe1.cpp
+[72/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\nvfp4\nvfp4_linear_add_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_linear_add_decode.cu
+tmpxft_00000b04_00000000-10_nvfp4_linear_add_decode.cudafe1.cpp
+[73/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\nvfp4\nvfp4_linear_add_plan.cpp.obj
+[74/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\fp8\fp8_linear_add_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_add_decode.cu
+tmpxft_000013bc_00000000-10_fp8_linear_add_decode.cudafe1.cpp
+[75/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\fp8\fp8_linear_add_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_add_small_t.cu
+tmpxft_00001754_00000000-10_fp8_linear_add_small_t.cudafe1.cpp
+[76/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\fp8\fp8_linear_add_plan.cpp.obj
+[77/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\nvfp4\nvfp4_linear_add_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_linear_add_small_t.cu
+tmpxft_00002608_00000000-10_nvfp4_linear_add_small_t.cudafe1.cpp
+[78/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\q5\q5_linear_add_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_linear_add_gemm_mma.cu
+tmpxft_00002ac4_00000000-10_q5_linear_add_gemm_mma.cudafe1.cpp
+[79/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\q5\q5_linear_add_gemv.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_linear_add_gemv.cu
+tmpxft_00002fb4_00000000-10_q5_linear_add_gemv.cudafe1.cpp
+[80/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\q5\q5_linear_add_plan.cpp.obj
+[81/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\w8\w8_linear_add_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_linear_add_gemm_mma.cu
+tmpxft_00003494_00000000-10_w8_linear_add_gemm_mma.cudafe1.cpp
+[82/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\q5\q5_linear_add_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_linear_add_gemm_simt.cu
+tmpxft_00000d90_00000000-10_q5_linear_add_gemm_simt.cudafe1.cpp
+[83/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\w8\w8_linear_add_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_linear_add_gemm_simt.cu
+tmpxft_00002370_00000000-10_w8_linear_add_gemm_simt.cudafe1.cpp
+[84/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\w8\w8_linear_add_plan.cpp.obj
+[85/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\w8\w8_linear_add_gemm_splitk.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_linear_add_gemm_splitk.cu
+tmpxft_000018b4_00000000-10_w8_linear_add_gemm_splitk.cudafe1.cpp
+[86/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\q4\q4_linear_swiglu_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_linear_swiglu_gemm_mma.cu
+tmpxft_00000994_00000000-10_q4_linear_swiglu_gemm_mma.cudafe1.cpp
+[87/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\q4\q4_linear_swiglu_plan.cpp.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\q4\q4_linear_swiglu_plan.cpp(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[88/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\q4\q4_linear_swiglu_gemv.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/q4/q4_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/q4/q4_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\q4\q4_linear_swiglu_gemv.cu(40): warning #177-D: member "ninfer::ops::detail::<unnamed>::Q4SwiGluSmallTGeometry::kInputRows" was declared but never referenced
+      static constexpr int kInputRows    = kK;
+                           ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\q4\q4_linear_swiglu_gemv.cu(41): warning #177-D: member "ninfer::ops::detail::<unnamed>::Q4SwiGluSmallTGeometry::kGroupsPerRow" was declared but never referenced
+      static constexpr int kGroupsPerRow = kK / kGroupK;
+                           ^
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\q4\q4_linear_swiglu_gemv.cu(47): warning #177-D: function "ninfer::ops::detail::<unnamed>::Q4SwiGluSmallTRows::weight_row" was declared but never referenced
+      __declspec(__device__) __forceinline int weight_row(int output_row0, int local_row) const {
+                                               ^
+
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_linear_swiglu_gemv.cu
+tmpxft_00000dc0_00000000-10_q4_linear_swiglu_gemv.cudafe1.cpp
+[89/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\nvfp4\nvfp4_linear_swiglu_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_linear_swiglu_decode.cu
+tmpxft_00002338_00000000-10_nvfp4_linear_swiglu_decode.cudafe1.cpp
+[90/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\nvfp4\nvfp4_linear_swiglu_plan.cpp.obj
+[91/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\fp8\fp8_linear_swiglu_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_swiglu_decode.cu
+tmpxft_00000fcc_00000000-10_fp8_linear_swiglu_decode.cudafe1.cpp
+[92/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\nvfp4\nvfp4_linear_swiglu_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_linear_swiglu_small_t.cu
+tmpxft_0000374c_00000000-10_nvfp4_linear_swiglu_small_t.cudafe1.cpp
+[93/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\fp8\fp8_linear_swiglu_plan.cpp.obj
+[94/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\fp8\fp8_linear_swiglu_small_t.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_swiglu_small_t.cu
+tmpxft_00002d20_00000000-10_fp8_linear_swiglu_small_t.cudafe1.cpp
+[95/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\w8\w8_linear_swiglu_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_linear_swiglu_decode.cu
+tmpxft_00002f80_00000000-10_w8_linear_swiglu_decode.cudafe1.cpp
+[96/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\w8\w8_linear_swiglu_gemm_splitk.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\w8\w8_linear_swiglu_gemm_splitk.cu(27): warning #177-D: function "ninfer::ops::detail::<unnamed>::W8SwiGluExactTRows::weight_row" was declared but never referenced
+      __declspec(__device__) __forceinline int weight_row(int output_row0, int local_row) const {
+                                               ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_swiglu\w8\w8_linear_swiglu_gemm_splitk.cu(24): warning #177-D: member "ninfer::ops::detail::<unnamed>::W8SwiGluExactTRows::kOutputRowsPerCta" was declared but never referenced
+      static constexpr int kOutputRowsPerCta = kRowsPerCta;
+                           ^
+
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_linear_swiglu_gemm_splitk.cu
+tmpxft_00003714_00000000-10_w8_linear_swiglu_gemm_splitk.cudafe1.cpp
+[97/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\w8\w8_linear_swiglu_plan.cpp.obj
+[98/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\q6\q6_dispatch.cpp.obj
+[99/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\w8\w8_linear_swiglu_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_linear_swiglu_gemm_mma.cu
+tmpxft_00003bb0_00000000-10_w8_linear_swiglu_gemm_mma.cudafe1.cpp
+[100/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q6\q6_rowsplit_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q6_rowsplit_gemm_mma.cu
+tmpxft_00003b68_00000000-10_q6_rowsplit_gemm_mma.cudafe1.cpp
+[101/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q6\q6_rowsplit_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q6_rowsplit_gemm_simt.cu
+tmpxft_0000396c_00000000-10_q6_rowsplit_gemm_simt.cudafe1.cpp
+[102/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_rowsplit_gemm_simt.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_rowsplit_gemm_simt.cu
+tmpxft_000039dc_00000000-10_w8_rowsplit_gemm_simt.cudafe1.cpp
+[103/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_rowsplit_gemm_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_rowsplit_gemm_decode.cu
+tmpxft_00000964_00000000-10_w8_rowsplit_gemm_decode.cudafe1.cpp
+[104/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_rowsplit_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_rowsplit_gemm_mma.cu
+tmpxft_0000063c_00000000-10_w8_rowsplit_gemm_mma.cudafe1.cpp
+[105/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_small_t.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\w8\w8_small_t.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\w8\w8_small_t.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_small_t.cu
+tmpxft_00002884_00000000-10_w8_small_t.cudafe1.cpp
+[106/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_rowsplit_gemm_splitk.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_rowsplit_gemm_splitk.cu
+tmpxft_00000bcc_00000000-10_w8_rowsplit_gemm_splitk.cudafe1.cpp
+[107/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_dispatch.cpp.obj
+[108/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_pair\w8\w8_pair_decode.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_pair_decode.cu
+tmpxft_00002fd8_00000000-10_w8_pair_decode.cudafe1.cpp
+[109/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_pair\w8\w8_pair_gemm_mma.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_pair_gemm_mma.cu
+tmpxft_00001464_00000000-10_w8_pair_gemm_mma.cudafe1.cpp
+[110/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_pair\w8\w8_pair_gemm_concat.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_pair_gemm_concat.cu
+tmpxft_00003b70_00000000-10_w8_pair_gemm_concat.cudafe1.cpp
+[111/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_pair\w8\w8_pair_plan.cpp.obj
+[112/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_pair\w8\w8_pair_gemm_splitk.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/linear/w8/w8_small_t_mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_pair\w8\w8_pair_gemm_splitk.cu(32): warning #177-D: function "ninfer::ops::detail::<unnamed>::W8PairExactTRows::weight_row" was declared but never referenced
+      __declspec(__device__) __forceinline int weight_row(int output_row0, int local_row) const {
+                                               ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_pair\w8\w8_pair_gemm_splitk.cu(30): warning #177-D: member "ninfer::ops::detail::<unnamed>::W8PairExactTRows::kOutputRowsPerCta" was declared but never referenced
+      static constexpr int kOutputRowsPerCta = kRowsPerCta;
+                           ^
+
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_pair_gemm_splitk.cu
+tmpxft_00002a74_00000000-10_w8_pair_gemm_splitk.cudafe1.cpp
+[113/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\sparse_moe\decode\sparse_moe_decode_plan.cpp.obj
+[114/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\sparse_moe\decode\sparse_moe_decode_kernels.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+sparse_moe_decode_kernels.cu
+tmpxft_00003768_00000000-10_sparse_moe_decode_kernels.cudafe1.cpp
+[115/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\sparse_moe\prefill\sparse_moe_prefill_plan.cpp.obj
+[116/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/mma.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(1746): warning #177-D: variable "routed_gate_grid" was declared but never referenced
+          const dim3 routed_gate_grid(kIntermediate / (kExpertBM / 2), kExperts);
+                     ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(1823): warning #177-D: variable "routed_down_grid" was declared but never referenced
+          const dim3 routed_down_grid(kHidden / kExpertBM, kExperts);
+                     ^
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(40): warning #177-D: function "ninfer::ops::detail::<unnamed>::sparse_moe_prefill_router_mma_kernel" was declared but never referenced
+  __declspec(__global__) __declspec(launch_bounds(kRouterThreads, 2)) void sparse_moe_prefill_router_mma_kernel(
+                                                                           ^
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(657): warning #177-D: function "ninfer::ops::detail::<unnamed>::Q5DownMma::decode" was declared but never referenced
+      __declspec(__device__) static __forceinline __nv_bfloat162 decode(const std::uint8_t* codes,
+                                                                 ^
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(655): warning #177-D: member "ninfer::ops::detail::<unnamed>::Q5DownMma::kHighBytes" was declared but never referenced
+      static constexpr int kHighBytes = Q5RowSplitStorage::kHighBytesPerGroup;
+                           ^
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(668): warning #177-D: function "ninfer::ops::detail::<unnamed>::Q6DownMma::decode" was declared but never referenced
+      __declspec(__device__) static __forceinline __nv_bfloat162 decode(const std::uint8_t* codes,
+                                                                 ^
+
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\sparse_moe\prefill\sparse_moe_prefill_kernels.cu(666): warning #177-D: member "ninfer::ops::detail::<unnamed>::Q6DownMma::kHighBytes" was declared but never referenced
+      static constexpr int kHighBytes = Q6RowSplitStorage::kHighBytesPerGroup;
+                           ^
+
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+sparse_moe_prefill_kernels.cu
+tmpxft_00000c34_00000000-10_sparse_moe_prefill_kernels.cudafe1.cpp
+[117/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\sparse_moe\small_t\sparse_moe_small_t_plan.cpp.obj
+[118/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear\linear.cpp.obj
+[119/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\add_bias.cpp.obj
+[120/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\argmax.cpp.obj
+[121/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\cast.cpp.obj
+[122/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\causal_conv1d_silu.cpp.obj
+[123/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\embedding.cpp.obj
+[124/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\gdn_gating.cpp.obj
+[125/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\gdn_gating_proj.cpp.obj
+[126/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\gdn_input_proj.cpp.obj
+[127/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\gelu.cpp.obj
+[128/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\bidirectional_gqa_attention.cpp.obj
+[129/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\swa.cpp.obj
+[130/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\gqa_attention.cpp.obj
+[131/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\kv_cache_append_prefix.cpp.obj
+[132/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\attn_input_proj.cpp.obj
+[133/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\l2norm.cpp.obj
+[134/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\layer_norm.cpp.obj
+[135/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\linear_add.cpp.obj
+[136/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\linear_pair.cpp.obj
+[137/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\linear_swiglu.cpp.obj
+[138/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\mtp_pack.cpp.obj
+[139/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\mtp_round.cpp.obj
+[140/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\speculative_round.cpp.obj
+[141/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\position.cpp.obj
+[142/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\prepare_ragged_prefix.cpp.obj
+[143/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\prepare_masked_block.cpp.obj
+[144/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\residual_add.cpp.obj
+[145/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\rmsnorm.cpp.obj
+[146/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\rope.cpp.obj
+[147/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\sparse_moe\small_t\sparse_moe_small_t_kernels.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+sparse_moe_small_t_kernels.cu
+tmpxft_000020f8_00000000-10_sparse_moe_small_t_kernels.cudafe1.cpp
+[148/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\sampling.cpp.obj
+[149/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\scalar.cpp.obj
+[150/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\scatter.cpp.obj
+[151/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\sigmoid_mul.cpp.obj
+[152/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\silu_mul.cpp.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\wrapper\silu_mul.cpp(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops/launcher/silu_and_mul.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[153/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\vision_attention.cpp.obj
+[154/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\sparse_moe.cpp.obj
+[155/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\vision_pos_embed.cpp.obj
+[156/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\bf16\bf16_n256_k5120_volta.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\bf16\bf16_n256_k5120_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear\bf16\bf16_n256_k5120_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_n256_k5120_volta.cu
+tmpxft_000018a0_00000000-10_bf16_n256_k5120_volta.cudafe1.cpp
+[157/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\linear_topk\linear_topk.cpp.obj
+[158/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\w8\w8_dflash2_attn_input_volta.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\w8\w8_dflash2_attn_input_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\attn_input_proj\w8\w8_dflash2_attn_input_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_dflash2_attn_input_volta.cu
+tmpxft_00002d64_00000000-10_w8_dflash2_attn_input_volta.cudafe1.cpp
+[159/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_topk\dflash2_linear_topk_volta.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_topk\dflash2_linear_topk_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\linear_topk\dflash2_linear_topk_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+dflash2_linear_topk_volta.cu
+tmpxft_000020b8_00000000-10_dflash2_linear_topk_volta.cudafe1.cpp
+[160/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\candidate_selector.cpp.obj
+[161/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\swa_dflash2_volta.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+swa_dflash2_volta.cu
+tmpxft_00000d14_00000000-10_swa_dflash2_volta.cudafe1.cpp
+[162/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\wrapper\dynamic_grouped_conv.cpp.obj
+[163/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\dynamic_grouped_conv\bf16\bf16_dynamic_grouped_conv_prepare_plan.cpp.obj
+[164/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\dynamic_grouped_conv\w8\w8_dynamic_grouped_conv_add_plan.cpp.obj
+[165/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\candidate_selector\bf16\dflash2_selector_volta.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\candidate_selector\bf16\dflash2_selector_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\candidate_selector\bf16\dflash2_selector_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+dflash2_selector_volta.cu
+tmpxft_00000ab0_00000000-10_dflash2_selector_volta.cudafe1.cpp
+[166/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\rmsnorm_rope\rmsnorm_rope.cpp.obj
+[167/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\dynamic_grouped_conv\volta\dflash2_dynamic_conv_volta.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\dynamic_grouped_conv\volta\dflash2_dynamic_conv_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\dynamic_grouped_conv\volta\dflash2_dynamic_conv_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+dflash2_dynamic_conv_volta.cu
+tmpxft_00002ea0_00000000-10_dflash2_dynamic_conv_volta.cudafe1.cpp
+[168/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\context_kv_materialize\context_kv_materialize.cpp.obj
+[169/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\common\dflash2_rmsnorm_rope_volta.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\common\dflash2_rmsnorm_rope_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\ops\common\dflash2_rmsnorm_rope_volta.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+dflash2_rmsnorm_rope_volta.cu
+tmpxft_000008cc_00000000-10_dflash2_rmsnorm_rope_volta.cudafe1.cpp
+[170/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\context_kv_materialize\append_volta.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+append_volta.cu
+tmpxft_000032f8_00000000-10_append_volta.cudafe1.cpp
+[171/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\bf16\bf16_cutlass_sm70.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_cutlass_sm70.cu
+tmpxft_000028ac_00000000-10_bf16_cutlass_sm70.cudafe1.cpp
+[172/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\bf16\bf16_attn_input_cutlass_sm70.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_attn_input_cutlass_sm70.cu
+tmpxft_00000a24_00000000-10_bf16_attn_input_cutlass_sm70.cudafe1.cpp
+[173/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\bf16\bf16_linear_add_volta.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+bf16_linear_add_volta.cu
+tmpxft_00003620_00000000-10_bf16_linear_add_volta.cudafe1.cpp
+[174/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\fp8\fp8_attn_input_cutlass_sm70.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_attn_input_cutlass_sm70.cu
+tmpxft_00000134_00000000-10_fp8_attn_input_cutlass_sm70.cudafe1.cpp
+[175/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\fp8\fp8_attn_input_volta_qpn.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_attn_input_volta_qpn.cu
+tmpxft_00002fc0_00000000-10_fp8_attn_input_volta_qpn.cudafe1.cpp
+[176/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\nvfp4\nvfp4_attn_input_cutlass_sm70.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_attn_input_cutlass_sm70.cu
+tmpxft_00000bf4_00000000-10_nvfp4_attn_input_cutlass_sm70.cudafe1.cpp
+[177/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_input_volta_qpn.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_gdn_input_volta_qpn.cu
+tmpxft_000012cc_00000000-10_fp8_gdn_input_volta_qpn.cudafe1.cpp
+[178/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\attn_input_proj\q4_q5\q4_q5_attn_input_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_attn_input_cutlass_sm70.cu
+tmpxft_0000127c_00000000-10_q4_q5_attn_input_cutlass_sm70.cudafe1.cpp
+[179/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\fp8\fp8_gdn_input_cutlass_sm70.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_gdn_input_cutlass_sm70.cu
+tmpxft_00002d60_00000000-10_fp8_gdn_input_cutlass_sm70.cudafe1.cpp
+[180/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\nvfp4\nvfp4_gdn_input_cutlass_sm70.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_gdn_input_cutlass_sm70.cu
+tmpxft_00003794_00000000-10_nvfp4_gdn_input_cutlass_sm70.cudafe1.cpp
+[181/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\q4_q5\q4_q5_gdn_input_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_q5_gdn_input_cutlass_sm70.cu
+tmpxft_0000398c_00000000-10_q4_q5_gdn_input_cutlass_sm70.cudafe1.cpp
+[182/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\gdn_input_proj\w8\w8_gdn_input_cutlass_sm70.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_gdn_input_cutlass_sm70.cu
+tmpxft_000030e4_00000000-10_w8_gdn_input_cutlass_sm70.cudafe1.cpp
+[183/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_volta_qpn_gemm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_volta_qpn_gemm.cu
+tmpxft_0000242c_00000000-10_fp8_volta_qpn_gemm.cudafe1.cpp
+[184/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_prepack_sm70.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_prepack_sm70.cu
+tmpxft_000018a0_00000000-10_fp8_prepack_sm70.cudafe1.cpp
+[185/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\fp8\fp8_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_cutlass_sm70.cu
+tmpxft_00000cf8_00000000-10_fp8_cutlass_sm70.cudafe1.cpp
+[186/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_volta_qpn_gemm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_volta_qpn_gemm.cu
+tmpxft_00002a28_00000000-10_nvfp4_volta_qpn_gemm.cudafe1.cpp
+[187/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_volta_mma_gemm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_volta_mma_gemm.cu
+tmpxft_00000c14_00000000-10_nvfp4_volta_mma_gemm.cudafe1.cpp
+[188/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_prepack_sm70.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_prepack_sm70.cu
+tmpxft_000024d0_00000000-10_nvfp4_prepack_sm70.cudafe1.cpp
+[189/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_volta_mma_gemm.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_volta_mma_gemm.cu
+tmpxft_00003364_00000000-10_q4_volta_mma_gemm.cudafe1.cpp
+[190/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\nvfp4\nvfp4_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_cutlass_sm70.cu
+tmpxft_00001a44_00000000-10_nvfp4_cutlass_sm70.cudafe1.cpp
+[191/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q4\q4_volta_qpn_gemm.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_volta_qpn_gemm.cu
+tmpxft_00002188_00000000-10_q4_volta_qpn_gemm.cudafe1.cpp
+[192/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\q5\q5_volta_mma_gemm.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_volta_mma_gemm.cu
+tmpxft_0000044c_00000000-10_q5_volta_mma_gemm.cudafe1.cpp
+[193/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_volta_mma_gemm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_volta_mma_gemm.cu
+tmpxft_00002818_00000000-10_w8_volta_mma_gemm.cudafe1.cpp
+[194/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear\w8\w8_volta_qpn_gemm.cu.obj
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+w8_volta_qpn_gemm.cu
+tmpxft_00003288_00000000-10_w8_volta_qpn_gemm.cudafe1.cpp
+[195/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_add\q5\q5_linear_add_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q5_linear_add_cutlass_sm70.cu
+tmpxft_00002d3c_00000000-10_q5_linear_add_cutlass_sm70.cudafe1.cpp
+[196/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\q4\q4_linear_swiglu_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+q4_linear_swiglu_cutlass_sm70.cu
+tmpxft_00002c98_00000000-10_q4_linear_swiglu_cutlass_sm70.cudafe1.cpp
+[197/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\fp8\fp8_linear_swiglu_volta_qpn.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_swiglu_volta_qpn.cu
+tmpxft_00000cf0_00000000-10_fp8_linear_swiglu_volta_qpn.cudafe1.cpp
+[198/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\fp8\fp8_linear_swiglu_cutlass_sm70.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_toolchain/cutlass/include\cutlass/gemm/threadblock/mma_multistage_blockwise.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_swiglu_cutlass_sm70.cu
+tmpxft_000017f4_00000000-10_fp8_linear_swiglu_cutlass_sm70.cudafe1.cpp
+[199/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\fp8\fp8_linear_swiglu_qpn_split.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fp8_linear_swiglu_qpn_split.cu
+tmpxft_00002d60_00000000-10_fp8_linear_swiglu_qpn_split.cudafe1.cpp
+[200/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\nvfp4\nvfp4_linear_swiglu_volta_qpn.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_linear_swiglu_volta_qpn.cu
+tmpxft_00002e30_00000000-10_nvfp4_linear_swiglu_volta_qpn.cudafe1.cpp
+[201/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\linear_swiglu\nvfp4\nvfp4_linear_swiglu_qpn_split.cu.obj
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvfp4_linear_swiglu_qpn_split.cu
+tmpxft_000038e4_00000000-10_nvfp4_linear_swiglu_qpn_split.cudafe1.cpp
+[202/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\vision_attention_volta_flash.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+vision_attention_volta_flash.cu
+tmpxft_000010e8_00000000-10_vision_attention_volta_flash.cudafe1.cpp
+[203/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\nvfp4_sm86_stubs.cpp.obj
+[204/291] Building CXX object src\CMakeFiles\ninfer_ops.dir\ops\fp8_sm86_stubs.cpp.obj
+[205/291] Generating CXX dyndep file src\CMakeFiles\ninfer_text.dir\CXX.dd
+[206/291] Generating CXX dyndep file src\CMakeFiles\ninfer_media_decode.dir\CXX.dd
+[207/291] Generating CXX dyndep file src\CMakeFiles\ninfer_media_acquire.dir\CXX.dd
+[208/291] Building CUDA object src\CMakeFiles\ninfer_ops.dir\ops\launcher\gqa_attention_volta_flash.cu.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23382): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\_toolchain\cuda-12.8\bin/../include\cuda.h(23937): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/.agents/worktrees/port-packet-allreduce/src\ops/common/math.cuh(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+gqa_attention_volta_flash.cu
+tmpxft_000028cc_00000000-10_gqa_attention_volta_flash.cudafe1.cpp
+[209/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\product\prompt_input\prompt_input.cpp for CXX dependencies
+[210/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\product\load_progress\load_progress.cpp for CXX dependencies
+[211/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\runtime\contract\sampling.cpp for CXX dependencies
+[212/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\registry.cpp for CXX dependencies
+[213/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\runtime\engine\engine.cpp for CXX dependencies
+[214/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\chat_template.cpp for CXX dependencies
+[215/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\digest.cpp for CXX dependencies
+[216/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\frontend.cpp for CXX dependencies
+[217/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\media_cache.cpp for CXX dependencies
+[218/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\processor.cpp for CXX dependencies
+[219/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\resources.cpp for CXX dependencies
+[220/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\tokenizer.cpp for CXX dependencies
+[221/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\runtime\prefix_identity.cpp for CXX dependencies
+[222/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\runtime\yarn_rope.cpp for CXX dependencies
+[223/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\state\decoder_state.cpp for CXX dependencies
+[224/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\runtime\visual_scatter.cpp for CXX dependencies
+[225/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\state\round_state.cpp for CXX dependencies
+[226/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\vision\control.cpp for CXX dependencies
+[227/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\vision\bindings.cpp for CXX dependencies
+[228/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6_27b\impl\package.cpp for CXX dependencies
+[229/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6_27b\impl\load\bindings.cpp for CXX dependencies
+[230/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6_35b_a3b\impl\package.cpp for CXX dependencies
+[231/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6_35b_a3b\impl\load\bindings.cpp for CXX dependencies
+[232/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6_27b\impl\variant.cpp for CXX dependencies
+[233/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6_35b_a3b\impl\variant.cpp for CXX dependencies
+[234/291] Building CXX object src\CMakeFiles\ninfer_artifact.dir\artifact\storage_layouts.cpp.obj
+[235/291] Building CXX object src\CMakeFiles\ninfer_artifact.dir\artifact\binder.cpp.obj
+[236/291] Building CXX object src\CMakeFiles\ninfer_artifact.dir\artifact\materializer.cpp.obj
+[237/291] Building CXX object src\CMakeFiles\ninfer_artifact.dir\artifact\reader.cpp.obj
+[238/291] Building CXX object src\CMakeFiles\ninfer_artifact.dir\artifact\typed_binding.cpp.obj
+[239/291] Building CXX object src\CMakeFiles\ninfer_text.dir\text\unicode.cpp.obj
+[240/291] Building C object src\CMakeFiles\ninfer_text.dir\__\third_party\utf8proc\utf8proc.c.obj
+[241/291] Building CXX object src\CMakeFiles\ninfer_media_decode.dir\media\decode\decode_stub_win.cpp.obj
+[242/291] Building CXX object src\CMakeFiles\ninfer_media_acquire.dir\product\media_acquire\acquire_stub_win.cpp.obj
+[243/291] Generating CXX dyndep file src\CMakeFiles\ninfer_product_prompt_input.dir\CXX.dd
+[244/291] Generating CXX dyndep file src\CMakeFiles\ninfer_product_load_progress.dir\CXX.dd
+[245/291] Generating CXX dyndep file src\CMakeFiles\ninfer_engine.dir\CXX.dd
+[246/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\apps\cli\main.cpp for CXX dependencies
+[247/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\apps\cli\options.cpp for CXX dependencies
+[248/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\bench\targets\qwen3_6_27b\ninfer_bench.cpp for CXX dependencies
+[249/291] Scanning C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\bench\targets\qwen3_6_27b\ninfer_bench_support.cpp for CXX dependencies
+[250/291] Building CXX object src\CMakeFiles\ninfer_product_prompt_input.dir\product\prompt_input\prompt_input.cpp.obj
+[251/291] Building CXX object src\CMakeFiles\ninfer_product_load_progress.dir\product\load_progress\load_progress.cpp.obj
+[252/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\registry.cpp.obj
+[253/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\runtime\contract\sampling.cpp.obj
+[254/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\runtime\engine\engine.cpp.obj
+[255/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\chat_template.cpp.obj
+[256/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\digest.cpp.obj
+[257/291] Linking CXX static library CMakeFiles\ninfer_ops.dir\cmake_device_link.obj
+ggml_k.cu.obj
+gguf.cu.obj
+allreduce.cu.obj
+add_bias.cu.obj
+argmax.cu.obj
+cast.cu.obj
+causal_conv1d.cu.obj
+embed_gather.cu.obj
+gdn_gating.cu.obj
+gelu.cu.obj
+bidirectional_gqa_attention.cu.obj
+swa.cu.obj
+gqa_attention_decode.cu.obj
+gqa_attention_prefill.cu.obj
+kv_cache_append_prefix.cu.obj
+l2norm.cu.obj
+layer_norm.cu.obj
+mtp_pack.cu.obj
+mtp_round.cu.obj
+speculative_round.cu.obj
+position.cu.obj
+prepare_ragged_prefix.cu.obj
+prepare_masked_block.cu.obj
+residual_add.cu.obj
+rmsnorm.cu.obj
+rope.cu.obj
+sampling.cu.obj
+scalar.cu.obj
+scatter.cu.obj
+sigmoid_gate_mul.cu.obj
+silu_and_mul.cu.obj
+vision_attention.cu.obj
+vision_pos_embed.cu.obj
+gated_delta_net.cpp.obj
+replay.cpp.obj
+recurrent.cu.obj
+launch.cu.obj
+prepare_wy_wu.cu.obj
+state_passing.cu.obj
+output.cu.obj
+bf16_attn_input_decode.cu.obj
+bf16_attn_input_gemm_mma.cu.obj
+bf16_attn_input_small_t.cu.obj
+bf16_attn_input_plan.cpp.obj
+fp8_attn_input_decode.cu.obj
+fp8_attn_input_small_t.cu.obj
+fp8_attn_input_plan.cpp.obj
+nvfp4_attn_input_decode.cu.obj
+nvfp4_attn_input_small_t.cu.obj
+nvfp4_attn_input_plan.cpp.obj
+q4_q5_attn_input_gemm_mma.cu.obj
+q4_q5_attn_input_small_t.cu.obj
+q4_q5_attn_input_plan.cpp.obj
+w8_attn_input_decode.cu.obj
+w8_attn_input_gemm_mma.cu.obj
+w8_attn_input_gemm_simt.cu.obj
+w8_attn_input_gemm_splitk.cu.obj
+w8_attn_input_plan.cpp.obj
+fp8_gdn_input_decode.cu.obj
+fp8_gdn_input_small_t.cu.obj
+fp8_gdn_input_plan.cpp.obj
+fp8_gdn_conv_fused.cu.obj
+fp8_gdn_conv_plan.cpp.obj
+nvfp4_gdn_input_decode.cu.obj
+nvfp4_gdn_input_small_t.cu.obj
+nvfp4_gdn_input_plan.cpp.obj
+nvfp4_gdn_snapshot_decode.cu.obj
+nvfp4_gdn_snapshot_small_t.cu.obj
+nvfp4_gdn_snapshot_post.cu.obj
+nvfp4_gdn_snapshot_plan.cpp.obj
+q4_q5_gdn_input_gemm_mma.cu.obj
+q4_q5_gdn_input_independent.cu.obj
+q4_q5_gdn_input_conv_snapshot.cu.obj
+q4_q5_gdn_input_plan.cpp.obj
+gdn_projected_conv.cu.obj
+w8_gdn_input_decode.cu.obj
+w8_gdn_input_gemm_mma.cu.obj
+w8_gdn_input_gemm_splitk.cu.obj
+w8_gdn_input_plan.cpp.obj
+bf16_gdn_gating_proj_kernels.cu.obj
+bf16_gdn_gating_proj_plan.cpp.obj
+bf16_gemv.cu.obj
+bf16_gemm_mma.cu.obj
+bf16_small_t.cu.obj
+bf16_dispatch.cpp.obj
+fp8_format.cpp.obj
+fp8_gemv.cu.obj
+fp8_small_t.cu.obj
+fp8_a16_mma.cu.obj
+fp8_dispatch.cpp.obj
+nvfp4_format.cpp.obj
+nvfp4_gemv.cu.obj
+nvfp4_small_t.cu.obj
+nvfp4_dispatch.cpp.obj
+q4_small_t_mma.cu.obj
+q4_rowsplit_gemm_mma.cu.obj
+q4_rowsplit_gemm_simt.cu.obj
+q4_rowsplit_gemv.cu.obj
+q4_dispatch.cpp.obj
+q5_dispatch.cpp.obj
+q5_rowsplit_gemm_mma.cu.obj
+q5_rowsplit_gemm_simt.cu.obj
+q5_rowsplit_gemv.cu.obj
+bf16_linear_add_decode.cu.obj
+bf16_linear_add_gemm_mma.cu.obj
+bf16_linear_add_small_t.cu.obj
+bf16_linear_add_plan.cpp.obj
+nvfp4_linear_add_decode.cu.obj
+nvfp4_linear_add_small_t.cu.obj
+nvfp4_linear_add_plan.cpp.obj
+fp8_linear_add_decode.cu.obj
+fp8_linear_add_small_t.cu.obj
+fp8_linear_add_plan.cpp.obj
+q5_linear_add_gemm_mma.cu.obj
+q5_linear_add_gemm_simt.cu.obj
+q5_linear_add_gemv.cu.obj
+q5_linear_add_plan.cpp.obj
+w8_linear_add_gemm_mma.cu.obj
+w8_linear_add_gemm_simt.cu.obj
+w8_linear_add_gemm_splitk.cu.obj
+w8_linear_add_plan.cpp.obj
+q4_linear_swiglu_gemm_mma.cu.obj
+q4_linear_swiglu_gemv.cu.obj
+q4_linear_swiglu_plan.cpp.obj
+nvfp4_linear_swiglu_decode.cu.obj
+nvfp4_linear_swiglu_small_t.cu.obj
+nvfp4_linear_swiglu_plan.cpp.obj
+fp8_linear_swiglu_decode.cu.obj
+fp8_linear_swiglu_small_t.cu.obj
+fp8_linear_swiglu_plan.cpp.obj
+w8_linear_swiglu_decode.cu.obj
+w8_linear_swiglu_gemm_mma.cu.obj
+w8_linear_swiglu_gemm_splitk.cu.obj
+w8_linear_swiglu_plan.cpp.obj
+q6_dispatch.cpp.obj
+q6_rowsplit_gemm_mma.cu.obj
+q6_rowsplit_gemm_simt.cu.obj
+w8_rowsplit_gemm_mma.cu.obj
+w8_rowsplit_gemm_simt.cu.obj
+w8_rowsplit_gemm_decode.cu.obj
+w8_small_t.cu.obj
+w8_rowsplit_gemm_splitk.cu.obj
+w8_dispatch.cpp.obj
+w8_pair_decode.cu.obj
+w8_pair_gemm_concat.cu.obj
+w8_pair_gemm_mma.cu.obj
+w8_pair_gemm_splitk.cu.obj
+w8_pair_plan.cpp.obj
+sparse_moe_decode_kernels.cu.obj
+sparse_moe_decode_plan.cpp.obj
+sparse_moe_prefill_kernels.cu.obj
+sparse_moe_prefill_plan.cpp.obj
+sparse_moe_small_t_kernels.cu.obj
+sparse_moe_small_t_plan.cpp.obj
+linear.cpp.obj
+add_bias.cpp.obj
+argmax.cpp.obj
+cast.cpp.obj
+causal_conv1d_silu.cpp.obj
+embedding.cpp.obj
+gdn_gating.cpp.obj
+gdn_gating_proj.cpp.obj
+gdn_input_proj.cpp.obj
+gelu.cpp.obj
+bidirectional_gqa_attention.cpp.obj
+swa.cpp.obj
+gqa_attention.cpp.obj
+kv_cache_append_prefix.cpp.obj
+attn_input_proj.cpp.obj
+l2norm.cpp.obj
+layer_norm.cpp.obj
+linear_add.cpp.obj
+linear_pair.cpp.obj
+linear_swiglu.cpp.obj
+mtp_pack.cpp.obj
+mtp_round.cpp.obj
+speculative_round.cpp.obj
+position.cpp.obj
+prepare_ragged_prefix.cpp.obj
+prepare_masked_block.cpp.obj
+residual_add.cpp.obj
+rmsnorm.cpp.obj
+rope.cpp.obj
+sampling.cpp.obj
+scalar.cpp.obj
+scatter.cpp.obj
+sigmoid_mul.cpp.obj
+silu_mul.cpp.obj
+sparse_moe.cpp.obj
+vision_attention.cpp.obj
+vision_pos_embed.cpp.obj
+bf16_n256_k5120_volta.cu.obj
+w8_dflash2_attn_input_volta.cu.obj
+linear_topk.cpp.obj
+dflash2_linear_topk_volta.cu.obj
+swa_dflash2_volta.cu.obj
+candidate_selector.cpp.obj
+dflash2_selector_volta.cu.obj
+dynamic_grouped_conv.cpp.obj
+bf16_dynamic_grouped_conv_prepare_plan.cpp.obj
+w8_dynamic_grouped_conv_add_plan.cpp.obj
+dflash2_dynamic_conv_volta.cu.obj
+rmsnorm_rope.cpp.obj
+dflash2_rmsnorm_rope_volta.cu.obj
+context_kv_materialize.cpp.obj
+append_volta.cu.obj
+bf16_cutlass_sm70.cu.obj
+bf16_attn_input_cutlass_sm70.cu.obj
+bf16_linear_add_volta.cu.obj
+fp8_attn_input_volta_qpn.cu.obj
+fp8_attn_input_cutlass_sm70.cu.obj
+nvfp4_attn_input_cutlass_sm70.cu.obj
+q4_q5_attn_input_cutlass_sm70.cu.obj
+fp8_gdn_input_volta_qpn.cu.obj
+fp8_gdn_input_cutlass_sm70.cu.obj
+nvfp4_gdn_input_cutlass_sm70.cu.obj
+q4_q5_gdn_input_cutlass_sm70.cu.obj
+w8_gdn_input_cutlass_sm70.cu.obj
+fp8_volta_qpn_gemm.cu.obj
+fp8_cutlass_sm70.cu.obj
+fp8_prepack_sm70.cu.obj
+nvfp4_volta_qpn_gemm.cu.obj
+nvfp4_volta_mma_gemm.cu.obj
+nvfp4_cutlass_sm70.cu.obj
+nvfp4_prepack_sm70.cu.obj
+q4_volta_mma_gemm.cu.obj
+q4_volta_qpn_gemm.cu.obj
+q5_volta_mma_gemm.cu.obj
+w8_volta_mma_gemm.cu.obj
+w8_volta_qpn_gemm.cu.obj
+q5_linear_add_cutlass_sm70.cu.obj
+q4_linear_swiglu_cutlass_sm70.cu.obj
+fp8_linear_swiglu_cutlass_sm70.cu.obj
+fp8_linear_swiglu_volta_qpn.cu.obj
+fp8_linear_swiglu_qpn_split.cu.obj
+nvfp4_linear_swiglu_volta_qpn.cu.obj
+nvfp4_linear_swiglu_qpn_split.cu.obj
+gqa_attention_volta_flash.cu.obj
+vision_attention_volta_flash.cu.obj
+nvfp4_sm86_stubs.cpp.obj
+fp8_sm86_stubs.cpp.obj
+cudart_static.lib
+cudadevrt.lib
+cudart_static.lib
+kernel32.lib
+user32.lib
+gdi32.lib
+winspool.lib
+shell32.lib
+ole32.lib
+oleaut32.lib
+uuid.lib
+comdlg32.lib
+advapi32.lib
+cl: 命令行 warning D9002 :忽略未知选项“/NODEFAULTLIB:LIBCMT”
+[258/291] Linking CXX static library src\ninfer_artifact.lib
+[259/291] Linking CXX static library src\ninfer_ops.lib
+[260/291] Linking CXX static library src\ninfer_text.lib
+[261/291] Linking CXX static library src\ninfer_media_decode.lib
+[262/291] Linking CXX static library src\ninfer_media_acquire.lib
+[263/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\frontend.cpp.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets\qwen3_6\impl\frontend\frontend.cpp(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[264/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\media_cache.cpp.obj
+[265/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\processor.cpp.obj
+[266/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\resources.cpp.obj
+[267/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\runtime\prefix_identity.cpp.obj
+[268/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\frontend\tokenizer.cpp.obj
+[269/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\runtime\yarn_rope.cpp.obj
+[270/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\state\decoder_state.cpp.obj
+[271/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\runtime\visual_scatter.cpp.obj
+[272/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\state\round_state.cpp.obj
+[273/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\vision\bindings.cpp.obj
+[274/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6\impl\vision\control.cpp.obj
+[275/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6_27b\impl\package.cpp.obj
+[276/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6_27b\impl\load\bindings.cpp.obj
+[277/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6_35b_a3b\impl\package.cpp.obj
+[278/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6_27b\impl\variant.cpp.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets/qwen3_6/impl/runtime/text_context.h(477): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2450): warning C4018: “<”: 有符号/无符号不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2450): note: 模板实例化上下文(最早的实例化上下文)为
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets/qwen3_6/impl/runtime/text_context_impl.h(1204): note: 查看对正在编译的函数 模板 实例化“_FwdIt std::lower_bound<std::_Span_iterator<_Ty>,unsigned int>(_FwdIt,_FwdIt,const unsigned int &)”的引用
+        with
+        [
+            _FwdIt=std::_Span_iterator<const ninfer::TokenId>,
+            _Ty=const ninfer::TokenId
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7047): note: 查看对正在编译的函数 模板 实例化“_FwdIt std::lower_bound<_FwdIt,_Ty,std::less<void>>(_FwdIt,const _FwdIt,const _Ty &,_Pr)”的引用
+        with
+        [
+            _FwdIt=std::_Span_iterator<const ninfer::TokenId>,
+            _Ty=unsigned int,
+            _Pr=std::less<void>
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7032): note: 在编译 类 模板 成员函数“bool std::less<void>::operator ()<_Ty&,const unsigned int&>(_Ty1,_Ty2) noexcept(<expr>) const”时
+        with
+        [
+            _Ty=const ninfer::TokenId,
+            _Ty1=const ninfer::TokenId &,
+            _Ty2=const unsigned int &
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2452): warning C4018: “<”: 有符号/无符号不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2452): note: 模板实例化上下文(最早的实例化上下文)为
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7047): note: 查看对正在编译的函数 模板 实例化“_FwdIt std::lower_bound<_FwdIt,_Ty,std::less<void>>(_FwdIt,const _FwdIt,const _Ty &,_Pr)”的引用
+        with
+        [
+            _FwdIt=std::_Span_iterator<const ninfer::TokenId>,
+            _Ty=unsigned int,
+            _Pr=std::less<void>
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7032): note: 查看对正在编译的函数 模板 实例化“bool std::less<void>::operator ()<_Ty&,const unsigned int&>(_Ty1,_Ty2) noexcept const”的引用
+        with
+        [
+            _Ty=const ninfer::TokenId,
+            _Ty1=const ninfer::TokenId &,
+            _Ty2=const unsigned int &
+        ]
+[279/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6_35b_a3b\impl\load\bindings.cpp.obj
+[280/291] Generating CXX dyndep file apps\CMakeFiles\ninfer.dir\CXX.dd
+[281/291] Generating CXX dyndep file bench\CMakeFiles\ninfer_bench.dir\CXX.dd
+[282/291] Linking CXX static library src\ninfer_product_load_progress.lib
+[283/291] Linking CXX static library src\ninfer_product_prompt_input.lib
+[284/291] Building CXX object apps\CMakeFiles\ninfer.dir\cli\main.cpp.obj
+[285/291] Building CXX object src\CMakeFiles\ninfer_engine.dir\targets\qwen3_6_35b_a3b\impl\variant.cpp.obj
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets/qwen3_6/impl/runtime/text_context.h(477): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2450): warning C4018: “<”: 有符号/无符号不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2450): note: 模板实例化上下文(最早的实例化上下文)为
+C:\Users\lwb6\Documents\git\NInfer-V100-Duo-win\.agents\worktrees\port-packet-allreduce\src\targets/qwen3_6/impl/runtime/text_context_impl.h(1204): note: 查看对正在编译的函数 模板 实例化“_FwdIt std::lower_bound<std::_Span_iterator<_Ty>,unsigned int>(_FwdIt,_FwdIt,const unsigned int &)”的引用
+        with
+        [
+            _FwdIt=std::_Span_iterator<const ninfer::TokenId>,
+            _Ty=const ninfer::TokenId
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7047): note: 查看对正在编译的函数 模板 实例化“_FwdIt std::lower_bound<_FwdIt,_Ty,std::less<void>>(_FwdIt,const _FwdIt,const _Ty &,_Pr)”的引用
+        with
+        [
+            _FwdIt=std::_Span_iterator<const ninfer::TokenId>,
+            _Ty=unsigned int,
+            _Pr=std::less<void>
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7032): note: 在编译 类 模板 成员函数“bool std::less<void>::operator ()<_Ty&,const unsigned int&>(_Ty1,_Ty2) noexcept(<expr>) const”时
+        with
+        [
+            _Ty=const ninfer::TokenId,
+            _Ty1=const ninfer::TokenId &,
+            _Ty2=const unsigned int &
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2452): warning C4018: “<”: 有符号/无符号不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\type_traits(2452): note: 模板实例化上下文(最早的实例化上下文)为
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7047): note: 查看对正在编译的函数 模板 实例化“_FwdIt std::lower_bound<_FwdIt,_Ty,std::less<void>>(_FwdIt,const _FwdIt,const _Ty &,_Pr)”的引用
+        with
+        [
+            _FwdIt=std::_Span_iterator<const ninfer::TokenId>,
+            _Ty=unsigned int,
+            _Pr=std::less<void>
+        ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\include\xutility(7032): note: 查看对正在编译的函数 模板 实例化“bool std::less<void>::operator ()<_Ty&,const unsigned int&>(_Ty1,_Ty2) noexcept const”的引用
+        with
+        [
+            _Ty=const ninfer::TokenId,
+            _Ty1=const ninfer::TokenId &,
+            _Ty2=const unsigned int &
+        ]
+[286/291] Linking CXX static library src\ninfer_engine.lib
+[287/291] Building CXX object apps\CMakeFiles\ninfer.dir\cli\options.cpp.obj
+[288/291] Building CXX object bench\CMakeFiles\ninfer_bench.dir\targets\qwen3_6_27b\ninfer_bench.cpp.obj
+[289/291] Linking CXX executable apps\ninfer.exe
+[290/291] Building CXX object bench\CMakeFiles\ninfer_bench.dir\targets\qwen3_6_27b\ninfer_bench_support.cpp.obj
+[291/291] Linking CXX executable bench\ninfer_bench.exe
+BUILD_OK

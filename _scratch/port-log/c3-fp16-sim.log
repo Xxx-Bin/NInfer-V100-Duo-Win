@@ -1,0 +1,29 @@
+== C3 fp16 error propagation, real prefill dump (8 of 64 layers, stride 8) ==
+   tolerance (S3 measured): state max_rel 9.2e-4 ; v_new max_abs 7.8e-3
+  layer 000 done
+  layer 008 done
+  layer 016 done
+  layer 024 done
+  layer 032 done
+  layer 040 done
+  layer 048 done
+  layer 056 done
+
+-- summary (vs fp64 reference) --
+C bf16 现状(Ti fp32)
+   v_new : n=62914560 max_abs=1.233e-01 max_rel=1.949e-02 bad(abs>7.8e-3)=23657 bad(rel>9.2e-4)=100277
+   state : n=125829120 max_abs=6.207e-02 max_rel=7.404e-03 bad(abs>7.8e-3)=7068 bad(rel>9.2e-4)=17350
+   flush : T_inv=0.0000% W=1.8919% state=0.0000%
+A f16 全局静�?     
+   v_new : n=62914560 max_abs=1.233e-01 max_rel=1.296e-02 bad(abs>7.8e-3)=22051 bad(rel>9.2e-4)=88515
+   state : n=125829120 max_abs=6.348e-02 max_rel=7.506e-03 bad(abs>7.8e-3)=5581 bad(rel>9.2e-4)=17953
+   flush : T_inv=3.0253% W=9.1896% state=0.0001%
+B f16 per-chunk     
+   v_new : n=62914560 max_abs=1.233e-01 max_rel=1.296e-02 bad(abs>7.8e-3)=22051 bad(rel>9.2e-4)=88515
+   state : n=125829120 max_abs=6.348e-02 max_rel=7.506e-03 bad(abs>7.8e-3)=5581 bad(rel>9.2e-4)=17953
+   flush : T_inv=3.0253% W=8.6050% state=0.0000%
+A0 f16 W/S, Ti fp32 
+   v_new : n=62914560 max_abs=1.233e-01 max_rel=1.403e-02 bad(abs>7.8e-3)=21857 bad(rel>9.2e-4)=87966
+   state : n=125829120 max_abs=6.481e-02 max_rel=7.404e-03 bad(abs>7.8e-3)=5614 bad(rel>9.2e-4)=17668
+   flush : T_inv=0.0000% W=9.1897% state=0.0001%
+GDN_FP16_SIM_DONE

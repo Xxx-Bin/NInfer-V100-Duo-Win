@@ -1,0 +1,36 @@
+[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=60520, kv_cache=int8-group64)
+[ninfer_bench] test 1/1 pp60000bench exit=0  (00:35:04)
+[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=60520, kv_cache=int8-group64)
+[ninfer_bench] test 1/1 pp60000bench exit=0  (00:35:04)
+wrote C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/_scratch/port-log/final-confirm.json
+=== POST ===
+0, 66, 10 MiB, 87.65 W
+1, 66, 10 MiB, 77.59 W
+
+==============================================================================
+CANDIDATE  final-confirm                 ref=baseline
+==============================================================================
+  rep0  prefill 1188.778 tok/s ( 50.472s)   decode 135.7612 tok/s ( 3.7713s)
+        sha1 06287348665d3648 n=513  acc/drf/rd 406/421/106  al=4.8301887 pp=[105, 102, 100, 99]
+  rep1  prefill 1185.376 tok/s ( 50.617s)   decode 135.8111 tok/s ( 3.7699s)
+        sha1 06287348665d3648 n=513  acc/drf/rd 406/421/106  al=4.8301887 pp=[105, 102, 100, 99]
+
+  reference (baseline):  prefill 945.799   decode 129.7266
+  threshold:        prefill 955.257   decode 130.3752   (+1.0% / +0.5%)
+
+--- ORACLE ---
+  class: A  (bit-identical, 纯等价改动)
+
+--- PERFORMANCE ---
+  prefill  [1188.778, 1185.376]  mean=1187.077  delta=+25.511%  gate=PASS
+  decode   [135.7612, 135.8111]  mean=135.7862  delta=+4.671%  gate=PASS
+
+--- RESOLUTION (实测噪声地板) ---
+  prefill  delta=+25.511%  MDD(95%, 2 reps)=0.481%  -> 可分辨
+  decode   delta=+4.671%  MDD(95%, 2 reps)=0.433%  -> 可分辨
+
+--- VERDICT ---
+  KEEP     (双指标均过门槛, oracle=A)
+
+  作为新 ladder 基线, 下一档门槛:
+    PREFILL_MIN=1198.948  DECODE_MIN=136.4651
