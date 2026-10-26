@@ -142,8 +142,9 @@ road#1（3 product → 1 product）接入真实 `state_passing` 内核后：
 
 ### 分支现状
 
-C3 判定无复用可能，全部 lab 分支已删除，`s5-prof` worktree 已移除，`git branch` 只剩
-`master`。`port/gdn-chunked-s1`（S1–S4：`2d3641ca`/`d2fb2323`/`3bbb3792`/`9e97b54d`/`c01799dd`，
+C3 判定无复用可能，全部 lab 分支已删除，`s5-prof` 与 `port-packet-allreduce` 两个 worktree
+均已移除，`git branch` 只剩 `master`，`.agents/worktrees/` 只剩一个 `.gitignore`。
+`port/gdn-chunked-s1`（S1–S4：`2d3641ca`/`d2fb2323`/`3bbb3792`/`9e97b54d`/`c01799dd`，
 含 ema 仿真层、fp64 对拍 harness、微基准）与 `port/gdn-road1-f16`（road#1）**代码已不可取得**，
 仅结论与数字保留在本文件。
 
@@ -187,17 +188,26 @@ acceptance_length 相等 + 差异位 ≤2% 且每差异位 margin <0.05。
 
 ## 六、工具位置（本地，不受版本控制）
 
+脚本在 `_scratch/port-bat/`，**当前不能直接跑**：`build-port.sh` 和 `measure.sh` 都硬编码了
+`.agents/worktrees/port-<feat>`，而 lab worktree 已于 2026-10-26 拆除——`.agents/worktrees/`
+现在只剩一个 `.gitignore`。要重用先重建：
+
+```bash
+git worktree add .agents/worktrees/port-packet-allreduce f9e5ce82
+```
+
+`measure.sh` 把目录名硬编码为 `port-packet-allreduce`，**这个目录名不能换**——
+Ninja 烧了绝对路径，改名等于冷编译。
+
 | 工具 | 路径 | 用途 |
 |---|---|---|
-| 构建 | `_scratch/port-bat/build-port.sh <feat> build` | `JOBS=2` 固定；只有改 `CMakeLists.txt` 才传 `configure` |
+| 构建 | `JOBS=2 _scratch/port-bat/build-port.sh <feat> build` | `-j2` 固定；只有改 `CMakeLists.txt` 才传 `configure` |
 | 测量 | `_scratch/port-bat/measure.sh <feat> <ref>` | 约 4 分钟；自动前置检查 GPU 空载 → bench → judge |
-| 重判 | `python _scratch/port-bat/judge.py <feat> --ref <ref> --target decode\|prefill` | 噪声地板已固化进常数 |
-| SASS | `_toolchain/cuda-12.8/bin/cuobjdump -sass <obj> \| grep LDG.E.128` | 指令生成核查 |
-| lab worktree | `.agents/worktrees/port-packet-allreduce` | **目录名不要改**（Ninja 烧了绝对路径）；已 detach 到 `f9e5ce82` |
+| 重判 | `_scratch/port-bat/judge.py <feat> --ref <ref> --target decode\|prefill` | 噪声地板已固化进常数 |
+| SASS | `_toolchain/downloads/cuda_cuobjdump-windows-x86_64-12.8.90-archive/bin/cuobjdump.exe -sass <obj> \| grep LDG.E.128` | 指令生成核查 |
 | 参考源码 | `_scratch/ref-v100x2/ninfer-V100X2-master`、`_ref/` | **只读，不要改任何东西** |
 
-主分支代码验证用 `git checkout --detach f9e5ce82`（master 被主仓库占用，
-worktree 里 checkout master 会报错）。
+worktree 拆除后，主分支代码验证直接在仓库根 `git checkout --detach f9e5ce82` 即可。
 
 ---
 
