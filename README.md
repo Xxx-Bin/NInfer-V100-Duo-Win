@@ -33,9 +33,9 @@ tools/v100/ninfer-v100-duo.sh model=/absolute/path/to/qwen3_8_27b_nvfp4.ninfer
 On Windows 11 with two V100s in TCC mode, use the native build instead:
 [Windows guide](docs/windows.md) and the [rebuild recipe](REBUILD.md), or the
 [Chinese quick start](README.zh-CN.md).
-Current Windows release: **v0.1.1-win.5** (2026-10-20, 2 × V100 TP2, media
+Current Windows release: **v0.1.1-win.6** (2026-10-24, 2 × V100 TP2, media
 enabled, built by CI and accepted on the V100s before promotion) —
-[release verification notes](docs/Releases/v0.1.1-win.5.md).
+[release verification notes](docs/Releases/v0.1.1-win.6.md).
 Windows executables are rebuilt from a clean checkout by
 `.github/workflows/build-windows.yml`: a manual dispatch with a `test-` prefix
 publishes a prerelease for acceptance, and that build is promoted in place once

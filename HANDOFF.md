@@ -33,7 +33,10 @@ from a clean checkout on a hosted `windows-2022` runner and publishes it as one 
 `.sha256` sidecar. It replaced the inherited Linux workflow. CI covers configure/compile/link/package
 and the archive round trip; the numerical and GPU checks below stay local, because the runner has no
 GPU. A run with the `test-` prefix publishes a prerelease, which is accepted on the V100s and then
-promoted in place — see [Release flow](docs/windows.md#release-flow).
+promoted in place — see [Release flow](docs/windows.md#release-flow). The current release is
+`v0.1.1-win.6` (run 40095984355, commit `2a619779`), accepted on 2026-10-26: PE/imports, `inspect`,
+graph parity, the 8k/16k/32k ladder, serve smoke and 10/10 media cases passed; the numbers and the
+one degenerate 32k answer are in [docs/Releases/v0.1.1-win.6.md](docs/Releases/v0.1.1-win.6.md).
 
 ## Evidence
 
@@ -133,6 +136,12 @@ promoted in place — see [Release flow](docs/windows.md#release-flow).
    output. Acceptance is a manual step on the V100 machine (release flow in `docs/windows.md`), and
    the CLI `--messages` file-path media route was not re-run for `v0.1.1-win.5`; only the serving
    media path was.
+7. **One degenerate 32k answer.** The first 32k run of the `v0.1.1-win.6` acceptance, started
+   immediately after the 16k process exited, generated sixteen `!` tokens instead of the six-digit
+   code. Four later 32k runs and ten consecutive repeats all returned the code (14/15), and the
+   failing run's summary is identical to the passing ones (free 3.81 GiB, 512/512 KV pages,
+   261.01 MiB workspace). Unexplained; the repeat log is `_scratch/win6-32k-repeat.log` and the
+   record is in [docs/Releases/v0.1.1-win.6.md](docs/Releases/v0.1.1-win.6.md).
 
 ## Next steps
 

@@ -11,16 +11,16 @@ NInfer 的 Windows 原生移植：在两张 Tesla V100-SXM2-16GB（TCC、NVLink�
 
 ## 当前版本
 
-`v0.1.1-win.5`（2026-10-20）由 `.github/workflows/build-windows.yml` 构建，在 2 × V100、TP2、媒体
+`v0.1.1-win.6`（2026-10-24）由 `.github/workflows/build-windows.yml` 构建，在 2 × V100、TP2、媒体
 开启的配置下验收通过后转正。构建运行、归档清单与验收记录见
-[docs/Releases/v0.1.1-win.5.md](docs/Releases/v0.1.1-win.5.md)。
+[docs/Releases/v0.1.1-win.6.md](docs/Releases/v0.1.1-win.6.md)。
 
 | 资产 | 字节数 | sha256 |
 |---|---:|---|
-| `ninfer-v0.1.1-win.5-windows-x64-cuda12.8-sm70.zip` | 506,273,857 | `bea77fddd47edfbbcc8cbe7c1d24576ff56ca5eb7ab8fbd66083aaf01f0b2af5` |
-| `ninfer-v0.1.1-win.5-windows-x64-cuda12.8-sm70.zip.sha256` | 115 | 归档的校验 sidecar |
+| `ninfer-v0.1.1-win.6-windows-x64-cuda12.8-sm70.zip` | 506,318,145 | `58460a48e921c64cdfee905d94804ace28b3b6056ddf5cec875e3ea88b3f888b` |
+| `ninfer-v0.1.1-win.6-windows-x64-cuda12.8-sm70.zip.sha256` | 120 | 归档的校验 sidecar |
 
-压缩包共十个文件（未压缩 855,872,132 字节）：`ninfer.exe`、`ninfer-serve.exe` 与媒体构建所需的
+压缩包共十个文件（未压缩 855,961,088 字节）：`ninfer.exe`、`ninfer-serve.exe` 与媒体构建所需的
 八个 FFmpeg/libcurl DLL。下载后必须整体解压：媒体构建从 exe 所在目录加载 DLL，只拷 exe 会启动
 失败。CUDA 运行时静态链接，不依赖 `cudart64_*` DLL。
 

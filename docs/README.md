@@ -94,5 +94,5 @@ maps:
   the disposition table and the banner format
 - [Archive index](archive/README.md) — every archived file with its reason and replacement
 
-Release notes for the current line are under [`Releases/`](Releases/): `v0.1.1-win.5` is current;
+Release notes for the current line are under [`Releases/`](Releases/): `v0.1.1-win.6` is current;
 `v0.1.0-win.1` and `v0.1.1-win.1` are archived because it supersedes both.
