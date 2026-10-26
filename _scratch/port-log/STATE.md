@@ -32,6 +32,14 @@
 >    （`cudaErrorIllegalAddress`）。必须 `ninja -t clean` + 重配 + 冷编。本轮冷编 08:18 完成可用
 >    （`-j2`，314 单元；期间 `cicc` 两次 ACCESS_VIOLATION，重试即过）。
 > 4. **07:54 机器硬挂重启**（uptime 归零，重启前 1 小时 WHEA id=19 共 34 条）。
+> 5. **2026-10-26 19:00 分支清零（按用户决定：C3 无复用可能）**：`feat/prefix-registry`、
+>    `port/prefill-down-cutlass`、`port/rmsnorm-wiring`、`port/rmsnorm-fusion`、`port/gdn-split10`、
+>    `port/gdn-chunked-s1`、`port/gdn-road1-f16` 全部删除，`s5-prof` worktree 已移除，
+>    `git branch` 只剩 `master`。可达性：`prefill-down-cutlass` 与 `feat/prefix-registry` 的提交
+>    在 master 历史里；`rmsnorm-wiring` / `gdn-split10` 仍由 `result/*` tag 固定；
+>    **`gdn-chunked-s1`（S1-S4）、`gdn-road1-f16`（road#1）、`rmsnorm-fusion` 的代码已不可恢复**
+>    （reflog 过期后回收）。⇒ 本文及 `c3-real-check.md` / `campaign-close.md` / `gdn-*.md` 中
+>    对这三个分支名的引用，一律视为**历史指针**，只能读到结论与数字，代码需重做。
 >
 > **★★ 第二阶段尽调已出判决（2026-10-26 凌晨→清晨）★★**：见 `dd-cards-20261026.md`——
 > C1/C2/C4/#7 **出队或维持否决**（各有量化依据）；C5 **永久结案**（探针 SASS 实测 key_split 0 条
