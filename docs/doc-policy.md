@@ -8,6 +8,11 @@
 适用范围：`git ls-files "*.md"` 能列出的文件。`_ref/`、`_toolchain/`、`_scratch/`、`probe/`、
 `.agents/worktrees/` 由 `.gitignore` 隔离，不属于本文管辖，也不参与任何文档索引。
 
+`_scratch/` 内的过程材料（战役交接、尽调卡、规划、原始测量输出）**只以单一自包含记录**
+进入版本控制：`docs/notes/v100-port-campaign.md`。该文件是 `record` 角色，只增不改地记录
+已终结的判决；`_scratch/` 下的原始材料视为本地证据仓，不受版本控制，也不得被其他文档
+作为判决依据引用。
+
 ## 1. 分类维度
 
 两个维度，不要混用。

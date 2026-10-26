@@ -1,6 +1,14 @@
 # tuxKOH/ninfer-V100X2 移植评估
 
-> 记录：2026-10-24 · 角色：assessment · 状态：待决策
+> **⚠️ 状态：`superseded` — 本文的决策已执行完毕，仅作评估链留存，不要按本文开工。**
+> 本文的 Phase 0/1/2 计划已全部执行，结论与终态指标见
+> [v100-port-campaign.md](v100-port-campaign.md)（2026-10-26 战役终局记录）。
+> 简短结论：V100X2 的七段接力**不能**快速移植（卡间互联假设不同，本机是 PCIe 3.0 x4
+> 而非 NVLink）；最终只采纳了 packet collective 与 prefill-down-cutlass 两项，累积
+> prefill +25.511% / decode +4.671%。本文「关键未知：本地 NVFP4 的真实基线」已由
+> `34412f4f` → `945.799 tok/s` 回答。
+>
+> 记录：2026-10-24 · 角色：assessment · 状态：~~待决策~~ **已终结（superseded）**
 > 参考源码：`_scratch/ref-v100x2/ninfer-V100X2-master`（master @ 02fec273，2026-10-23，本地 gitignore）
 > 对照：本仓库 `perf/v100x2-port-study` 分支，base = `c96744938293e1bbe77124f0d7ba5dd1c3045dd2`
 

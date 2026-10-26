@@ -1,2 +1,0 @@
-[ninfer_bench] loading F:/models/ninfer/qwen3_8_27b_nvfp4.ninfer (max_context=60520, kv_cache=int8-group64)
-C:/Users/lwb6/Documents/git/NInfer-V100-Duo-win/src\ops/launcher/kernel_attr_once.h:61: CUDA_CHECK(cudaFuncSetAttribute(func, attr, value)) failed: cudaErrorIllegalAddress: an illegal memory access was encountered
