@@ -1,5 +1,13 @@
 # 交接文案（2026-10-26 00:45 · 第二阶段：收官后再挖掘）
 
+> **■ 本战役已于 2026-10-26 18:24 终结，不要再开工。**
+> 六项判决全部落地：C1/C2/C4/#7 出队、C5 结案、**C3 封存**（road#1 内核实测 1.31×，
+> mma 只占 state_passing 35%，chunked 5.800 vs recurrent 5.33ms —— 见 `c3-real-check.md`）。
+> 终态 master `77a493a5` + docs `e7a53442`，prefill **1187.077（+25.5%）** / decode
+> **135.786（+4.7%）**，oracle A 类，tag `result/final-confirm`。**无挂起项、无待办。**
+> 若将来要重启优化，唯一还站得住的方向是"recurrent GDN 自身是否带宽受限"（1 小时的 roofline
+> 判断即可定性），其余候选池已清空。下文为第二阶段开工时的原始交接，留档。
+
 > 复制本文件即可接手。目标、状态、判据、工具、教训、下一步都在这里，不需要重新做源码分析。
 > 上一阶段（至 GDN chunked 否决 + final-confirm 收官）的完整记录见 `campaign-close.md`。
 

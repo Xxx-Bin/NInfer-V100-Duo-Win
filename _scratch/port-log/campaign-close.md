@@ -54,3 +54,29 @@ tag：`result/final-confirm` = `f9e5ce82`（已核对 ≠ `34412f4f`）。
 
 `-j4` 满载编译两次无 dump 硬挂（WHEA Bus/Interconnect 风暴，见 `incident-20261025-freeze.md`），
 两卡只协商到 PCIe 3.0 x4 → 永远 `-j2`；测量前后查 `nvidia-smi`。
+
+---
+
+# 附：第二阶段（2026-10-26）终态 —— 六项判决 + C3 封存
+
+| 项 | 判决 | 一句话依据 |
+|---|---|---|
+| C1 prefill 大消息 collective | 出队 | 占比 ≤1.4%（kill 线 5%）+ TP2 流量守恒 |
+| C2 GEMM 融合反量化 | 出队 | 折算 0.15~0.25% prefill |
+| C3 GDN 复活三路 | **封存（实测）** | road#1 内核只兑现 1.31×；chunked 5.800 vs recurrent 5.33ms |
+| C4 Streaming/Fp32Scale | 出队 | 改 oracle 类 / +0.19% < MDD |
+| C5 vector16 SASS 探针 | 永久结案 | 0 条 `LDG.E.128`，int4 被拆 2×64 位 |
+| #7 epilogue publish | 维持否决 | prefill +0.4~0.7% < 1% 红线 |
+
+C3 的三段证据链（完整记录见 `c3-real-check.md`）：
+1. **真实数据复核**：合成统计"span ≤25~28 bits 静态预缩放成立"**撤回**——真实 chunk 的
+   subnormal 占比 16.4~30.7%、state max 61.2，根因是真实 g 的 chunk 内累积和到 −10 以下。
+2. **误差传播模拟**：P1（绝对容差 9.2e-4）作废（现状 bf16 路径同数据下也超标 8~21 倍），
+   改 P2（相对现状 ≤+10%）后 f16 全局静态缩放通过，per-chunk 缩放无必要。
+3. **内核落地实测**：road#1（3 product → 1 product）在真实 state_passing 里只有 **1.31×**
+   （微基准 5.12×），反推 mma 仅占 35% → 内核不是 mma-bound → 剩余 road#3 只能打平。
+
+**新增纪律**：微基准倍率不得线性外推到内核实测，必须先量目标块在真实内核里的时间占比。
+
+**终态**：master `77a493a5`（+ docs 提交 `e7a53442`），实测 prefill **1187.077（+25.5%）** /
+decode **135.786（+4.7%）**，oracle A 类逐位一致，tag `result/final-confirm`。**无挂起项。**
