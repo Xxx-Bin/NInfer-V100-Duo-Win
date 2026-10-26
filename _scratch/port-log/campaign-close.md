@@ -82,5 +82,9 @@ C3 的三段证据链（完整记录见 `c3-real-check.md`）：
 `git branch` 只剩 `master`。文中"C3 封存于 lab 分支"的表述**已过期**：`port/gdn-chunked-s1`（S1-S4）
 与 `port/gdn-road1-f16`（road#1）的代码不再可取得，仅结论与数字保留在本文件与 `c3-real-check.md`。
 
+**分支处置（2026-10-26 19:00）**：C3 判定无复用可能，全部 lab 分支已删除、`s5-prof` worktree 已移除，
+`git branch` 只剩 `master`。文中"C3 封存于 lab 分支"的表述**已过期**：`port/gdn-chunked-s1`（S1-S4）
+与 `port/gdn-road1-f16`（road#1）的代码不再可取得，仅结论与数字保留在本文件与 `c3-real-check.md`。
+
 **终态**：master `77a493a5`（+ docs 提交 `e7a53442`），实测 prefill **1187.077（+25.5%）** /
 decode **135.786（+4.7%）**，oracle A 类逐位一致，tag `result/final-confirm`。**无挂起项。**
